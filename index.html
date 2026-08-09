@@ -496,11 +496,11 @@ const STR = {
     titleRequests:'הבקשות שלי', titleIncoming:'בקשות נכנסות', titleCompose:'כתיבת ניתוח',
     heroTitle:'מעלים משחק.<br>בוחרים מאמן/אנליסט.<br>משתפרים.',
     heroSub:'העלו סרטון מאימון או ממשחק, בחרו מאמן/אנליסט לפי ותק, התמחות ומחיר, וקבלו ניתוח ביצועים מפורט תוך פרק זמן מוגדר מראש.',
-    uploadCta:'העלו סרטון לניתוח',
+    uploadCta:'בחרו מאמן/אנליסט',
     statCoaches:'מאמנים', statCoachesGK:'מאמני שוערים', statDone:'ניתוחים שהושלמו', statTurnaround:'זמן מסירה',
     howTitle:'איך זה עובד',
-    step1t:'מעלים סרטון', step1s:'מאימון, משחק או תרגול עצמאי — כל קטע שבו רואים את השוער בפעולה.',
-    step2t:'בוחרים מאמן שוערים', step2s:'לפי ותק, התמחות בילדים או בוגרים, דירוג ומחיר.',
+    step1t:'בוחרים מאמן/אנליסט', step1s:'לפי סוג, התמחות, ותק, דירוג ומחיר.',
+    step2t:'מעלים סרטון', step2s:'מאימון, משחק או תרגול עצמאי — כל קטע שבו רואים אתכם בפעולה.',
     step3t:'מקבלים ניתוח מפורט', step3s:'המאמן מתחייב לפרק זמן מסירה קבוע מראש, בלי הפתעות.',
     changePrefs:'שינוי שפה ומדינה',
     dropTitle:'גררו לכאן סרטון או לחצו לבחירה', dropSub:'MP4, MOV — עד כמה דקות של אימון או משחק',
@@ -508,7 +508,7 @@ const STR = {
     removeFile:'הסירו', demoFileName:'אימון_שוער_לדוגמה.mp4',
     ageCategory:'קטגוריית גיל', noteLabel:'תיאור קצר למאמן (אופציונלי)',
     notePh:'למשל: לשים לב במיוחד ליציאות מהקו בדקה 30–40...',
-    continueToCoaches:'המשיכו לבחירת מאמן',
+    continueToCoaches:'המשיכו לאישור הבקשה',
     filterAll:'הכל', country:'מדינת המאמן',
     sortRating:'מיון: דירוג', sortPrice:'מיון: מחיר', sortYears:'מיון: ותק', sortSpeed:'מיון: זמן מסירה',
     yearsExp:'שנות ניסיון', deliveryIn:'מסירה תוך', perAnalysis:'לניתוח מלא', selectCoach:'בחרו מאמן זה',
@@ -538,7 +538,7 @@ const STR = {
     deliveryUpTo:'מסירה עד',
     coachHello:'שלום', coachHomeSub:'כאן תראו את בקשות הניתוח שהשחקנים שלחו אליכם, עם הווידאו, ההערה שלהם וההתחייבות לזמן מסירה.',
     coachHomeCta:'לבקשות הנכנסות',
-    statPending:'ממתינות', statCompleted:'הושלמו', statEarnings:'הכנסה נטו (אחרי עמלה)', statMyRating:'הדירוג שלי',
+    statPending:'ממתינות', statCompleted:'הושלמו', statEarnings:'הכנסה', statMyRating:'הדירוג שלי',
     adminPlayers:'שחקנים', adminCoaches:'מאמנים/אנליסטים', adminRevenue:'הכנסות הפלטפורמה (15%)', adminGrossVolume:'סה״כ מחזור עסקאות',
     showingFor:'מציגים בקשות עבור המאמן:',
     demoNote:'לצורך ההדגמה אפשר לבחור כל אחד מהמאמנים ולראות את תיבת הבקשות שהוא היה מקבל. במוצר אמיתי כל מאמן יתחבר לחשבון האישי שלו בלבד.',
@@ -577,6 +577,8 @@ const STR = {
     noPackagesOffered:'המאמן לא מציע חבילות כרגע', packagePurchased:'החבילה נרכשה בהצלחה',
     highlightClipTitle:'קליפ ביצועים ערוך', highlightClipOfferLabel:'הציעו קליפ ביצועים ערוך בתוספת תשלום',
     highlightClipPriceLabel:'מחיר הקליפ (₪)', totalPriceLabel:'סה״כ לתשלום', requestedHighlightClip:'השוער ביקש גם קליפ ביצועים ערוך',
+    coachAmountLabel:'מחיר המאמן/אנליסט', serviceFeeLabel:'עמלת שירות (15%)', youPaidLabel:'שולם על ידכם',
+    searchCoachLabel:'חיפוש מאמן/אנליסט', searchCoachPh:'הקלידו שם מאמן...',
     highlightClipTurnaroundLabel:'התחייבות זמן מסירה לקליפ', clipDeliveryUpTo:'הקליפ יימסר תוך',
     removeVideo:'הסירו',
     finishSignup:'סיימו הרשמה', requiredName:'נא למלא שם מלא',
@@ -624,11 +626,11 @@ const STR = {
     titleRequests:'My requests', titleIncoming:'Incoming requests', titleCompose:'Write analysis',
     heroTitle:'Upload the match.<br>Pick a coach/analyst.<br>Improve.',
     heroSub:'Upload a video from training or a match, choose a coach/analyst by experience, specialty and price, and get a detailed performance analysis within a set turnaround time.',
-    uploadCta:'Upload video for analysis',
+    uploadCta:'Choose a coach/analyst',
     statCoaches:'Coaches', statCoachesGK:'GK coaches', statDone:'Analyses done', statTurnaround:'Turnaround',
     howTitle:'How it works',
-    step1t:'Upload a video', step1s:'From training, a match, or solo practice — any clip that shows the goalkeeper in action.',
-    step2t:'Choose a GK coach', step2s:'By experience, specialty in kids or adults, rating and price.',
+    step1t:'Choose a coach/analyst', step1s:'By type, specialty, experience, rating and price.',
+    step2t:'Upload a video', step2s:'From training, a match, or solo practice — any clip that shows you in action.',
     step3t:'Get a detailed analysis', step3s:'The coach commits to a fixed turnaround time, no surprises.',
     changePrefs:'Change language & country',
     dropTitle:'Drag a video here or tap to choose', dropSub:'MP4, MOV — up to a few minutes of training or a match',
@@ -636,7 +638,7 @@ const STR = {
     removeFile:'Remove', demoFileName:'sample_goalkeeper_training.mp4',
     ageCategory:'Age category', noteLabel:'Short note to the coach (optional)',
     notePh:'e.g. Pay special attention to coming off the line at minute 30–40...',
-    continueToCoaches:'Continue to choose a coach',
+    continueToCoaches:'Continue to confirm request',
     filterAll:'All', country:"Coach's country",
     sortRating:'Sort: rating', sortPrice:'Sort: price', sortYears:'Sort: experience', sortSpeed:'Sort: turnaround',
     yearsExp:'years experience', deliveryIn:'delivers within', perAnalysis:'per full analysis', selectCoach:'Select this coach',
@@ -666,7 +668,7 @@ const STR = {
     deliveryUpTo:'delivery by',
     coachHello:'Hello', coachHomeSub:"Here you'll see the analysis requests players sent you, with the video, their note, and your delivery commitment.",
     coachHomeCta:'Go to incoming requests',
-    statPending:'Pending', statCompleted:'Completed', statEarnings:'Net earnings (after fee)', statMyRating:'My rating',
+    statPending:'Pending', statCompleted:'Completed', statEarnings:'Earnings', statMyRating:'My rating',
     adminPlayers:'Players', adminCoaches:'Coaches/analysts', adminRevenue:'Platform revenue (15%)', adminGrossVolume:'Total transaction volume',
     showingFor:'Showing requests for coach:',
     demoNote:'For this demo you can pick any coach to see the requests they would receive. In a real product, each coach would sign in to their own account only.',
@@ -705,6 +707,8 @@ const STR = {
     noPackagesOffered:'This coach has no packages right now', packagePurchased:'Package purchased successfully',
     highlightClipTitle:'Edited highlights clip', highlightClipOfferLabel:'Offer an edited highlights clip for an extra fee',
     highlightClipPriceLabel:'Clip price (₪)', totalPriceLabel:'Total price', requestedHighlightClip:'Goalkeeper also requested an edited highlights clip',
+    coachAmountLabel:'Coach/analyst price', serviceFeeLabel:'Service fee (15%)', youPaidLabel:'You paid',
+    searchCoachLabel:'Search coach/analyst', searchCoachPh:'Type a coach name...',
     highlightClipTurnaroundLabel:'Clip delivery time commitment', clipDeliveryUpTo:'Clip delivered within',
     removeVideo:'Remove',
     finishSignup:'Finish signup', requiredName:'Please enter a full name',
@@ -767,7 +771,7 @@ let state = {
   composeId: null,
   requests: [],
   draft: { videos:[], isDemo:false, fileName:null, category:'kids', note:'' },
-  filters: { specialty:'all', sort:'rating', country:'all', coachType:'all', generalSpec:'all' },
+  filters: { specialty:'all', sort:'rating', country:'all', coachType:'all', generalSpec:'all', query:'' },
   selectedCoach: null,
 };
 const videoUrls = {}; // reqId -> objectURL (session-only)
@@ -819,7 +823,7 @@ let hasLangPref = false;
 
 /* ---------------- FIREBASE (accounts, coach directory, requests) ---------------- */
 // !!! REPLACE with your own login email — this account gets access to the admin approval screen !!!
-const ADMIN_EMAIL = 'tadadi25@gmail.com';
+const ADMIN_EMAIL = 'anzclip.support@gmail.com';
 
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -894,7 +898,12 @@ async function firebaseLogin(email, password){
   try{
     const cred = await auth.signInWithEmailAndPassword(email, password);
     const doc = await db.collection('users').doc(cred.user.uid).get();
-    if(!doc.exists) return {ok:false, errorKey:'loginError'};
+    if(!doc.exists){
+      if(email.trim().toLowerCase()===ADMIN_EMAIL.toLowerCase()){
+        return {ok:true, uid:cred.user.uid, profile:{email, role:'admin'}, emailVerified: cred.user.emailVerified};
+      }
+      return {ok:false, errorKey:'loginError'};
+    }
     return {ok:true, uid:cred.user.uid, profile:doc.data(), emailVerified: cred.user.emailVerified};
   }catch(e){ console.error('login failed', e); return {ok:false, errorKey: mapAuthError(e.code)}; }
 }
@@ -946,10 +955,16 @@ async function loadAdminStats(){
   }catch(e){ console.error('failed to count coaches', e); }
   try{
     const doneSnap = await db.collection('requests').where('status','==','done').get();
-    let gross = 0;
-    doneSnap.forEach(doc=>{ const d = doc.data(); gross += (d.price!=null?d.price:(d.basePrice||0)); });
+    let gross = 0, revenue = 0;
+    doneSnap.forEach(doc=>{
+      const d = doc.data();
+      const coachAmount = (d.price!=null?d.price:(d.basePrice||0));
+      const fee = d.platformFee!=null ? d.platformFee : Math.round(coachAmount*PLATFORM_FEE_RATE);
+      gross += coachAmount + fee;
+      revenue += fee;
+    });
     stats.grossVolume = gross;
-    stats.platformRevenue = Math.round(gross * PLATFORM_FEE_RATE);
+    stats.platformRevenue = revenue;
   }catch(e){ console.error('failed to sum completed requests', e); }
   return stats;
 }
@@ -1139,6 +1154,10 @@ function getVideoDuration(url){
   });
 }
 const PLATFORM_FEE_RATE = 0.15;
+function computeFee(coachAmount){
+  const fee = Math.round(coachAmount * PLATFORM_FEE_RATE);
+  return { fee, total: coachAmount + fee };
+}
 const TURNAROUND_OPTIONS = [24,48,72,120,168,240,336]; // 1,2,3,5,7,10,14 days
 function genPackageId(){ return 'pkg_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); }
 function draftTotalDurationSec(){
@@ -1200,7 +1219,7 @@ function renderTopBar(){
     home:null, upload:t('titleUpload'), coaches:t('titleCoaches'), confirm:t('titleConfirm'), requests:t('titleRequests'),
     'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'admin':t('adminTitle')
   };
-  const isRoot = state.view==='home' || state.view==='coach-dash';
+  const isRoot = state.view==='home' || state.view==='coach-dash' || state.view==='admin';
   return `
     <div class="topbar">
       <div class="topbar-row">
@@ -1223,6 +1242,9 @@ function renderTopBar(){
 }
 
 function renderBottomNav(){
+  if(state.role==='admin'){
+    return '';
+  }
   if(state.role==='coach'){
     const newCount = state.requests.filter(r=>r.status==='requested').length;
     return `
@@ -1697,6 +1719,10 @@ function filteredCoaches(){
   list = list.filter(c => state.filters.country==='all' || c.country===state.filters.country);
   list = list.filter(c => state.filters.coachType==='all' || (c.coachTypes||[]).includes(state.filters.coachType));
   list = list.filter(c => state.filters.generalSpec==='all' || (c.generalSpecialties||[]).includes(state.filters.generalSpec));
+  if(state.filters.query && state.filters.query.trim()){
+    const q = state.filters.query.trim().toLowerCase();
+    list = list.filter(c => c.name.toLowerCase().includes(q));
+  }
   const sortFns = {
     rating: (a,b)=>(b.rating||0)-(a.rating||0),
     price: (a,b)=>a.singleGamePrice-b.singleGamePrice,
@@ -1761,7 +1787,10 @@ function fmtDateTime(ts){
 function renderCoaches(){
   const list = filteredCoaches();
   return `
-    <div class="field-label" style="margin-top:0">${t('filterCoachType')}</div>
+    <div class="field-label" style="margin-top:0">${t('searchCoachLabel')}</div>
+    <input class="form-input" id="coach-search-input" type="text" placeholder="${t('searchCoachPh')}" value="${state.filters.query||''}">
+
+    <div class="field-label" style="margin-top:14px">${t('filterCoachType')}</div>
     <div class="filter-bar">
       ${[['all',t('filterAllTypes')],['goalkeeper',t('coachTypeGK')],['general',t('coachTypeGeneral')],['analyst',t('coachTypeAnalyst')]].map(([v,l])=>`
         <div class="chip ${state.filters.coachType===v?'active':''}" data-coach-type-filter="${v}">${l}</div>
@@ -1824,7 +1853,7 @@ function renderCoaches(){
           <div class="price-block">${priceBlockHtml}</div>
           ${c.isFullyBooked
             ? `<button class="select-btn" disabled style="opacity:.5;cursor:not-allowed">${t('notAvailableBtn')}</button>`
-            : `<button class="select-btn" data-select-coach="${c.id}">${t('selectCoach')}</button>`}
+            : `<button class="select-btn" data-view-coach="${c.id}">${t('selectCoach')}</button>`}
         </div>
       </div>
     `;}).join('') || `<div class="empty-state">${icon('ghost',34)}<b>${t('noCoachesTitle')}</b><span>${t('noCoachesSub')}</span></div>`}
@@ -1836,6 +1865,20 @@ function renderCoachProfile(){
   const c = state.viewingCoach;
   if(!c) return renderCoaches();
   const reviews = state.coachReviews || [];
+  const activePackages = state.activePackages || [];
+  const choice = state.draft.paymentChoice || 'single';
+  let choiceSummary = `${t('singleGameOption')} — ₪${c.singleGamePrice}`;
+  let coachAmount = c.singleGamePrice, isExisting = false;
+  if(choice.startsWith('existing:')){
+    const pid = choice.slice(9);
+    const pkg = activePackages.find(p=>p.id===pid);
+    if(pkg){ choiceSummary = `${t('useFromPackage')} — ${pkg.gamesTotal-pkg.gamesUsed} ${t('gamesRemaining')}`; coachAmount = 0; isExisting = true; }
+  } else if(choice.startsWith('new:')){
+    const pid = choice.slice(4);
+    const pkg = (c.packages||[]).find(p=>p.id===pid);
+    if(pkg){ choiceSummary = `${t('packageNamePreview')} ${pkg.gameCount} ${t('gamesUnit')} — ₪${pkg.price}`; coachAmount = pkg.price; }
+  }
+  const fee = computeFee(coachAmount);
   return `
     <div class="coach-top" style="margin-bottom:14px">
       ${avatarHtml(c, 56)}
@@ -1865,10 +1908,26 @@ function renderCoachProfile(){
       <p style="font-size:13.5px;color:var(--chalk-dim);line-height:1.6;margin:0 0 18px">${state.lang==='he'?c.bio:c.bio_en}</p>
     ` : ''}
 
-    <div class="summary-card">
-      <div class="summary-row"><span>${t('singleGameOption')}</span><span class="mono">₪${c.singleGamePrice}</span></div>
-      ${(c.packages||[]).map(p=>`<div class="summary-row"><span>${t('packageNamePreview')} ${p.gameCount} ${t('gamesUnit')}</span><span class="mono">₪${p.price}</span></div>`).join('')}
-    </div>
+    ${!c.isFullyBooked ? `
+      ${activePackages.length ? `
+        <div class="field-label" style="margin-top:0">${t('myActivePackages')}</div>
+        <div class="chip-row">
+          ${activePackages.map(p=>`<div class="chip ${choice==='existing:'+p.id?'active':''}" data-payment-choice="existing:${p.id}">${p.gamesTotal-p.gamesUsed} ${t('gamesRemaining')}</div>`).join('')}
+        </div>
+      ` : ''}
+      <div class="field-label" style="margin-top:14px">${t('singleGameOption')} / ${t('buyPackageOption')}</div>
+      <div class="chip-row">
+        <div class="chip ${choice==='single'?'active':''}" data-payment-choice="single">${t('singleGameOption')} (₪${c.singleGamePrice})</div>
+        ${(c.packages||[]).map(p=>`<div class="chip ${choice==='new:'+p.id?'active':''}" data-payment-choice="new:${p.id}">${p.gameCount} ${t('gamesUnit')} (₪${p.price})</div>`).join('')}
+      </div>
+      <div class="summary-card" style="margin-top:14px">
+        <div class="summary-row"><span>${t('priceForYourVideo')}</span><span class="mono">${choiceSummary}</span></div>
+        ${!isExisting ? `
+          <div class="summary-row"><span>${t('serviceFeeLabel')}</span><span class="mono">+₪${fee.fee}</span></div>
+          <div class="summary-row"><span><b>${t('totalPriceLabel')}</b></span><span class="mono"><b>₪${fee.total}</b></span></div>
+        ` : ''}
+      </div>
+    ` : ''}
 
     <div class="section-title" style="margin-top:22px">${t('reviewsTitle')} ${reviews.length?`(${reviews.length})`:''}</div>
     <div class="section-line"></div>
@@ -1891,7 +1950,7 @@ function renderCoachProfile(){
     <div class="sticky-cta">
       ${c.isFullyBooked
         ? `<button class="btn btn-primary btn-block" disabled style="opacity:.5;cursor:not-allowed">${t('notAvailableBtn')}</button>`
-        : `<button class="btn btn-primary btn-block" data-select-coach="${c.id}">${t('selectCoach')}</button>`}
+        : `<button class="btn btn-primary btn-block" data-select-coach="${c.id}">${t('continueToCoaches')}</button>`}
     </div>
   `;
 }
@@ -1948,17 +2007,18 @@ function renderConfirm(){
   const activePackages = state.activePackages || [];
   const choice = d.paymentChoice || 'single';
 
-  let baseLabel = t('singleGameOption'), basePrice = c.singleGamePrice;
+  let baseLabel = t('singleGameOption'), basePrice = c.singleGamePrice, isExisting = false;
   if(choice.startsWith('existing:')){
     const pid = choice.slice(9);
     const pkg = activePackages.find(p=>p.id===pid);
-    if(pkg){ baseLabel = `${t('useFromPackage')} (${pkg.gamesTotal-pkg.gamesUsed} ${t('gamesRemaining')})`; basePrice = 0; }
+    if(pkg){ baseLabel = `${t('useFromPackage')} (${pkg.gamesTotal-pkg.gamesUsed} ${t('gamesRemaining')})`; basePrice = 0; isExisting = true; }
   } else if(choice.startsWith('new:')){
     const pid = choice.slice(4);
     const pkg = (c.packages||[]).find(p=>p.id===pid);
     if(pkg){ baseLabel = `${t('packageNamePreview')} ${pkg.gameCount} ${t('gamesUnit')}`; basePrice = pkg.price; }
   }
-  const totalPrice = basePrice + (wantsClip ? clipPrice : 0);
+  const coachAmount = basePrice + (wantsClip ? clipPrice : 0);
+  const fee = computeFee(coachAmount);
 
   return `
     <div class="summary-card">
@@ -1975,22 +2035,11 @@ function renderConfirm(){
       <div class="summary-row"><span>${t('sumNote')}</span><span>${d.note ? d.note.slice(0,28)+(d.note.length>28?'…':'') : t('sumNone')}</span></div>
     </div>
 
-    ${activePackages.length ? `
-      <div class="field-label" style="margin-top:18px">${t('myActivePackages')}</div>
-      <div class="chip-row">
-        ${activePackages.map(p=>`<div class="chip ${choice==='existing:'+p.id?'active':''}" data-payment-choice="existing:${p.id}">${p.gamesTotal-p.gamesUsed} ${t('gamesRemaining')}</div>`).join('')}
-      </div>
-    ` : ''}
-    <div class="field-label" style="margin-top:14px">${t('singleGameOption')} / ${t('buyPackageOption')}</div>
-    <div class="chip-row">
-      <div class="chip ${choice==='single'?'active':''}" data-payment-choice="single">${t('singleGameOption')} (₪${c.singleGamePrice})</div>
-      ${(c.packages||[]).map(p=>`<div class="chip ${choice==='new:'+p.id?'active':''}" data-payment-choice="new:${p.id}">${p.gameCount} ${t('gamesUnit')} (₪${p.price})</div>`).join('')}
-    </div>
-
     <div class="summary-card" style="margin-top:14px">
-      <div class="summary-row"><span>${t('priceForYourVideo')}</span><span class="mono">${baseLabel} — ₪${basePrice}</span></div>
+      <div class="summary-row"><span>${t('priceForYourVideo')}</span><span class="mono">${baseLabel}${!isExisting?` — ₪${basePrice}`:''}</span></div>
       ${wantsClip ? `<div class="summary-row"><span>${t('highlightClipTitle')}</span><span class="mono">+₪${clipPrice}</span></div>` : ''}
-      <div class="summary-row"><span><b>${t('totalPriceLabel')}</b></span><span class="mono"><b>₪${totalPrice}</b></span></div>
+      ${!isExisting ? `<div class="summary-row"><span>${t('serviceFeeLabel')}</span><span class="mono">+₪${fee.fee}</span></div>` : ''}
+      <div class="summary-row"><span><b>${t('totalPriceLabel')}</b></span><span class="mono"><b>₪${isExisting?0:fee.total}</b></span></div>
       <div class="summary-row"><span>${t('sumDelivery')}</span><span>${t('deliveryUpTo')} ${fmtHours(c.turnaround)}</span></div>
       ${wantsClip ? `<div class="summary-row"><span>${t('highlightClipTurnaroundLabel')}</span><span>${t('clipDeliveryUpTo')} ${fmtHours(c.highlightClipTurnaround)}</span></div>` : ''}
     </div>
@@ -2035,7 +2084,7 @@ function renderRequests(){
           ${avatarHtml(r.coach, 34)}
           <div style="font-size:13px">
             <div style="font-weight:600">${r.coach.name} ${countryFlag(r.coach.country)}</div>
-            <div class="req-meta">₪${r.price!=null?r.price:r.basePrice||0} · ${t('deliveryUpTo')} ${fmtHours(r.coach.turnaround)}</div>
+            <div class="req-meta">₪${r.totalCharged!=null?r.totalCharged:(r.price!=null?r.price:r.basePrice||0)} · ${t('deliveryUpTo')} ${fmtHours(r.coach.turnaround)}</div>
           </div>
         </div>
         <div style="margin-bottom:10px">${videosViewHtml(r)}</div>
@@ -2077,8 +2126,7 @@ function renderCoachHome(){
   const mine = state.requests;
   const pending = mine.filter(r=>r.status!=='done' && r.status!=='declined').length;
   const done = mine.filter(r=>r.status==='done').length;
-  const grossEarnings = mine.filter(r=>r.status==='done').reduce((s,r)=>s+(r.price!=null?r.price:(r.basePrice||0)),0);
-  const earnings = Math.round(grossEarnings * (1 - PLATFORM_FEE_RATE));
+  const earnings = mine.filter(r=>r.status==='done').reduce((s,r)=>s+(r.price!=null?r.price:(r.basePrice||0)),0);
   return `
     ${state.user && !state.user.isVerified ? `
       <div class="commit-box" style="margin-bottom:16px">
@@ -2238,7 +2286,7 @@ function renderCoachCompose(){
       <div class="summary-row"><span>${t('sumFile')}</span><span>${r.fileName}</span></div>
       <div class="summary-row"><span>${t('totalDuration')}</span><span>${r.totalDurationSec!=null?fmtMinutes(r.totalDurationSec/60):t('sumDash')}</span></div>
       <div class="summary-row"><span>${t('goalkeeperNote')}</span><span>${r.note||t('sumNone')}</span></div>
-      <div class="summary-row"><span>${t('totalPriceLabel')}</span><span class="mono">₪${r.price!=null?r.price:(r.basePrice||0)}</span></div>
+      <div class="summary-row"><span>${t('coachAmountLabel')}</span><span class="mono">₪${r.price!=null?r.price:(r.basePrice||0)}</span></div>
       ${r.wantsHighlightClip ? `<div class="summary-row"><span>${t('highlightClipTitle')}</span><span>${t('requestedHighlightClip')}</span></div>` : ''}
       <div class="summary-row"><span>${t('commitmentLabel')}</span><span>${t('deliveryUpTo')} ${fmtHours(r.coach.turnaround)}</span></div>
     </div>
@@ -2400,9 +2448,10 @@ function attachHandlers(){
   });
 
   app.querySelector('[data-action="back"]')?.addEventListener('click', ()=>{
-    if(state.view==='confirm') go('coaches');
+    if(state.view==='confirm') go('upload');
+    else if(state.view==='upload') go('coach-profile');
     else if(state.view==='coach-profile') go('coaches');
-    else if(state.view==='coaches') go('upload');
+    else if(state.view==='coaches') go('home');
     else if(state.view==='coach-compose') go('coach-dash');
     else go('home');
   });
@@ -2468,6 +2517,19 @@ function attachHandlers(){
     const res = await firebaseLogin(email, password);
     if(res.ok){
       state.user = {uid:res.uid, ...res.profile};
+      if(state.user.role==='admin'){
+        state.role = 'admin';
+        if(!res.emailVerified){
+          state.postVerifyDestination = 'admin';
+          go('verify-email');
+          return;
+        }
+        state.adminPendingCoaches = await loadPendingCoaches();
+        state.adminStats = await loadAdminStats();
+        showToast(t('welcomeBack')+', Admin');
+        go('admin');
+        return;
+      }
       state.role = state.user.role==='coach' ? 'coach' : 'player';
       if(!res.emailVerified){
         state.postVerifyDestination = 'home';
@@ -2510,6 +2572,12 @@ function attachHandlers(){
     const verified = await refreshEmailVerified();
     if(!verified){ showToast(t('stillNotVerified')); return; }
     const dest = state.postVerifyDestination || 'home';
+    if(state.role==='admin'){
+      state.adminPendingCoaches = await loadPendingCoaches();
+      state.adminStats = await loadAdminStats();
+      go('admin');
+      return;
+    }
     if(state.role==='coach'){
       await refreshCoachDirectory();
       state.coachId = state.user.uid;
@@ -3023,9 +3091,10 @@ function attachHandlers(){
     showToast(failedCount>0 ? t('someAttachmentsFailed') : t('toastAnalysisSent'));
     go('coach-dash');
   });
-  app.querySelector('[data-action="start-upload"]')?.addEventListener('click', ()=>{
+  app.querySelector('[data-action="start-upload"]')?.addEventListener('click', async ()=>{
     state.draft = { videos:[], isDemo:false, fileName:null, category:'kids', note:'' };
-    go('upload');
+    await refreshCoachDirectory();
+    go('coaches');
   });
 
   // upload view
@@ -3077,11 +3146,18 @@ function attachHandlers(){
   app.querySelector('[data-action="to-coaches"]')?.addEventListener('click', async ()=>{
     const d = state.draft;
     if(!d.isDemo && (!d.videos || !d.videos.length)) return;
-    await refreshCoachDirectory();
-    go('coaches');
+    if(!state.selectedCoach){ go('coaches'); return; }
+    go('confirm');
   });
 
   // coaches view
+  app.querySelector('#coach-search-input')?.addEventListener('input', (e)=>{
+    state.filters.query = e.target.value;
+    const caret = e.target.selectionStart;
+    render();
+    const input = document.getElementById('coach-search-input');
+    if(input){ input.focus(); input.setSelectionRange(caret, caret); }
+  });
   app.querySelectorAll('[data-coach-type-filter]').forEach(el=>{
     el.addEventListener('click', ()=>{ state.filters.coachType = el.dataset.coachTypeFilter; state.filters.generalSpec='all'; render(); });
   });
@@ -3102,18 +3178,33 @@ function attachHandlers(){
       e.stopPropagation();
       const coach = COACHES.find(c=>c.id===el.dataset.selectCoach) || state.viewingCoach;
       state.selectedCoach = coach;
-      state.draft.wantsHighlightClip = false;
-      state.activePackages = state.user ? await loadActivePackages(state.user.uid, coach.id) : [];
-      state.draft.paymentChoice = state.activePackages.length ? ('existing:'+state.activePackages[0].id) : 'single';
-      go('confirm');
+      if(!state.draft.wantsHighlightClip) state.draft.wantsHighlightClip = false;
+      if(!state.activePackages || !state.activePackages.length){
+        state.activePackages = state.user ? await loadActivePackages(state.user.uid, coach.id) : [];
+      }
+      if(!state.draft.paymentChoice){
+        state.draft.paymentChoice = state.activePackages.length ? ('existing:'+state.activePackages[0].id) : 'single';
+      }
+      state.draft.videos = [];
+      state.draft.isDemo = false;
+      state.draft.fileName = null;
+      state.draft.category = state.draft.category || 'kids';
+      state.draft.note = '';
+      go('upload');
     });
   });
   app.querySelectorAll('[data-view-coach]').forEach(el=>{
-    el.addEventListener('click', async ()=>{
+    el.addEventListener('click', async (e)=>{
+      e.stopPropagation();
       const coach = COACHES.find(c=>c.id===el.dataset.viewCoach);
       if(!coach) return;
       state.viewingCoach = coach;
+      state.selectedCoach = coach;
+      state.draft.wantsHighlightClip = false;
+      state.draft.paymentChoice = null;
       state.coachReviews = await loadCoachReviews(coach.id);
+      state.activePackages = state.user ? await loadActivePackages(state.user.uid, coach.id) : [];
+      state.draft.paymentChoice = state.activePackages.length ? ('existing:'+state.activePackages[0].id) : 'single';
       go('coach-profile');
     });
   });
@@ -3146,7 +3237,8 @@ function attachHandlers(){
       const pkg = (c.packages||[]).find(p=>p.id===packageTemplateId);
       basePrice = pkg ? pkg.price : 0; paymentType = 'newPackage';
     }
-    const totalPrice = basePrice + clipPrice;
+    const coachAmount = basePrice + clipPrice;
+    const fee = computeFee(coachAmount);
 
     const uploadedVideos = [];
     const videosToUpload = d.videos || [];
@@ -3201,7 +3293,8 @@ function attachHandlers(){
       isDemo: !!d.isDemo,
       videos: uploadedVideos,
       totalDurationSec: dur,
-      paymentType, packagePurchaseId, basePrice, wantsHighlightClip: wantsClip, highlightClipPrice: clipPrice, highlightClipTurnaround: wantsClip ? c.highlightClipTurnaround : null, price: totalPrice,
+      paymentType, packagePurchaseId, basePrice, wantsHighlightClip: wantsClip, highlightClipPrice: clipPrice, highlightClipTurnaround: wantsClip ? c.highlightClipTurnaround : null,
+      price: coachAmount, platformFee: fee.fee, totalCharged: fee.total,
       createdAt: Date.now(), deadline: null, status:'requested'
     };
     const id = await createRequestDoc(reqData);
@@ -3214,7 +3307,7 @@ function attachHandlers(){
       `<div dir="rtl" style="font-family:sans-serif">
         <h2>יש לכם בקשת ניתוח חדשה!</h2>
         <p><b>${state.user.name}</b> שלח/ה בקשה לניתוח וידאו.</p>
-        <p>קטגוריה: ${SPEC_LABEL[state.lang][d.category]}<br>סכום: ₪${totalPrice}</p>
+        <p>קטגוריה: ${SPEC_LABEL[state.lang][d.category]}<br>סכום: ₪${fee.total}</p>
         <p>היכנסו לאפליקציה כדי לאשר או לדחות את הבקשה.</p>
       </div>`
     );
@@ -3304,6 +3397,17 @@ setInterval(()=>{
         } else {
           await loadMyRequests(state.user.uid);
           state.view = 'home';
+        }
+      } else if(fbUser.email && fbUser.email.toLowerCase()===ADMIN_EMAIL.toLowerCase()){
+        state.user = {uid:fbUser.uid, email:fbUser.email, role:'admin'};
+        state.role = 'admin';
+        if(!fbUser.emailVerified){
+          state.postVerifyDestination = 'admin';
+          state.view = 'verify-email';
+        } else {
+          state.adminPendingCoaches = await loadPendingCoaches();
+          state.adminStats = await loadAdminStats();
+          state.view = 'admin';
         }
       } else {
         state.view = 'lang-select';

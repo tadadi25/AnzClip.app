@@ -1878,7 +1878,9 @@ function renderCoachProfile(){
     const pkg = (c.packages||[]).find(p=>p.id===pid);
     if(pkg){ choiceSummary = `${t('packageNamePreview')} ${pkg.gameCount} ${t('gamesUnit')} — ₪${pkg.price}`; coachAmount = pkg.price; }
   }
-  const fee = computeFee(coachAmount);
+  const wantsClip = !!state.draft.wantsHighlightClip && c.highlightClipEnabled;
+  const clipPrice = wantsClip ? c.highlightClipPrice : 0;
+  const fee = computeFee(coachAmount + clipPrice);
   return `
     <div class="coach-top" style="margin-bottom:14px">
       ${avatarHtml(c, 56)}
@@ -1922,11 +1924,18 @@ function renderCoachProfile(){
       </div>
       <div class="summary-card" style="margin-top:14px">
         <div class="summary-row"><span>${t('priceForYourVideo')}</span><span class="mono">${choiceSummary}</span></div>
-        ${!isExisting ? `
+        ${wantsClip ? `<div class="summary-row"><span>${t('highlightClipTitle')}</span><span class="mono">+₪${clipPrice}</span></div>` : ''}
+        ${!isExisting || wantsClip ? `
           <div class="summary-row"><span>${t('serviceFeeLabel')}</span><span class="mono">+₪${fee.fee}</span></div>
           <div class="summary-row"><span><b>${t('totalPriceLabel')}</b></span><span class="mono"><b>₪${fee.total}</b></span></div>
         ` : ''}
       </div>
+      ${c.highlightClipEnabled ? `
+        <div class="chip-row" style="margin-top:14px">
+          <div class="chip ${wantsClip?'active':''}" data-toggle-clip="1">${t('highlightClipTitle')} (+₪${c.highlightClipPrice})</div>
+        </div>
+        ${!wantsClip ? `<div class="req-meta" style="margin-top:6px">${t('highlightClipTurnaroundLabel')}: ${fmtHours(c.highlightClipTurnaround)}</div>` : ''}
+      ` : ''}
     ` : ''}
 
     <div class="section-title" style="margin-top:22px">${t('reviewsTitle')} ${reviews.length?`(${reviews.length})`:''}</div>

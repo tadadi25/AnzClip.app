@@ -991,7 +991,7 @@ async function loadIncomingRequests(uid){
 }
 async function loadCoachReviews(coachUid){
   try{
-    const snap = await db.collection('requests').where('coachUid','==',coachUid).get();
+    const snap = await db.collection('requests').where('coachUid','==',coachUid).where('status','==','done').where('gkRating','>',0).get();
     const reviews = [];
     snap.forEach(doc=>{
       const d = doc.data();
@@ -1922,6 +1922,13 @@ function renderCoachProfile(){
         <div class="chip ${choice==='single'?'active':''}" data-payment-choice="single">${t('singleGameOption')} (₪${c.singleGamePrice})</div>
         ${(c.packages||[]).map(p=>`<div class="chip ${choice==='new:'+p.id?'active':''}" data-payment-choice="new:${p.id}">${p.gameCount} ${t('gamesUnit')} (₪${p.price})</div>`).join('')}
       </div>
+      ${c.highlightClipEnabled ? `
+        <div class="field-label" style="margin-top:14px">${t('highlightClipTitle')}</div>
+        <div class="chip-row">
+          <div class="chip ${wantsClip?'active':''}" data-toggle-clip="1">${t('highlightClipTitle')} (+₪${c.highlightClipPrice})</div>
+        </div>
+        ${!wantsClip ? `<div class="req-meta" style="margin-top:6px">${t('highlightClipTurnaroundLabel')}: ${fmtHours(c.highlightClipTurnaround)}</div>` : ''}
+      ` : ''}
       <div class="summary-card" style="margin-top:14px">
         <div class="summary-row"><span>${t('priceForYourVideo')}</span><span class="mono">${choiceSummary}</span></div>
         ${wantsClip ? `<div class="summary-row"><span>${t('highlightClipTitle')}</span><span class="mono">+₪${clipPrice}</span></div>` : ''}
@@ -1930,12 +1937,6 @@ function renderCoachProfile(){
           <div class="summary-row"><span><b>${t('totalPriceLabel')}</b></span><span class="mono"><b>₪${fee.total}</b></span></div>
         ` : ''}
       </div>
-      ${c.highlightClipEnabled ? `
-        <div class="chip-row" style="margin-top:14px">
-          <div class="chip ${wantsClip?'active':''}" data-toggle-clip="1">${t('highlightClipTitle')} (+₪${c.highlightClipPrice})</div>
-        </div>
-        ${!wantsClip ? `<div class="req-meta" style="margin-top:6px">${t('highlightClipTurnaroundLabel')}: ${fmtHours(c.highlightClipTurnaround)}</div>` : ''}
-      ` : ''}
     ` : ''}
 
     <div class="section-title" style="margin-top:22px">${t('reviewsTitle')} ${reviews.length?`(${reviews.length})`:''}</div>

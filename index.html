@@ -2543,6 +2543,7 @@ function attachHandlers(){
         await loadIncomingRequests(state.user.uid);
       } else {
         await loadMyRequests(state.user.uid);
+        await refreshCoachDirectory();
       }
       showToast(t('welcomeBack')+', '+state.user.name);
       await savePrefs();
@@ -2585,6 +2586,7 @@ function attachHandlers(){
       await loadIncomingRequests(state.user.uid);
     } else {
       await loadMyRequests(state.user.uid);
+      await refreshCoachDirectory();
     }
     await savePrefs();
     if(dest==='country-select'){
@@ -3396,6 +3398,7 @@ setInterval(()=>{
           state.view = 'home';
         } else {
           await loadMyRequests(state.user.uid);
+          await refreshCoachDirectory();
           state.view = 'home';
         }
       } else if(fbUser.email && fbUser.email.toLowerCase()===ADMIN_EMAIL.toLowerCase()){

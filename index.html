@@ -394,6 +394,10 @@
   }
   .consent-row a{ color:var(--coral-dim); text-decoration:underline; }
   .package-row{ display:flex; align-items:flex-end; gap:8px; margin-bottom:10px; }
+  .stat-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .stat-row-label{ flex:1; font-size:13px; color:var(--chalk-dim); }
+  .stat-row-sep{ color:var(--muted); font-size:13px; }
+  .stat-mini{ width:64px; flex-shrink:0; padding:8px 10px; text-align:center; }
   .pkg-remove-btn{
     background:var(--surface); border:1px solid rgba(243,241,231,.1); border-radius:10px; width:44px; height:44px;
     flex-shrink:0; color:var(--muted); cursor:pointer; display:flex; align-items:center; justify-content:center;
@@ -438,6 +442,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyB_-x4zF93fus5IMpFfIiOf1_JjaSkXxfc",
@@ -479,6 +484,27 @@ const COACH_TYPE_LABEL = {
   he:{goalkeeper:'מאמן שוערים', general:'מאמן כללי', analyst:'אנליסט'},
   en:{goalkeeper:'Goalkeeper coach', general:'General coach', analyst:'Analyst'},
 };
+
+const STAT_DEFS = {
+  goalkeeper: [
+    { key:'saves', type:'ratio', he:'הצלות', en:'Saves' },
+    { key:'exits', type:'ratio', he:'יציאות מוצלחות', en:'Successful exits' },
+    { key:'passAccuracy', type:'ratio', he:'דיוק מסירות/בעיטות', en:'Pass/kick accuracy' },
+    { key:'goalsConceded', type:'count', he:'שערים שספג', en:'Goals conceded' },
+  ],
+  field: [
+    { key:'keyPasses', type:'count', he:'מסירות מפתח', en:'Key passes' },
+    { key:'passAccuracy', type:'ratio', he:'דיוק מסירות', en:'Pass accuracy' },
+    { key:'duelsWon', type:'ratio', he:'הצלחות בהתמודדות', en:'Duels won' },
+    { key:'turnovers', type:'count', he:'איבודי כדור', en:'Turnovers' },
+    { key:'goals', type:'count', he:'שערים', en:'Goals' },
+    { key:'assists', type:'count', he:'בישולים', en:'Assists' },
+  ],
+};
+function statLabel(key, role){
+  const def = (STAT_DEFS[role]||[]).find(s=>s.key===key);
+  return def ? def[state.lang] : key;
+}
 
 const SAMPLE_ANALYSIS = {
   he:'עמידה ומיקום בשער תקינים ברוב המצבים, אך יש נטייה לאבד את קו השער בכדורים חוצים — מומלץ לתרגל קריאת זוויות מול מסירות רוחביות. יציאות מהקו נעשות בתזמון טוב ברוב המקרים, למעט שתי סיטואציות של יציאה מוקדמת מדי שיצרה סיכון לכדור מעל. הנפילה הצדדית חלקה ובטוחה עם שימוש טוב בידיים, אך יש מקום לשיפור בזמן ההתאוששות לאחר נפילה כפולה. משחק הרגליים מדויק תחת לחץ נמוך, אך תחת לחץ גבוה נראתה חוסר ביטחון — מומלץ תרגול בלחץ מדורג.',
@@ -605,6 +631,11 @@ const STR = {
     coachTypeTitle:'סוג מאמן', coachTypeGK:'מאמן שוערים', coachTypeGeneral:'מאמן כללי', coachTypeAnalyst:'אנליסט',
     coachTypeHint:'אפשר לסמן כמה סוגים',
     generalSpecTitle:'התמחות', fieldPositions:'עמדות משחק', positionsHint:'אפשר לסמן כמה עמדות',
+    playerRoleTitle:'תפקיד', playerRoleGK:'שוער', playerRoleField:'שחקן שדה', playerRoleHint:'זה קובע אילו מאמנים תראו',
+    requiredPlayerRole:'יש לבחור אם אתם שוער או שחקן שדה',
+    statsTitle:'סטטיסטיקות המשחק', statsOptional:'אופציונלי', statMade:'הצליח', statAttempts:'מתוך',
+    myStatsNav:'הסטטיסטיקה שלי', statsPageTitle:'הסטטיסטיקה שלי', noStatsYet:'עדיין אין מספיק ניתוחים עם סטטיסטיקות',
+    perGameLabel:'משחק',
     filterCoachType:'סוג מאמן', filterAllTypes:'הכל', filterSpecialization:'התמחות',
     writeReview:'כתבו ביקורת (אופציונלי)', reviewPlaceholder:'איך היה הניתוח? מה עבד טוב?',
     reviewsTitle:'ביקורות', noReviewsYet:'עדיין אין ביקורות', submitRating:'שלחו דירוג',
@@ -735,6 +766,11 @@ const STR = {
     coachTypeTitle:'Coach type', coachTypeGK:'Goalkeeper coach', coachTypeGeneral:'General coach', coachTypeAnalyst:'Analyst',
     coachTypeHint:'You can select more than one',
     generalSpecTitle:'Specialization', fieldPositions:'Playing positions', positionsHint:'You can select more than one',
+    playerRoleTitle:'Role', playerRoleGK:'Goalkeeper', playerRoleField:'Field player', playerRoleHint:'This determines which coaches you\'ll see',
+    requiredPlayerRole:'Please choose whether you are a goalkeeper or a field player',
+    statsTitle:'Game statistics', statsOptional:'Optional', statMade:'Made', statAttempts:'Out of',
+    myStatsNav:'My stats', statsPageTitle:'My stats', noStatsYet:'Not enough analyses with stats yet',
+    perGameLabel:'Game',
     filterCoachType:'Coach type', filterAllTypes:'All', filterSpecialization:'Specialization',
     writeReview:'Write a review (optional)', reviewPlaceholder:'How was the analysis? What worked well?',
     reviewsTitle:'Reviews', noReviewsYet:'No reviews yet', submitRating:'Submit rating',
@@ -1098,6 +1134,7 @@ function icon(name, size=20){
     upload:`<path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`,
     home:`<path d="M4 10.5L12 4l8 6.5V19a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4H10v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-8.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>`,
     list:`<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+    chart:`<path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`,
     back:`<path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
     star:`<path d="M12 2l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17l-6.1 3.5 1.5-6.8L2.2 9l6.9-.7L12 2z" fill="currentColor"/>`,
     clip:`<rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 12l2.5 2.5L16 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`,
@@ -1120,6 +1157,69 @@ function fmtHours(h){
 }
 function fmtMinutes(min){
   return `${Math.round(min)} ${t('minutesUnit')}`;
+}
+function renderMyStats(){
+  const role = (state.user && state.user.playerRole) || 'field';
+  const defs = STAT_DEFS[role] || STAT_DEFS.field;
+  const games = state.requests
+    .filter(r=>r.status==='done' && r.stats && Object.keys(r.stats).length)
+    .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  if(!games.length){
+    return `<div class="empty-state" style="padding:60px 20px">${icon('chart',34)}<b>${t('noStatsYet')}</b></div>`;
+  }
+  const charts = defs.map(s=>{
+    const hasData = games.some(g=> g.stats && g.stats[s.key]!=null);
+    if(!hasData) return '';
+    return `
+      <div class="field-label" style="margin-top:22px">${s[state.lang]}</div>
+      <div style="position:relative;width:100%;height:200px;">
+        <canvas id="statchart-${s.key}"></canvas>
+      </div>
+    `;
+  }).join('');
+  return `<div style="padding-bottom:10px">${charts}</div>`;
+}
+function initStatsCharts(){
+  if(typeof Chart==='undefined') return;
+  const role = (state.user && state.user.playerRole) || 'field';
+  const defs = STAT_DEFS[role] || STAT_DEFS.field;
+  const games = state.requests
+    .filter(r=>r.status==='done' && r.stats && Object.keys(r.stats).length)
+    .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const labels = games.map((g,i)=> `${t('perGameLabel')} ${i+1}`);
+  defs.forEach(s=>{
+    const canvas = document.getElementById('statchart-'+s.key);
+    if(!canvas) return;
+    let data;
+    if(s.type==='ratio'){
+      data = games.map(g=>{
+        const v = g.stats && g.stats[s.key];
+        if(!v || !v.att) return null;
+        return Math.round((v.made/v.att)*100);
+      });
+    } else {
+      data = games.map(g=> (g.stats && g.stats[s.key]!=null) ? g.stats[s.key] : null);
+    }
+    new Chart(canvas, {
+      type: s.type==='ratio' ? 'line' : 'bar',
+      data:{ labels, datasets:[{
+        data,
+        borderColor:'#ff6b47', backgroundColor: s.type==='ratio' ? 'rgba(255,107,71,.15)' : '#ff6b47',
+        borderWidth:2, pointRadius:4, pointBackgroundColor:'#ff6b47',
+        fill: s.type==='ratio', tension:0.3,
+        borderRadius: s.type==='count' ? 4 : 0, maxBarThickness:28
+      }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false} },
+        scales:{
+          y: s.type==='ratio'
+            ? { min:0, max:100, ticks:{color:'#9aa89e', callback:(v)=>v+'%'}, grid:{color:'rgba(154,168,158,.15)'} }
+            : { beginAtZero:true, ticks:{color:'#9aa89e', precision:0}, grid:{color:'rgba(154,168,158,.15)'} },
+          x: { ticks:{color:'#9aa89e'}, grid:{display:false} }
+        }
+      }
+    });
+  });
 }
 function cleanPackages(packages){
   return (packages||[])
@@ -1217,7 +1317,7 @@ function render(){
 function renderTopBar(){
   const titles = {
     home:null, upload:t('titleUpload'), coaches:t('titleCoaches'), confirm:t('titleConfirm'), requests:t('titleRequests'),
-    'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'admin':t('adminTitle')
+    'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'admin':t('adminTitle'), 'my-stats':t('statsPageTitle')
   };
   const isRoot = state.view==='home' || state.view==='coach-dash' || state.view==='admin';
   return `
@@ -1269,6 +1369,9 @@ function renderBottomNav(){
         <span class="nav-icon-wrap">${icon('list',20)}${unseenCount>0?`<span class="nav-badge">${unseenCount>9?'9+':unseenCount}</span>`:''}</span>
         <span>${t('navRequests')}</span>
       </button>
+      <button class="nav-btn ${state.view==='my-stats'?'active':''}" data-action="nav-my-stats">
+        ${icon('chart',20)}<span>${t('myStatsNav')}</span>
+      </button>
     </div>
   `;
 }
@@ -1291,6 +1394,7 @@ function renderView(){
     case 'profile': return renderProfile();
     case 'coach-profile': return renderCoachProfile();
     case 'admin': return renderAdmin();
+    case 'my-stats': return renderMyStats();
     case 'verify-email': return renderVerifyEmail();
     case 'forgot-password': return renderForgotPassword();
     default: return renderHome();
@@ -1467,13 +1571,22 @@ function renderSignupGK(){
         </div>
         <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('passwordHint')}</div>
 
-        <div class="field-label">${t('fieldPositions')}</div>
-        <div class="chip-row" id="su-position-chips">
-          ${['goalkeeper','center_back','fullback','midfielder','winger','striker'].map(p=>`
-            <div class="chip ${(d.positions||[]).includes(p)?'active':''}" data-su-position="${p}">${POSITION_LABEL[state.lang][p]}</div>
-          `).join('')}
+        <div class="field-label">${t('playerRoleTitle')}</div>
+        <div class="chip-row" id="su-player-role-chips">
+          <div class="chip ${d.playerRole==='goalkeeper'?'active':''}" data-su-player-role="goalkeeper">${t('playerRoleGK')}</div>
+          <div class="chip ${d.playerRole==='field'?'active':''}" data-su-player-role="field">${t('playerRoleField')}</div>
         </div>
-        <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('positionsHint')}</div>
+        <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('playerRoleHint')}</div>
+
+        ${d.playerRole==='field' ? `
+          <div class="field-label">${t('fieldPositions')}</div>
+          <div class="chip-row" id="su-position-chips">
+            ${['center_back','fullback','midfielder','winger','striker'].map(p=>`
+              <div class="chip ${(d.positions||[]).includes(p)?'active':''}" data-su-position="${p}">${POSITION_LABEL[state.lang][p]}</div>
+            `).join('')}
+          </div>
+          <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('positionsHint')}</div>
+        ` : ''}
 
         <div class="field-label">${t('fieldDob')}</div>
         <input class="form-input" id="su-dob" type="date" value="${d.dob||''}">
@@ -1719,6 +1832,13 @@ function filteredCoaches(){
   list = list.filter(c => state.filters.country==='all' || c.country===state.filters.country);
   list = list.filter(c => state.filters.coachType==='all' || (c.coachTypes||[]).includes(state.filters.coachType));
   list = list.filter(c => state.filters.generalSpec==='all' || (c.generalSpecialties||[]).includes(state.filters.generalSpec));
+  if(state.user && state.user.role==='gk' && state.user.playerRole){
+    if(state.user.playerRole==='goalkeeper'){
+      list = list.filter(c => (c.coachTypes||[]).includes('goalkeeper') || (c.coachTypes||[]).includes('analyst'));
+    } else {
+      list = list.filter(c => (c.coachTypes||[]).includes('general') || (c.coachTypes||[]).includes('analyst'));
+    }
+  }
   if(state.filters.query && state.filters.query.trim()){
     const q = state.filters.query.trim().toLowerCase();
     list = list.filter(c => c.name.toLowerCase().includes(q));
@@ -1759,6 +1879,27 @@ function videosViewHtml(r){
   }
   return `<div style="display:flex;flex-direction:column;gap:10px">${r.videos.map(v=>`<div class="video-preview"><video src="${v.url}" controls></video></div>`).join('')}</div>`;
 }
+function statsViewHtml(stats, role){
+  if(!stats || !Object.keys(stats).length) return '';
+  const defs = STAT_DEFS[role] || STAT_DEFS.field;
+  const rows = defs.filter(s=>stats[s.key]!=null).map(s=>{
+    const v = stats[s.key];
+    let display;
+    if(s.type==='ratio'){
+      if(v.made==null || v.att==null || v.att===0) return '';
+      const pct = Math.round((v.made/v.att)*100);
+      display = `${v.made}/${v.att} (${pct}%)`;
+    } else {
+      display = String(v);
+    }
+    return `<div class="summary-row"><span>${s[state.lang]}</span><span class="mono">${display}</span></div>`;
+  }).join('');
+  if(!rows) return '';
+  return `
+    <div class="field-label" style="margin-top:14px">${t('statsTitle')}</div>
+    <div class="summary-card">${rows}</div>
+  `;
+}
 function attachmentsViewHtml(attachments){
   if(!attachments || !attachments.length) return '';
   return `
@@ -1786,13 +1927,18 @@ function fmtDateTime(ts){
 
 function renderCoaches(){
   const list = filteredCoaches();
+  const isGkPlayer = state.user && state.user.role==='gk' && state.user.playerRole==='goalkeeper';
+  const isFieldPlayer = state.user && state.user.role==='gk' && state.user.playerRole==='field';
+  const typeOptions = isGkPlayer ? [['all',t('filterAllTypes')],['goalkeeper',t('coachTypeGK')],['analyst',t('coachTypeAnalyst')]]
+    : isFieldPlayer ? [['all',t('filterAllTypes')],['general',t('coachTypeGeneral')],['analyst',t('coachTypeAnalyst')]]
+    : [['all',t('filterAllTypes')],['goalkeeper',t('coachTypeGK')],['general',t('coachTypeGeneral')],['analyst',t('coachTypeAnalyst')]];
   return `
     <div class="field-label" style="margin-top:0">${t('searchCoachLabel')}</div>
     <input class="form-input" id="coach-search-input" type="text" placeholder="${t('searchCoachPh')}" value="${state.filters.query||''}">
 
     <div class="field-label" style="margin-top:14px">${t('filterCoachType')}</div>
     <div class="filter-bar">
-      ${[['all',t('filterAllTypes')],['goalkeeper',t('coachTypeGK')],['general',t('coachTypeGeneral')],['analyst',t('coachTypeAnalyst')]].map(([v,l])=>`
+      ${typeOptions.map(([v,l])=>`
         <div class="chip ${state.filters.coachType===v?'active':''}" data-coach-type-filter="${v}">${l}</div>
       `).join('')}
     </div>
@@ -2112,6 +2258,7 @@ function renderRequests(){
             <div class="analysis-item"><b>${t('coachAnalysisTitle')}</b><span>${r.analysis}</span></div>
             ${attachmentsViewHtml(r.attachments)}
           </div>
+          ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
           ${r.gkRating ? `
             <div class="rating-given">${t('yourRating')}: ${starsHtml(r.gkRating,18)}</div>
             ${r.reviewText ? `<div class="req-meta" style="margin-top:6px">"${r.reviewText}"</div>` : ''}
@@ -2246,6 +2393,7 @@ function renderCoachDash(){
               <div class="analysis-item"><b>${t('coachAnalysisTitle')}</b><span>${r.analysis}</span></div>
               ${attachmentsViewHtml(r.attachments)}
             </div>
+            ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
           `}
         `}
         </div>
@@ -2280,6 +2428,21 @@ function renderAttachList(){
   });
 }
 
+function statsInputHtml(role){
+  const defs = STAT_DEFS[role] || STAT_DEFS.field;
+  return defs.map(s=>`
+    <div class="stat-row">
+      <span class="stat-row-label">${s[state.lang]}</span>
+      ${s.type==='ratio' ? `
+        <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="made" placeholder="${t('statMade')}">
+        <span class="stat-row-sep">/</span>
+        <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="att" placeholder="${t('statAttempts')}">
+      ` : `
+        <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="count" placeholder="0">
+      `}
+    </div>
+  `).join('');
+}
 function renderCoachCompose(){
   const r = state.requests.find(x=>x.id===state.composeId);
   if(!r) return renderCoachDash();
@@ -2307,6 +2470,9 @@ function renderCoachCompose(){
       <b id="score-display">8.0</b>
       <input type="range" id="score-range" min="1" max="10" step="0.1" value="8.0">
     </div>
+
+    <div class="field-label">${t('statsTitle')} <span style="font-weight:400;color:var(--muted);font-size:12px">(${t('statsOptional')})</span></div>
+    <div id="stats-inputs">${statsInputHtml(r.gkPlayerRole||'field')}</div>
 
     <div class="field-label">${t('coachAnalysisTitle')}</div>
     <textarea id="analysis-text" class="textarea-lg" placeholder="${t('fbPlaceholder')}"></textarea>
@@ -2404,10 +2570,17 @@ function renderProfile(){
       </label>
       <input type="file" id="pf-cert-input" accept="image/*,.pdf" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
     ` : `
-      <div class="field-label">${t('fieldPositions')}</div>
-      <div class="chip-row" id="pf-position-chips">
-        ${['goalkeeper','center_back','fullback','midfielder','winger','striker'].map(p=>`<div class="chip ${(d.positions||[]).includes(p)?'active':''}" data-pf-position="${p}">${POSITION_LABEL[state.lang][p]}</div>`).join('')}
+      <div class="field-label">${t('playerRoleTitle')}</div>
+      <div class="chip-row" id="pf-player-role-chips">
+        <div class="chip ${d.playerRole==='goalkeeper'?'active':''}" data-pf-player-role="goalkeeper">${t('playerRoleGK')}</div>
+        <div class="chip ${d.playerRole==='field'?'active':''}" data-pf-player-role="field">${t('playerRoleField')}</div>
       </div>
+      ${d.playerRole==='field' ? `
+        <div class="field-label">${t('fieldPositions')}</div>
+        <div class="chip-row" id="pf-position-chips">
+          ${['center_back','fullback','midfielder','winger','striker'].map(p=>`<div class="chip ${(d.positions||[]).includes(p)?'active':''}" data-pf-position="${p}">${POSITION_LABEL[state.lang][p]}</div>`).join('')}
+        </div>
+      ` : ''}
       <div class="field-label">${t('fieldDob')}</div>
       <input class="form-input" id="pf-dob" type="date" value="${d.dob||''}">
       <div class="field-label">${t('fieldClub')}</div>
@@ -2471,6 +2644,10 @@ function attachHandlers(){
     go('requests');
     markRequestsSeen();
     render();
+  });
+  app.querySelector('[data-action="nav-my-stats"]')?.addEventListener('click', async ()=>{
+    if(state.user) await loadMyRequests(state.user.uid);
+    go('my-stats');
   });
   app.querySelectorAll('[data-action="nav-coach-dash"]').forEach(el=>{
     el.addEventListener('click', async ()=>{
@@ -2643,16 +2820,26 @@ function attachHandlers(){
       render();
     });
   });
+  app.querySelectorAll('[data-su-player-role]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      state.signupDraft.playerRole = el.dataset.suPlayerRole;
+      if(state.signupDraft.playerRole==='goalkeeper') state.signupDraft.positions = ['goalkeeper'];
+      else state.signupDraft.positions = (state.signupDraft.positions||[]).filter(p=>p!=='goalkeeper');
+      render();
+    });
+  });
   app.querySelector('[data-action="finish-signup-gk"]')?.addEventListener('click', async ()=>{
     const d = state.signupDraft;
     if(!d.name || !d.name.trim()){ showToast(t('requiredName')); return; }
     if(!EMAIL_RE.test((d.email||'').trim())){ showToast(t('invalidEmail')); return; }
     if(!d.password || d.password.length<6){ showToast(t('invalidPassword')); return; }
     if(!d.agreedTerms){ showToast(t('mustAgreeTerms')); return; }
+    if(!d.playerRole){ showToast(t('requiredPlayerRole')); return; }
     const emailLower = d.email.trim().toLowerCase();
     const profile = {
       role:'gk', name:d.name.trim(), email:emailLower,
-      positions: d.positions || [],
+      playerRole: d.playerRole,
+      positions: d.playerRole==='goalkeeper' ? ['goalkeeper'] : (d.positions || []),
       photo:d.photo||null, dob:d.dob||null, club:d.club||'', height:d.height||'', about:d.about||'',
       acceptedTermsAt: Date.now()
     };
@@ -2900,6 +3087,14 @@ function attachHandlers(){
       render();
     });
   });
+  app.querySelectorAll('[data-pf-player-role]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      state.profileDraft.playerRole = el.dataset.pfPlayerRole;
+      if(state.profileDraft.playerRole==='goalkeeper') state.profileDraft.positions = ['goalkeeper'];
+      else state.profileDraft.positions = (state.profileDraft.positions||[]).filter(p=>p!=='goalkeeper');
+      render();
+    });
+  });
   app.querySelector('[data-pf-clip-toggle]')?.addEventListener('click', ()=>{
     state.profileDraft.highlightClipEnabled = !state.profileDraft.highlightClipEnabled;
     render();
@@ -2954,7 +3149,8 @@ function attachHandlers(){
       ...certUpdates
     } : {
       name: d.name.trim(), photo: d.photo||null,
-      positions: d.positions || [],
+      playerRole: d.playerRole || 'field',
+      positions: d.playerRole==='goalkeeper' ? ['goalkeeper'] : (d.positions || []),
       dob: d.dob||null, club: d.club||'', height: d.height||'', about: d.about||''
     };
     try{
@@ -3063,6 +3259,18 @@ function attachHandlers(){
     if(!analysisText){ showToast(t('requiredAnalysis')); return; }
     const scoreVal = parseFloat(app.querySelector('#score-range')?.value || '8.0').toFixed(1);
 
+    const stats = {};
+    app.querySelectorAll('#stats-inputs [data-stat-key]').forEach(inp=>{
+      const val = inp.value.trim();
+      if(val==='') return;
+      const key = inp.dataset.statKey, field = inp.dataset.statField;
+      if(field==='count'){ stats[key] = Number(val); }
+      else {
+        if(!stats[key]) stats[key] = {};
+        stats[key][field] = Number(val);
+      }
+    });
+
     const files = state.composeAttachments || [];
     const uploadedAttachments = [];
     let failedCount = 0;
@@ -3082,12 +3290,13 @@ function attachHandlers(){
       btn.textContent = originalLabel;
     }
 
-    const ok = await updateRequestDoc(r.id, {status:'done', score:scoreVal, analysis:analysisText, attachments:uploadedAttachments, gkSeen:false});
+    const ok = await updateRequestDoc(r.id, {status:'done', score:scoreVal, analysis:analysisText, attachments:uploadedAttachments, stats, gkSeen:false});
     if(!ok){ showToast(t('saveError')); return; }
     r.status = 'done';
     r.score = scoreVal;
     r.analysis = analysisText;
     r.attachments = uploadedAttachments;
+    r.stats = stats;
     r.gkSeen = false;
     state.composeAttachments = [];
     sendEmailNotification(
@@ -3299,6 +3508,7 @@ function attachHandlers(){
 
     const reqData = {
       gkUid: state.user.uid, gkName: state.user.name, gkPhoto: state.user.photo||null, gkEmail: state.user.email||null, gkSeen: true,
+      gkPlayerRole: state.user.playerRole || 'field',
       coachUid: c.id,
       coach: { id:c.id, name:c.name, country:c.country, turnaround:c.turnaround, avatarColor:c.avatarColor, photo:c.photo||null },
       category: d.category, note: d.note||'', fileName: d.isDemo ? d.fileName : `${uploadedVideos.length} ${t('selectedVideos')}`,
@@ -3377,6 +3587,8 @@ function attachHandlers(){
       render();
     });
   });
+
+  if(state.view==='my-stats') initStatsCharts();
 }
 
 /* countdown ticker */

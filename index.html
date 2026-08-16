@@ -1027,11 +1027,11 @@ async function loadIncomingRequests(uid){
 }
 async function loadCoachReviews(coachUid){
   try{
-    const snap = await db.collection('requests').where('coachUid','==',coachUid).where('status','==','done').where('gkRating','>',0).get();
+    const snap = await db.collection('reviews').where('coachUid','==',coachUid).get();
     const reviews = [];
     snap.forEach(doc=>{
       const d = doc.data();
-      if(d.gkRating){ reviews.push({ gkName:d.gkName, gkPhoto:d.gkPhoto||null, rating:d.gkRating, text:d.reviewText||'', createdAt:d.createdAt }); }
+      reviews.push({ gkName:d.gkName, gkPhoto:d.gkPhoto||null, rating:d.rating, text:d.text||'', createdAt:d.createdAt });
     });
     reviews.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
     return reviews;
@@ -1054,7 +1054,7 @@ async function sendEmailNotification(toEmail, subject, htmlBody){
     });
   }catch(e){ console.error('failed to queue email notification', e); }
 }
-async function rateCoachRequest(reqId, coachUid, n, reviewText){
+async function rateCoachRequest(reqId, coachUid, n, reviewText, gkUid, gkName, gkPhoto){
   let reqOk = false, coachOk = false;
   try{
     await db.collection('requests').doc(reqId).update({ gkRating: n, reviewText: reviewText||'' });
@@ -1067,6 +1067,12 @@ async function rateCoachRequest(reqId, coachUid, n, reviewText){
     });
     coachOk = true;
   }catch(e){ console.error('updating coach aggregate rating failed', e); }
+  try{
+    await db.collection('reviews').add({
+      coachUid, gkUid, gkName: gkName||'', gkPhoto: gkPhoto||null,
+      rating: n, text: reviewText||'', createdAt: Date.now(), requestId: reqId
+    });
+  }catch(e){ console.error('creating public review failed', e); }
   return { reqOk, coachOk };
 }
 function applyDocDir(){
@@ -3578,7 +3584,7 @@ function attachHandlers(){
       const n = parseInt(wrap?.dataset.selected||'0', 10);
       if(!n){ showToast(t('requiredAnalysis')); return; }
       const reviewText = app.querySelector(`#review-text-${reqId}`)?.value?.trim() || '';
-      const result = await rateCoachRequest(reqId, req.coachUid, n, reviewText);
+      const result = await rateCoachRequest(reqId, req.coachUid, n, reviewText, state.user.uid, state.user.name, state.user.photo);
       if(!result.reqOk){ showToast(t('saveError')); return; }
       req.gkRating = n;
       req.reviewText = reviewText;

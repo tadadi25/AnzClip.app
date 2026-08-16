@@ -523,7 +523,7 @@ const STR = {
     heroTitle:'בוחרים מאמן/אנליסט.<br>מעלים משחק.<br>משתפרים.',
     heroSub:'בחרו מאמן/אנליסט לפי ותק, התמחות ומחיר, העלו סרטון מאימון או ממשחק, וקבלו ניתוח ביצועים מפורט תוך פרק זמן מוגדר מראש.',
     uploadCta:'בחרו מאמן/אנליסט',
-    statCoaches:'מאמנים', statCoachesGK:'מאמני שוערים', statDone:'ניתוחים שהושלמו', statTurnaround:'זמן מסירה',
+    statCoaches:'מאמנים/אנליסטים', statCoachesGK:'מאמני שוערים/אנליסטים', statDone:'ניתוחים שהושלמו', statTurnaround:'זמן מסירה',
     howTitle:'איך זה עובד',
     step1t:'בוחרים מאמן/אנליסט', step1s:'לפי סוג, התמחות, ותק, דירוג ומחיר.',
     step2t:'מעלים סרטון', step2s:'מאימון, משחק או תרגול עצמאי — כל קטע שבו רואים אתכם בפעולה.',
@@ -658,7 +658,7 @@ const STR = {
     heroTitle:'Pick a coach/analyst.<br>Upload the match.<br>Improve.',
     heroSub:'Choose a coach/analyst by experience, specialty and price, upload a video from training or a match, and get a detailed performance analysis within a set turnaround time.',
     uploadCta:'Choose a coach/analyst',
-    statCoaches:'Coaches', statCoachesGK:'GK coaches', statDone:'Analyses done', statTurnaround:'Turnaround',
+    statCoaches:'Coaches/analysts', statCoachesGK:'GK coaches/analysts', statDone:'Analyses done', statTurnaround:'Turnaround',
     howTitle:'How it works',
     step1t:'Choose a coach/analyst', step1s:'By type, specialty, experience, rating and price.',
     step2t:'Upload a video', step2s:'From training, a match, or solo practice — any clip that shows you in action.',
@@ -1741,7 +1741,7 @@ function renderHome(){
       <p class="hero-sub">${t('heroSub')}</p>
       <button class="btn btn-primary btn-block" data-action="start-upload">${icon('upload',19)} ${t('uploadCta')}</button>
       <div class="stats-strip">
-        <div class="stat-chip"><b class="mono">${(state.user && (state.user.positions||[]).includes('goalkeeper')) ? COACHES.filter(c=>(c.coachTypes||[]).includes('goalkeeper')).length : COACHES.length}</b><span>${(state.user && (state.user.positions||[]).includes('goalkeeper')) ? t('statCoachesGK') : t('statCoaches')}</span></div>
+        <div class="stat-chip"><b class="mono">${(state.user && state.user.playerRole==='goalkeeper') ? COACHES.filter(c=>(c.coachTypes||[]).includes('goalkeeper')||(c.coachTypes||[]).includes('analyst')).length : (state.user && state.user.playerRole==='field') ? COACHES.filter(c=>(c.coachTypes||[]).includes('general')||(c.coachTypes||[]).includes('analyst')).length : COACHES.length}</b><span>${(state.user && state.user.playerRole==='goalkeeper') ? t('statCoachesGK') : t('statCoaches')}</span></div>
         <div class="stat-chip"><b class="mono">${completed}</b><span>${t('statDone')}</span></div>
         <div class="stat-chip"><b class="mono">24h+</b><span>${t('statTurnaround')}</span></div>
       </div>

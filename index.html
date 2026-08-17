@@ -399,6 +399,21 @@
   .stat-row-sep{ color:var(--muted); font-size:13px; }
   .stat-mini{ width:64px; flex-shrink:0; padding:8px 10px; text-align:center; }
   .stat-mini.invalid{ border-color:var(--coral); box-shadow:0 0 0 1px var(--coral); }
+  .stat-cat-label{ font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--coral-dim); margin:16px 0 8px; padding-bottom:5px; border-bottom:1px solid rgba(243,241,231,.08); }
+  .ratings-card{ background:var(--surface); border:1px solid rgba(243,241,231,.08); border-radius:14px; padding:12px 14px; margin-bottom:4px; }
+  .rating-input-row{ display:flex; align-items:center; gap:12px; padding:6px 0; }
+  .rating-input-row .stat-row-label{ flex:0 0 40%; }
+  .rating-input-row input[type="range"]{ flex:1; accent-color:var(--coral); }
+  .rating-input-row b{ min-width:22px; text-align:center; color:var(--gold); font-size:14px; }
+  .rating-view-row{ display:flex; align-items:center; gap:10px; padding:5px 0; font-size:13px; }
+  .rating-view-row > span{ flex:0 0 40%; color:var(--chalk-dim); }
+  .rating-bar{ flex:1; height:7px; border-radius:4px; background:rgba(243,241,231,.1); overflow:hidden; }
+  .rating-bar-fill{ height:100%; background:linear-gradient(90deg,var(--coral),var(--gold)); border-radius:4px; }
+  .rating-view-row > b{ min-width:20px; text-align:center; color:var(--gold); }
+  .keystat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:6px; }
+  .keystat-tile{ background:var(--surface); border:1px solid rgba(243,241,231,.08); border-radius:12px; padding:12px 8px; text-align:center; }
+  .keystat-tile b{ display:block; font-family:'IBM Plex Mono'; font-weight:600; font-size:22px; color:var(--gold); line-height:1; }
+  .keystat-tile span{ font-size:11px; color:var(--chalk-dim); display:block; margin-top:5px; line-height:1.2; }
   .pkg-remove-btn{
     background:var(--surface); border:1px solid rgba(243,241,231,.1); border-radius:10px; width:44px; height:44px;
     flex-shrink:0; color:var(--muted); cursor:pointer; display:flex; align-items:center; justify-content:center;
@@ -488,22 +503,90 @@ const COACH_TYPE_LABEL = {
   en:{goalkeeper:'Goalkeeper coach', general:'General coach', analyst:'Analyst'},
 };
 
+// Objective, numeric per-game stats — grouped by category. type 'ratio' = made/att (shows %), 'count' = integer.
 const STAT_DEFS = {
   goalkeeper: [
-    { key:'saves', type:'ratio', he:'הצלות', en:'Saves' },
-    { key:'exits', type:'ratio', he:'יציאות מוצלחות', en:'Successful exits' },
-    { key:'passAccuracy', type:'ratio', he:'דיוק מסירות/בעיטות', en:'Pass/kick accuracy' },
-    { key:'goalsConceded', type:'count', he:'שערים שספג', en:'Goals conceded' },
+    { key:'saves', type:'count', cat:'gkSaves', he:'עצירות', en:'Saves' },
+    { key:'savePct', type:'ratio', cat:'gkSaves', he:'אחוז עצירות', en:'Save %' },
+    { key:'goalsConceded', type:'count', cat:'gkSaves', he:'שערים שספג', en:'Goals Conceded' },
+    { key:'savesInsideBox', type:'count', cat:'gkSaves', he:'עצירות מתוך הרחבה', en:'Saves Inside Box' },
+    { key:'crossesClaimed', type:'ratio', cat:'gkExits', he:'תפיסת כדורים חוצים', en:'Crosses Claimed' },
+    { key:'punches', type:'count', cat:'gkExits', he:'איגרופים', en:'Punches' },
+    { key:'successful1v1', type:'ratio', cat:'gkExits', he:'אחד על אחד מוצלח', en:'Successful 1v1' },
+    { key:'passAccuracy', type:'ratio', cat:'gkFeet', he:'דיוק מסירות', en:'Pass Accuracy %' },
+    { key:'longPassAccuracy', type:'ratio', cat:'gkFeet', he:'דיוק מסירות ארוכות', en:'Long Pass Accuracy %' },
+    { key:'shortPassAccuracy', type:'ratio', cat:'gkFeet', he:'דיוק מסירות קצרות', en:'Short Pass Accuracy %' },
+    { key:'successfulThrows', type:'count', cat:'gkFeet', he:'זריקות יד מוצלחות', en:'Successful Throws' },
+    { key:'sweeperActions', type:'count', cat:'gkMgmt', he:'פעולות סוויפר', en:'Sweeper Actions' },
+    { key:'sweeperSuccess', type:'ratio', cat:'gkMgmt', he:'אחוז סוויפר מוצלח', en:'Successful Sweeper %' },
+    { key:'errorsToShot', type:'count', cat:'gkErrors', he:'טעויות שהובילו לבעיטה', en:'Errors Leading to Shot' },
+    { key:'errorsToGoal', type:'count', cat:'gkErrors', he:'טעויות שהובילו לשער', en:'Errors Leading to Goal' },
   ],
   field: [
-    { key:'keyPasses', type:'count', he:'מסירות מפתח', en:'Key passes' },
-    { key:'passAccuracy', type:'ratio', he:'דיוק מסירות', en:'Pass accuracy' },
-    { key:'duelsWon', type:'ratio', he:'הצלחות בהתמודדות', en:'Duels won' },
-    { key:'turnovers', type:'count', he:'איבודי כדור', en:'Turnovers' },
-    { key:'goals', type:'count', he:'שערים', en:'Goals' },
-    { key:'assists', type:'count', he:'בישולים', en:'Assists' },
+    { key:'goals', type:'count', cat:'fAttack', he:'שערים', en:'Goals' },
+    { key:'assists', type:'count', cat:'fAttack', he:'בישולים', en:'Assists' },
+    { key:'shotsOnTarget', type:'ratio', cat:'fAttack', he:'בעיטות למסגרת', en:'Shots on Target' },
+    { key:'chancesCreated', type:'count', cat:'fAttack', he:'הזדמנויות שנוצרו', en:'Chances Created' },
+    { key:'passAccuracy', type:'ratio', cat:'fPass', he:'דיוק מסירות', en:'Pass Accuracy %' },
+    { key:'keyPasses', type:'count', cat:'fPass', he:'מסירות מפתח', en:'Key Passes' },
+    { key:'progressivePasses', type:'count', cat:'fPass', he:'מסירות מתקדמות', en:'Progressive Passes' },
+    { key:'longPassAccuracy', type:'ratio', cat:'fPass', he:'דיוק מסירות ארוכות', en:'Long Pass Accuracy %' },
+    { key:'dribbles', type:'ratio', cat:'fDribble', he:'כדרורים מוצלחים', en:'Successful Dribbles' },
+    { key:'tackles', type:'ratio', cat:'fDef', he:'הכרעות (זכייה)', en:'Tackles Won' },
+    { key:'interceptions', type:'count', cat:'fDef', he:'חטיפות', en:'Interceptions' },
+    { key:'clearances', type:'count', cat:'fDef', he:'הרחקות', en:'Clearances' },
+    { key:'blocks', type:'count', cat:'fDef', he:'חסימות', en:'Blocks' },
+    { key:'groundDuels', type:'ratio', cat:'fDuels', he:'מאבקי קרקע (זכייה)', en:'Ground Duels Won %' },
+    { key:'aerialDuels', type:'ratio', cat:'fDuels', he:'מאבקי אוויר (זכייה)', en:'Aerial Duels Won %' },
+    { key:'possessionLost', type:'count', cat:'fLoss', he:'איבודי כדור', en:'Possession Lost' },
+    { key:'dispossessed', type:'count', cat:'fLoss', he:'נושל מהכדור', en:'Dispossessed' },
+    { key:'fouls', type:'count', cat:'fDisc', he:'עבירות', en:'Fouls' },
+    { key:'yellowCards', type:'count', cat:'fDisc', he:'כרטיסים צהובים', en:'Yellow Cards' },
+    { key:'redCards', type:'count', cat:'fDisc', he:'כרטיסים אדומים', en:'Red Cards' },
   ],
 };
+// Category headers for the stat groups.
+const CAT_LABEL = {
+  he: { gkSaves:'עצירות', gkExits:'יציאות', gkFeet:'משחק רגל', gkMgmt:'ניהול משחק', gkErrors:'טעויות',
+        fAttack:'התקפה', fPass:'מסירות', fDribble:'אחד על אחד', fDef:'הגנה', fDuels:'מאבקים', fLoss:'איבודי כדור', fDisc:'משמעת' },
+  en: { gkSaves:'Saves', gkExits:'Exits', gkFeet:'Footwork', gkMgmt:'Game Management', gkErrors:'Errors',
+        fAttack:'Attack', fPass:'Passing', fDribble:'1v1', fDef:'Defending', fDuels:'Duels', fLoss:'Possession Lost', fDisc:'Discipline' },
+};
+// Subjective coach/analyst attribute ratings, 1–10.
+const RATING_DEFS = {
+  goalkeeper: [
+    { key:'positioning', he:'מיקום', en:'Positioning' },
+    { key:'handling', he:'תפיסת כדור', en:'Handling' },
+    { key:'reflexes', he:'רפלקסים', en:'Reflexes' },
+    { key:'oneVone', he:'אחד על אחד', en:'1v1' },
+    { key:'crosses', he:'כדורים חוצים', en:'Crosses' },
+    { key:'footwork', he:'עבודת רגליים', en:'Footwork' },
+    { key:'distribution', he:'פתיחת משחק', en:'Distribution' },
+    { key:'decisionMaking', he:'קבלת החלטות', en:'Decision Making' },
+    { key:'communication', he:'תקשורת', en:'Communication' },
+  ],
+  field: [
+    { key:'technique', he:'טכניקה', en:'Technique' },
+    { key:'passing', he:'מסירה', en:'Passing' },
+    { key:'dribbling', he:'כדרור', en:'Dribbling' },
+    { key:'decisionMaking', he:'קבלת החלטות', en:'Decision Making' },
+    { key:'positioning', he:'מיקום', en:'Positioning' },
+    { key:'offBallMovement', he:'תנועה ללא כדור', en:'Off-ball Movement' },
+    { key:'defending', he:'הגנה', en:'Defending' },
+    { key:'physical', he:'פיזי', en:'Physical' },
+    { key:'gameUnderstanding', he:'הבנת משחק', en:'Game Understanding' },
+  ],
+};
+// The 6 headline stats shown on the profile / share card (rest behind "View full stats").
+const KEY_STATS = {
+  goalkeeper: ['savePct','goalsConceded','successful1v1','crossesClaimed','passAccuracy','longPassAccuracy'],
+  field: ['goals','assists','keyPasses','passAccuracy','dribbles','groundDuels'],
+};
+function keyStatDefs(role){
+  const all = STAT_DEFS[role] || STAT_DEFS.field;
+  const keys = KEY_STATS[role] || KEY_STATS.field;
+  return keys.map(k=>all.find(s=>s.key===k)).filter(Boolean);
+}
 function statLabel(key, role){
   const def = (STAT_DEFS[role]||[]).find(s=>s.key===key);
   return def ? def[state.lang] : key;
@@ -644,6 +727,7 @@ const STR = {
     shareGenerating:'מכין תמונה…', shareGamesAnalyzed:'משחקים נותחו', shareAvg:'ממוצע', shareTotal:'סה״כ', shareTagline:'ניתוח ביצועים מקצועי', shareErr:'יצירת התמונה נכשלה, נסו שוב',
     searchHomePh:'חיפוש מאמן, אנליסט או שחקן…', searchCoachesSection:'מאמנים ואנליסטים', searchPlayersSection:'שחקנים', searchNoResults:'לא נמצאו תוצאות', playerProfileTitle:'פרופיל שחקן',
     pfSearchableTitle:'חשיפה בחיפוש', pfSearchableLabel:'הצג אותי בחיפוש', pfSearchableHint:'כשמופעל, שחקנים ומאמנים יוכלו למצוא את הפרופיל שלך ולראות את הסטטיסטיקה שלך. כבוי כברירת מחדל.',
+    coachRatingsTitle:'ציוני מאמן', attributeRatingsLabel:'ציוני יכולת (1–10)', attributeRatingsHint:'דרגו את השחקן בכל מאפיין. אופציונלי.', detailedStatsLabel:'סטטיסטיקה מפורטת', statsOptionalHint:'מלאו רק את מה שרלוונטי — הכל אופציונלי.', viewFullStats:'כל הנתונים', viewKeyStats:'נתוני מפתח', keyStatsTitle:'נתוני מפתח',
     filterCoachType:'סוג מאמן', filterAllTypes:'הכל', filterSpecialization:'התמחות',
     writeReview:'כתבו ביקורת (אופציונלי)', reviewPlaceholder:'איך היה הניתוח? מה עבד טוב?',
     reviewsTitle:'ביקורות', noReviewsYet:'עדיין אין ביקורות', submitRating:'שלחו דירוג',
@@ -784,6 +868,7 @@ const STR = {
     shareGenerating:'Preparing image…', shareGamesAnalyzed:'games analyzed', shareAvg:'Avg', shareTotal:'Total', shareTagline:'Professional performance analysis', shareErr:'Image generation failed, please try again',
     searchHomePh:'Search a coach, analyst or player…', searchCoachesSection:'Coaches & analysts', searchPlayersSection:'Players', searchNoResults:'No results found', playerProfileTitle:'Player profile',
     pfSearchableTitle:'Search visibility', pfSearchableLabel:'Show me in search', pfSearchableHint:'When on, players and coaches can find your profile and see your stats. Off by default.',
+    coachRatingsTitle:'Coach ratings', attributeRatingsLabel:'Attribute ratings (1–10)', attributeRatingsHint:'Rate the player on each attribute. Optional.', detailedStatsLabel:'Detailed stats', statsOptionalHint:'Fill only what applies — all optional.', viewFullStats:'View full stats', viewKeyStats:'Key stats', keyStatsTitle:'Key stats',
     filterCoachType:'Coach type', filterAllTypes:'All', filterSpecialization:'Specialization',
     writeReview:'Write a review (optional)', reviewPlaceholder:'How was the analysis? What worked well?',
     reviewsTitle:'Reviews', noReviewsYet:'No reviews yet', submitRating:'Submit rating',
@@ -813,6 +898,7 @@ let state = {
   composeAttachments: [],
   viewingCoach: null,
   viewingPlayer: null,
+  statsFull: false,
   adminPendingCoaches: [],
   adminStats: null,
   activePackages: [],
@@ -1005,7 +1091,7 @@ async function loadSearchablePlayers(){
 }
 function computePublicStats(){
   const role = (state.user && state.user.playerRole) || 'field';
-  const defs = STAT_DEFS[role] || STAT_DEFS.field;
+  const defs = keyStatDefs(role);
   const games = state.requests.filter(r=>r.status==='done' && r.stats && Object.keys(r.stats).length);
   const items = defs.map(s=>{
     if(s.type==='ratio'){
@@ -1226,14 +1312,23 @@ function fmtMinutes(min){
 }
 function renderMyStats(){
   const role = (state.user && state.user.playerRole) || 'field';
-  const defs = STAT_DEFS[role] || STAT_DEFS.field;
+  const allDefs = STAT_DEFS[role] || STAT_DEFS.field;
+  const keyDefs = keyStatDefs(role);
   const games = state.requests
     .filter(r=>r.status==='done' && r.stats && Object.keys(r.stats).length)
     .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   if(!games.length){
     return `<div class="empty-state" style="padding:60px 20px">${icon('chart',34)}<b>${t('noStatsYet')}</b></div>`;
   }
-  const charts = defs.map(s=>{
+  const showFull = !!state.statsFull;
+  const chartDefs = showFull ? allDefs : keyDefs;
+  const tiles = aggregatePlayerStats(games, keyDefs);
+  const tilesHtml = tiles.length ? `
+    <div class="field-label" style="margin-top:4px">${t('keyStatsTitle')}</div>
+    <div class="keystat-grid">${tiles.map(tl=>`
+      <div class="keystat-tile"><b>${tl.value}</b><span>${tl.label}<br><span style="font-size:9px;color:var(--muted)">${tl.sub}</span></span></div>
+    `).join('')}</div>` : '';
+  const charts = chartDefs.map(s=>{
     const hasData = games.some(g=> g.stats && g.stats[s.key]!=null);
     if(!hasData) return '';
     return `
@@ -1243,13 +1338,14 @@ function renderMyStats(){
       </div>
     `;
   }).join('');
-  const gamesCount = games.length;
   return `
     <button class="btn btn-primary btn-block" data-action="open-stats-share" style="margin-bottom:4px">
       ${icon('chart',18)} ${t('shareStatsBtn')}
     </button>
-    <div class="req-meta" style="margin:0 0 6px">${gamesCount} ${t('shareGamesAnalyzed')}</div>
-    <div style="padding-bottom:10px">${charts}</div>`;
+    <div class="req-meta" style="margin:0 0 10px">${games.length} ${t('shareGamesAnalyzed')}</div>
+    ${tilesHtml}
+    <div style="padding-bottom:10px">${charts}</div>
+    <button class="btn btn-ghost btn-block" data-action="toggle-full-stats" style="margin-top:6px">${showFull ? t('viewKeyStats') : t('viewFullStats')}</button>`;
 }
 function initStatsCharts(){
   if(typeof Chart==='undefined') return;
@@ -1319,7 +1415,7 @@ function closeStatsShare(){
 
 function openStatsShare(){
   const role = (state.user && state.user.playerRole) || 'field';
-  const defs = STAT_DEFS[role] || STAT_DEFS.field;
+  const defs = keyStatDefs(role);
   const games = state.requests
     .filter(r=>r.status==='done' && r.stats && Object.keys(r.stats).length)
     .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
@@ -2233,24 +2329,44 @@ function videosViewHtml(r){
   }
   return `<div style="display:flex;flex-direction:column;gap:10px">${r.videos.map(v=>`<div class="video-preview"><video src="${v.url}" controls></video></div>`).join('')}</div>`;
 }
+function statRowDisplay(s, v){
+  if(s.type==='ratio'){
+    if(!v || typeof v!=='object' || v.made==null || v.att==null || v.att===0) return null;
+    return `${v.made}/${v.att} (${Math.round((v.made/v.att)*100)}%)`;
+  }
+  if(v==null || typeof v==='object') return null;
+  return String(v);
+}
 function statsViewHtml(stats, role){
   if(!stats || !Object.keys(stats).length) return '';
   const defs = STAT_DEFS[role] || STAT_DEFS.field;
-  const rows = defs.filter(s=>stats[s.key]!=null).map(s=>{
-    const v = stats[s.key];
-    let display;
-    if(s.type==='ratio'){
-      if(v.made==null || v.att==null || v.att===0) return '';
-      const pct = Math.round((v.made/v.att)*100);
-      display = `${v.made}/${v.att} (${pct}%)`;
-    } else {
-      display = String(v);
-    }
-    return `<div class="summary-row"><span>${s[state.lang]}</span><span class="mono">${display}</span></div>`;
+  const cats = []; const byCat = {};
+  defs.filter(s=>stats[s.key]!=null).forEach(s=>{
+    const disp = statRowDisplay(s, stats[s.key]);
+    if(disp==null) return;
+    if(!byCat[s.cat]){ byCat[s.cat] = []; cats.push(s.cat); }
+    byCat[s.cat].push(`<div class="summary-row"><span>${s[state.lang]}</span><span class="mono">${disp}</span></div>`);
+  });
+  if(!cats.length) return '';
+  const body = cats.map(cat=>`
+    <div class="stat-cat-label">${(CAT_LABEL[state.lang]||{})[cat]||cat}</div>
+    <div class="summary-card" style="margin-bottom:10px">${byCat[cat].join('')}</div>
+  `).join('');
+  return `
+    <div class="field-label" style="margin-top:14px">${t('statsTitle')}</div>
+    ${body}
+  `;
+}
+function ratingsViewHtml(ratings, role){
+  if(!ratings || !Object.keys(ratings).length) return '';
+  const defs = RATING_DEFS[role] || RATING_DEFS.field;
+  const rows = defs.filter(rt=>ratings[rt.key]!=null).map(rt=>{
+    const v = ratings[rt.key];
+    return `<div class="rating-view-row"><span>${rt[state.lang]}</span><div class="rating-bar"><div class="rating-bar-fill" style="width:${Math.max(0,Math.min(10,v))*10}%"></div></div><b class="mono">${v}</b></div>`;
   }).join('');
   if(!rows) return '';
   return `
-    <div class="field-label" style="margin-top:14px">${t('statsTitle')}</div>
+    <div class="field-label" style="margin-top:14px">${t('coachRatingsTitle')}</div>
     <div class="summary-card">${rows}</div>
   `;
 }
@@ -2613,6 +2729,7 @@ function renderRequests(){
             ${attachmentsViewHtml(r.attachments)}
           </div>
           ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
+          ${ratingsViewHtml(r.ratings, r.gkPlayerRole||'field')}
           ${r.gkRating ? `
             <div class="rating-given">${t('yourRating')}: ${starsHtml(r.gkRating,18)}</div>
             ${r.reviewText ? `<div class="req-meta" style="margin-top:6px">"${r.reviewText}"</div>` : ''}
@@ -2748,6 +2865,7 @@ function renderCoachDash(){
               ${attachmentsViewHtml(r.attachments)}
             </div>
             ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
+          ${ratingsViewHtml(r.ratings, r.gkPlayerRole||'field')}
           `}
         `}
         </div>
@@ -2784,16 +2902,31 @@ function renderAttachList(){
 
 function statsInputHtml(role){
   const defs = STAT_DEFS[role] || STAT_DEFS.field;
-  return defs.map(s=>`
-    <div class="stat-row">
-      <span class="stat-row-label">${s[state.lang]}</span>
-      ${s.type==='ratio' ? `
-        <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="made" placeholder="${t('statMade')}">
-        <span class="stat-row-sep">/</span>
-        <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="att" placeholder="${t('statAttempts')}">
-      ` : `
-        <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="count" placeholder="0">
-      `}
+  const cats = []; const byCat = {};
+  defs.forEach(s=>{ if(!byCat[s.cat]){ byCat[s.cat] = []; cats.push(s.cat); } byCat[s.cat].push(s); });
+  return cats.map(cat=>`
+    <div class="stat-cat-label">${(CAT_LABEL[state.lang]||{})[cat]||cat}</div>
+    ${byCat[cat].map(s=>`
+      <div class="stat-row">
+        <span class="stat-row-label">${s[state.lang]}</span>
+        ${s.type==='ratio' ? `
+          <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="made" placeholder="${t('statMade')}">
+          <span class="stat-row-sep">/</span>
+          <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="att" placeholder="${t('statAttempts')}">
+        ` : `
+          <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="count" placeholder="0">
+        `}
+      </div>
+    `).join('')}
+  `).join('');
+}
+function ratingsInputHtml(role){
+  const defs = RATING_DEFS[role] || RATING_DEFS.field;
+  return defs.map(rt=>`
+    <div class="rating-input-row">
+      <span class="stat-row-label">${rt[state.lang]}</span>
+      <input type="range" min="1" max="10" step="1" value="7" data-rating-key="${rt.key}" class="rating-range">
+      <b class="mono" data-rating-val="${rt.key}">7</b>
     </div>
   `).join('');
 }
@@ -2825,7 +2958,12 @@ function renderCoachCompose(){
       <input type="range" id="score-range" min="1" max="10" step="0.1" value="8.0">
     </div>
 
-    <div class="field-label">${t('statsTitle')} <span style="font-weight:400;color:var(--muted);font-size:12px">(${t('statsOptional')})</span></div>
+    <div class="field-label">${t('attributeRatingsLabel')} <span style="font-weight:400;color:var(--muted);font-size:12px">(${t('statsOptional')})</span></div>
+    <div class="photo-hint" style="margin:0 0 8px">${t('attributeRatingsHint')}</div>
+    <div id="ratings-inputs" class="ratings-card">${ratingsInputHtml(r.gkPlayerRole||'field')}</div>
+
+    <div class="field-label">${t('detailedStatsLabel')} <span style="font-weight:400;color:var(--muted);font-size:12px">(${t('statsOptional')})</span></div>
+    <div class="photo-hint" style="margin:0 0 8px">${t('statsOptionalHint')}</div>
     <div id="stats-inputs">${statsInputHtml(r.gkPlayerRole||'field')}</div>
 
     <div class="field-label">${t('coachAnalysisTitle')}</div>
@@ -3010,6 +3148,7 @@ function attachHandlers(){
     go('my-stats');
   });
   app.querySelector('[data-action="open-stats-share"]')?.addEventListener('click', ()=>openStatsShare());
+  app.querySelector('[data-action="toggle-full-stats"]')?.addEventListener('click', ()=>{ state.statsFull = !state.statsFull; render(); });
 
   // home unified search (coaches + opted-in players)
   app.querySelector('#home-search-input')?.addEventListener('input', (e)=>{
@@ -3626,6 +3765,13 @@ function attachHandlers(){
   scoreRange?.addEventListener('input', (e)=>{
     app.querySelector('#score-display').textContent = parseFloat(e.target.value).toFixed(1);
   });
+  // coach compose: live attribute-rating values
+  app.querySelectorAll('#ratings-inputs [data-rating-key]').forEach(rng=>{
+    rng.addEventListener('input', ()=>{
+      const out = app.querySelector(`#ratings-inputs [data-rating-val="${rng.dataset.ratingKey}"]`);
+      if(out) out.textContent = rng.value;
+    });
+  });
 
   // coach compose: attachments
   if(app.querySelector('#attach-list')) renderAttachList();
@@ -3679,6 +3825,11 @@ function attachHandlers(){
       }
     }
 
+    const ratings = {};
+    app.querySelectorAll('#ratings-inputs [data-rating-key]').forEach(rng=>{
+      ratings[rng.dataset.ratingKey] = Number(rng.value);
+    });
+
     const files = state.composeAttachments || [];
     const uploadedAttachments = [];
     let failedCount = 0;
@@ -3698,13 +3849,14 @@ function attachHandlers(){
       btn.textContent = originalLabel;
     }
 
-    const ok = await updateRequestDoc(r.id, {status:'done', score:scoreVal, analysis:analysisText, attachments:uploadedAttachments, stats, gkSeen:false});
+    const ok = await updateRequestDoc(r.id, {status:'done', score:scoreVal, analysis:analysisText, attachments:uploadedAttachments, stats, ratings, gkSeen:false});
     if(!ok){ showToast(t('saveError')); return; }
     r.status = 'done';
     r.score = scoreVal;
     r.analysis = analysisText;
     r.attachments = uploadedAttachments;
     r.stats = stats;
+    r.ratings = ratings;
     r.gkSeen = false;
     state.composeAttachments = [];
     sendEmailNotification(

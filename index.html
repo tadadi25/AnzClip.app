@@ -399,21 +399,6 @@
   .stat-row-sep{ color:var(--muted); font-size:13px; }
   .stat-mini{ width:64px; flex-shrink:0; padding:8px 10px; text-align:center; }
   .stat-mini.invalid{ border-color:var(--coral); box-shadow:0 0 0 1px var(--coral); }
-  .stat-cat-label{ font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--coral-dim); margin:16px 0 8px; padding-bottom:5px; border-bottom:1px solid rgba(243,241,231,.08); }
-  .ratings-card{ background:var(--surface); border:1px solid rgba(243,241,231,.08); border-radius:14px; padding:12px 14px; margin-bottom:4px; }
-  .rating-input-row{ display:flex; align-items:center; gap:12px; padding:6px 0; }
-  .rating-input-row .stat-row-label{ flex:0 0 40%; }
-  .rating-input-row input[type="range"]{ flex:1; accent-color:var(--coral); }
-  .rating-input-row b{ min-width:22px; text-align:center; color:var(--gold); font-size:14px; }
-  .rating-view-row{ display:flex; align-items:center; gap:10px; padding:5px 0; font-size:13px; }
-  .rating-view-row > span{ flex:0 0 40%; color:var(--chalk-dim); }
-  .rating-bar{ flex:1; height:7px; border-radius:4px; background:rgba(243,241,231,.1); overflow:hidden; }
-  .rating-bar-fill{ height:100%; background:linear-gradient(90deg,var(--coral),var(--gold)); border-radius:4px; }
-  .rating-view-row > b{ min-width:20px; text-align:center; color:var(--gold); }
-  .keystat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:6px; }
-  .keystat-tile{ background:var(--surface); border:1px solid rgba(243,241,231,.08); border-radius:12px; padding:12px 8px; text-align:center; }
-  .keystat-tile b{ display:block; font-family:'IBM Plex Mono'; font-weight:600; font-size:22px; color:var(--gold); line-height:1; }
-  .keystat-tile span{ font-size:11px; color:var(--chalk-dim); display:block; margin-top:5px; line-height:1.2; }
   .pkg-remove-btn{
     background:var(--surface); border:1px solid rgba(243,241,231,.1); border-radius:10px; width:44px; height:44px;
     flex-shrink:0; color:var(--muted); cursor:pointer; display:flex; align-items:center; justify-content:center;
@@ -459,7 +444,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyB_-x4zF93fus5IMpFfIiOf1_JjaSkXxfc",
@@ -484,7 +468,6 @@ const COUNTRIES = [
 ];
 
 const COACHES = [];
-const PLAYERS = [];
 
 const SPEC_LABEL = {
   he:{kids:'ילדים', teens:'נוער', adults:'בוגרים'},
@@ -503,89 +486,22 @@ const COACH_TYPE_LABEL = {
   en:{goalkeeper:'Goalkeeper coach', general:'General coach', analyst:'Analyst'},
 };
 
-// Objective, numeric per-game stats — grouped by category. type 'ratio' = made/att (shows %), 'count' = integer.
 const STAT_DEFS = {
   goalkeeper: [
-    { key:'saves', type:'count', cat:'gkSaves', he:'עצירות', en:'Saves' },
-    { key:'savePct', type:'ratio', cat:'gkSaves', he:'אחוז עצירות', en:'Save %' },
-    { key:'goalsConceded', type:'count', cat:'gkSaves', he:'שערים שספג', en:'Goals Conceded' },
-    { key:'savesInsideBox', type:'count', cat:'gkSaves', he:'עצירות מתוך הרחבה', en:'Saves Inside Box' },
-    { key:'crossesClaimed', type:'ratio', cat:'gkExits', he:'תפיסת כדורים חוצים', en:'Crosses Claimed' },
-    { key:'punches', type:'count', cat:'gkExits', he:'איגרופים', en:'Punches' },
-    { key:'successful1v1', type:'ratio', cat:'gkExits', he:'אחד על אחד מוצלח', en:'Successful 1v1' },
-    { key:'passAccuracy', type:'ratio', cat:'gkFeet', he:'דיוק מסירות', en:'Pass Accuracy %' },
-    { key:'longPassAccuracy', type:'ratio', cat:'gkFeet', he:'דיוק מסירות ארוכות', en:'Long Pass Accuracy %' },
-    { key:'shortPassAccuracy', type:'ratio', cat:'gkFeet', he:'דיוק מסירות קצרות', en:'Short Pass Accuracy %' },
-    { key:'successfulThrows', type:'count', cat:'gkFeet', he:'זריקות יד מוצלחות', en:'Successful Throws' },
-    { key:'sweeperActions', type:'count', cat:'gkMgmt', he:'פעולות סוויפר', en:'Sweeper Actions' },
-    { key:'sweeperSuccess', type:'ratio', cat:'gkMgmt', he:'אחוז סוויפר מוצלח', en:'Successful Sweeper %' },
-    { key:'errorsToShot', type:'count', cat:'gkErrors', he:'טעויות שהובילו לבעיטה', en:'Errors Leading to Shot' },
-    { key:'errorsToGoal', type:'count', cat:'gkErrors', he:'טעויות שהובילו לשער', en:'Errors Leading to Goal' },
+    { key:'saves', type:'ratio', he:'הצלות', en:'Saves' },
+    { key:'exits', type:'ratio', he:'יציאות מוצלחות', en:'Successful exits' },
+    { key:'passAccuracy', type:'ratio', he:'דיוק מסירות/בעיטות', en:'Pass/kick accuracy' },
+    { key:'goalsConceded', type:'count', he:'שערים שספג', en:'Goals conceded' },
   ],
   field: [
-    { key:'goals', type:'count', cat:'fAttack', he:'שערים', en:'Goals' },
-    { key:'assists', type:'count', cat:'fAttack', he:'בישולים', en:'Assists' },
-    { key:'shotsOnTarget', type:'ratio', cat:'fAttack', he:'בעיטות למסגרת', en:'Shots on Target' },
-    { key:'chancesCreated', type:'count', cat:'fAttack', he:'הזדמנויות שנוצרו', en:'Chances Created' },
-    { key:'passAccuracy', type:'ratio', cat:'fPass', he:'דיוק מסירות', en:'Pass Accuracy %' },
-    { key:'keyPasses', type:'count', cat:'fPass', he:'מסירות מפתח', en:'Key Passes' },
-    { key:'progressivePasses', type:'count', cat:'fPass', he:'מסירות מתקדמות', en:'Progressive Passes' },
-    { key:'longPassAccuracy', type:'ratio', cat:'fPass', he:'דיוק מסירות ארוכות', en:'Long Pass Accuracy %' },
-    { key:'dribbles', type:'ratio', cat:'fDribble', he:'כדרורים מוצלחים', en:'Successful Dribbles' },
-    { key:'tackles', type:'ratio', cat:'fDef', he:'הכרעות (זכייה)', en:'Tackles Won' },
-    { key:'interceptions', type:'count', cat:'fDef', he:'חטיפות', en:'Interceptions' },
-    { key:'clearances', type:'count', cat:'fDef', he:'הרחקות', en:'Clearances' },
-    { key:'blocks', type:'count', cat:'fDef', he:'חסימות', en:'Blocks' },
-    { key:'groundDuels', type:'ratio', cat:'fDuels', he:'מאבקי קרקע (זכייה)', en:'Ground Duels Won %' },
-    { key:'aerialDuels', type:'ratio', cat:'fDuels', he:'מאבקי אוויר (זכייה)', en:'Aerial Duels Won %' },
-    { key:'possessionLost', type:'count', cat:'fLoss', he:'איבודי כדור', en:'Possession Lost' },
-    { key:'fouls', type:'count', cat:'fDisc', he:'עבירות', en:'Fouls' },
-    { key:'yellowCards', type:'count', cat:'fDisc', he:'כרטיסים צהובים', en:'Yellow Cards' },
-    { key:'redCards', type:'count', cat:'fDisc', he:'כרטיסים אדומים', en:'Red Cards' },
+    { key:'keyPasses', type:'count', he:'מסירות מפתח', en:'Key passes' },
+    { key:'passAccuracy', type:'ratio', he:'דיוק מסירות', en:'Pass accuracy' },
+    { key:'duelsWon', type:'ratio', he:'הצלחות בהתמודדות', en:'Duels won' },
+    { key:'turnovers', type:'count', he:'איבודי כדור', en:'Turnovers' },
+    { key:'goals', type:'count', he:'שערים', en:'Goals' },
+    { key:'assists', type:'count', he:'בישולים', en:'Assists' },
   ],
 };
-// Category headers for the stat groups.
-const CAT_LABEL = {
-  he: { gkSaves:'עצירות', gkExits:'יציאות', gkFeet:'משחק רגל', gkMgmt:'ניהול משחק', gkErrors:'טעויות',
-        fAttack:'התקפה', fPass:'מסירות', fDribble:'אחד על אחד', fDef:'הגנה', fDuels:'מאבקים', fLoss:'איבודי כדור', fDisc:'משמעת' },
-  en: { gkSaves:'Saves', gkExits:'Exits', gkFeet:'Footwork', gkMgmt:'Game Management', gkErrors:'Errors',
-        fAttack:'Attack', fPass:'Passing', fDribble:'1v1', fDef:'Defending', fDuels:'Duels', fLoss:'Possession Lost', fDisc:'Discipline' },
-};
-// Subjective coach/analyst attribute ratings, 1–10.
-const RATING_DEFS = {
-  goalkeeper: [
-    { key:'positioning', he:'מיקום', en:'Positioning' },
-    { key:'handling', he:'תפיסת כדור', en:'Handling' },
-    { key:'reflexes', he:'רפלקסים', en:'Reflexes' },
-    { key:'oneVone', he:'אחד על אחד', en:'1v1' },
-    { key:'crosses', he:'כדורים חוצים', en:'Crosses' },
-    { key:'footwork', he:'עבודת רגליים', en:'Footwork' },
-    { key:'distribution', he:'פתיחת משחק', en:'Distribution' },
-    { key:'decisionMaking', he:'קבלת החלטות', en:'Decision Making' },
-    { key:'communication', he:'תקשורת', en:'Communication' },
-  ],
-  field: [
-    { key:'technique', he:'טכניקה', en:'Technique' },
-    { key:'passing', he:'מסירה', en:'Passing' },
-    { key:'dribbling', he:'כדרור', en:'Dribbling' },
-    { key:'decisionMaking', he:'קבלת החלטות', en:'Decision Making' },
-    { key:'positioning', he:'מיקום', en:'Positioning' },
-    { key:'offBallMovement', he:'תנועה ללא כדור', en:'Off-ball Movement' },
-    { key:'defending', he:'הגנה', en:'Defending' },
-    { key:'physical', he:'פיזי', en:'Physical' },
-    { key:'gameUnderstanding', he:'הבנת משחק', en:'Game Understanding' },
-  ],
-};
-// The 6 headline stats shown on the profile / share card (rest behind "View full stats").
-const KEY_STATS = {
-  goalkeeper: ['savePct','goalsConceded','successful1v1','crossesClaimed','passAccuracy','longPassAccuracy'],
-  field: ['goals','assists','keyPasses','passAccuracy','dribbles','groundDuels'],
-};
-function keyStatDefs(role){
-  const all = STAT_DEFS[role] || STAT_DEFS.field;
-  const keys = KEY_STATS[role] || KEY_STATS.field;
-  return keys.map(k=>all.find(s=>s.key===k)).filter(Boolean);
-}
 function statLabel(key, role){
   const def = (STAT_DEFS[role]||[]).find(s=>s.key===key);
   return def ? def[state.lang] : key;
@@ -608,7 +524,7 @@ const STR = {
     heroTitle:'בוחרים מאמן/אנליסט.<br>מעלים משחק.<br>משתפרים.',
     heroSub:'בחרו מאמן/אנליסט לפי ותק, התמחות ומחיר, העלו סרטון מאימון או ממשחק, וקבלו ניתוח ביצועים מפורט תוך פרק זמן מוגדר מראש.',
     uploadCta:'בחרו מאמן/אנליסט',
-    statCoaches:'מאמנים/אנליסטים', statCoachesGK:'מאמנים/אנליסטים', statDone:'ניתוחים שהושלמו', statTurnaround:'זמן מסירה',
+    statCoaches:'מאמנים/אנליסטים', statCoachesGK:'מאמני שוערים/אנליסטים', statDone:'ניתוחים שהושלמו', statTurnaround:'זמן מסירה',
     howTitle:'איך זה עובד',
     step1t:'בוחרים מאמן/אנליסט', step1s:'לפי סוג, התמחות, ותק, דירוג ומחיר.',
     step2t:'מעלים סרטון', step2s:'מאימון, משחק או תרגול עצמאי — כל קטע שבו רואים אתכם בפעולה.',
@@ -670,6 +586,12 @@ const STR = {
     welcomeTitle:'ברוכים הבאים ל-AnzClip', welcomeSub:'איך תרצו להשתמש בפלטפורמה?',
     registerGKTitle:'הרשמה כשחקן/ית', registerGKSub:'העלו סרטונים וקבלו ניתוח ממאמן מקצועי',
     registerCoachTitle:'הרשמה כמאמן/אנליסט', registerCoachSub:'קבלו בקשות ניתוח משחקנים ובנו לעצמכם הכנסה',
+    registerAgentTitle:'הרשמה כסוכן', registerAgentSub:'צפו בפרופילים של מאמנים, אנליסטים, סקאוטים ושחקנים',
+    registerScoutTitle:'הרשמה כסקאוט', registerScoutSub:'צפו בפרופילים של מאמנים, אנליסטים, סקאוטים ושחקנים',
+    viewerLicenseTitle:'העלאת רישיון סוכן בתוקף', viewerScoutProofTitle:'העלאת אישור ייצוג קבוצה',
+    representingClubLabel:'הקבוצה שאתם מייצגים', viewerPendingApproval:'ממתין לאישור מנהל המערכת',
+    directoryTitle:'ספרייה', directoryCoaches:'מאמנים/אנליסטים', directoryPlayers:'שחקנים',
+    searchPlayerPh:'הקלידו שם שחקן...', viewerReadOnlyNote:'חשבון צפייה בלבד — אין אפשרות להזמין ניתוח',
     alreadyHaveAccount:'כבר יש לכם חשבון? התחברות', noSavedAccount:'לא נמצא חשבון שמור במכשיר הזה',
     welcomeBack:'ברוכים השבים',
     switchUser:'לא אתם? החלפת משתמש', logout:'התנתקות',
@@ -711,6 +633,9 @@ const STR = {
     rateCoachPrompt:'איך היה הניתוח? דרגו את המאמן', yourRating:'הדירוג שנתתם', ratingSaved:'תודה על הדירוג!',
     ratingScaleHint:'1 = חלש · 5 = מצוין',
     addAttachments:'הוסיפו קבצים (אופציונלי)', attachmentsHint:'תמונות, PDF או כל קובץ אחר',
+    highlightClipUploadTitle:'העלאת קליף ביצועים', highlightClipUploadHint:'העלו את קובץ הקליף הערוך',
+    myClipsNav:'הקליפים שלי', myClipsTitle:'הקליפים שלי', noClipsYet:'עדיין לא קיבלתם קליפים',
+    watchClip:'צפו בקליף', clipFrom:'קליף מ-',
     uploadingAttachments:'מעלים קבצים...', attachmentsTitle:'קבצים מצורפים', removeAttachment:'הסירו',
     someAttachmentsFailed:'הניתוח נשלח, אך חלק מהקבצים המצורפים לא הועלו בהצלחה',
     coachTypeTitle:'סוג מאמן', coachTypeGK:'מאמן שוערים', coachTypeGeneral:'מאמן כללי', coachTypeAnalyst:'אנליסט',
@@ -722,14 +647,12 @@ const STR = {
     statInvalidRatioMsg:'לא יכול להיות גדול מ"מתוך"', statIncompleteRatioMsg:'יש למלא גם "הצליח" וגם "מתוך"',
     myStatsNav:'הסטטיסטיקה שלי', statsPageTitle:'הסטטיסטיקה שלי', noStatsYet:'עדיין אין מספיק ניתוחים עם סטטיסטיקות',
     perGameLabel:'משחק',
-    shareStatsBtn:'תצוגה גדולה ושיתוף', shareCardTitle:'כרטיס הסטטיסטיקה שלי', shareDownload:'הורדת תמונה', shareShareBtn:'שיתוף', shareClose:'סגירה',
-    shareGenerating:'מכין תמונה…', shareGamesAnalyzed:'משחקים נותחו', shareAvg:'ממוצע', shareTotal:'סה״כ', shareTagline:'ניתוח ביצועים מקצועי', shareErr:'יצירת התמונה נכשלה, נסו שוב',
-    searchHomePh:'חיפוש מאמן, אנליסט או שחקן…', searchCoachesSection:'מאמנים ואנליסטים', searchPlayersSection:'שחקנים', searchNoResults:'לא נמצאו תוצאות', playerProfileTitle:'פרופיל שחקן',
-    pfSearchableTitle:'חשיפה בחיפוש', pfSearchableLabel:'הצג אותי בחיפוש', pfSearchableHint:'כשמופעל, שחקנים ומאמנים יוכלו למצוא את הפרופיל שלך ולראות את הסטטיסטיקה שלך. כבוי כברירת מחדל.',
-    coachRatingsTitle:'ציוני מאמן', attributeRatingsLabel:'ציוני יכולת (1–10)', attributeRatingsHint:'דרגו את השחקן בכל מאפיין. אופציונלי.', detailedStatsLabel:'סטטיסטיקה מפורטת', statsOptionalHint:'מלאו רק את מה שרלוונטי — הכל אופציונלי.', viewFullStats:'כל הנתונים', viewKeyStats:'נתוני מפתח', keyStatsTitle:'נתוני מפתח',
     filterCoachType:'סוג מאמן', filterAllTypes:'הכל', filterSpecialization:'התמחות',
     writeReview:'כתבו ביקורת (אופציונלי)', reviewPlaceholder:'איך היה הניתוח? מה עבד טוב?',
     reviewsTitle:'ביקורות', noReviewsYet:'עדיין אין ביקורות', submitRating:'שלחו דירוג',
+    sampleClipsTitle:'קליפים לדוגמה',
+    statsPrivacyTitle:'פרטיות', statsPrivacyLabel:'הצגת הסטטיסטיקה והקליפים שלי לכל משתמש מחובר באפליקציה',
+    playerProfileTitle:'פרופיל שחקן', statsPrivateMsg:'השחקן/ית הגדיר/ה שהמידע הזה פרטי',
     coachProfileTitle:'פרופיל מאמן', aboutCoach:'קצת על המאמן',
     fieldCertificate:'העלאת תעודת מאמן/אנליסט', certificateHint:'העלו תמונה או PDF של התעודה',
     certificateRequired:'יש להעלות תעודת הסמכה כדי להירשם', certificateUploadError:'העלאת התעודה נכשלה, נסו שוב',
@@ -811,6 +734,12 @@ const STR = {
     welcomeTitle:'Welcome to AnzClip', welcomeSub:'How would you like to use the platform?',
     registerGKTitle:'Sign up as a player', registerGKSub:'Upload videos and get analysis from a professional coach',
     registerCoachTitle:'Sign up as a coach/analyst', registerCoachSub:'Get analysis requests from players and build your income',
+    registerAgentTitle:'Sign up as an agent', registerAgentSub:'Browse profiles of coaches, analysts, scouts and players',
+    registerScoutTitle:'Sign up as a scout', registerScoutSub:'Browse profiles of coaches, analysts, scouts and players',
+    viewerLicenseTitle:'Upload a valid agent license', viewerScoutProofTitle:'Upload proof of club representation',
+    representingClubLabel:'Club you represent', viewerPendingApproval:'Awaiting admin approval',
+    directoryTitle:'Directory', directoryCoaches:'Coaches/analysts', directoryPlayers:'Players',
+    searchPlayerPh:'Type a player name...', viewerReadOnlyNote:'View-only account — booking an analysis is not available',
     alreadyHaveAccount:'Already have an account? Log in', noSavedAccount:'No saved account found on this device',
     welcomeBack:'Welcome back',
     switchUser:'Not you? Switch user', logout:'Log out',
@@ -852,6 +781,9 @@ const STR = {
     rateCoachPrompt:'How was the analysis? Rate the coach', yourRating:'Your rating', ratingSaved:'Thanks for rating!',
     ratingScaleHint:'1 = poor · 5 = excellent',
     addAttachments:'Add files (optional)', attachmentsHint:'Images, PDF, or any other file',
+    highlightClipUploadTitle:'Upload highlight clip', highlightClipUploadHint:'Upload the edited clip file',
+    myClipsNav:'My clips', myClipsTitle:'My clips', noClipsYet:"You haven't received any clips yet",
+    watchClip:'Watch clip', clipFrom:'Clip from ',
     uploadingAttachments:'Uploading files...', attachmentsTitle:'Attached files', removeAttachment:'Remove',
     someAttachmentsFailed:"Analysis sent, but some attached files failed to upload",
     coachTypeTitle:'Coach type', coachTypeGK:'Goalkeeper coach', coachTypeGeneral:'General coach', coachTypeAnalyst:'Analyst',
@@ -863,14 +795,12 @@ const STR = {
     statInvalidRatioMsg:'cannot be greater than "out of"', statIncompleteRatioMsg:'Please fill in both "made" and "out of"',
     myStatsNav:'My stats', statsPageTitle:'My stats', noStatsYet:'Not enough analyses with stats yet',
     perGameLabel:'Game',
-    shareStatsBtn:'Big view & share', shareCardTitle:'My stats card', shareDownload:'Download image', shareShareBtn:'Share', shareClose:'Close',
-    shareGenerating:'Preparing image…', shareGamesAnalyzed:'games analyzed', shareAvg:'Avg', shareTotal:'Total', shareTagline:'Professional performance analysis', shareErr:'Image generation failed, please try again',
-    searchHomePh:'Search a coach, analyst or player…', searchCoachesSection:'Coaches & analysts', searchPlayersSection:'Players', searchNoResults:'No results found', playerProfileTitle:'Player profile',
-    pfSearchableTitle:'Search visibility', pfSearchableLabel:'Show me in search', pfSearchableHint:'When on, players and coaches can find your profile and see your stats. Off by default.',
-    coachRatingsTitle:'Coach ratings', attributeRatingsLabel:'Attribute ratings (1–10)', attributeRatingsHint:'Rate the player on each attribute. Optional.', detailedStatsLabel:'Detailed stats', statsOptionalHint:'Fill only what applies — all optional.', viewFullStats:'View full stats', viewKeyStats:'Key stats', keyStatsTitle:'Key stats',
     filterCoachType:'Coach type', filterAllTypes:'All', filterSpecialization:'Specialization',
     writeReview:'Write a review (optional)', reviewPlaceholder:'How was the analysis? What worked well?',
     reviewsTitle:'Reviews', noReviewsYet:'No reviews yet', submitRating:'Submit rating',
+    sampleClipsTitle:'Sample clips',
+    statsPrivacyTitle:'Privacy', statsPrivacyLabel:'Show my stats and clips to any logged-in user',
+    playerProfileTitle:'Player profile', statsPrivateMsg:'This player has set this information as private',
     coachProfileTitle:'Coach profile', aboutCoach:'About the coach',
     fieldCertificate:'Upload coach/analyst certificate', certificateHint:'Upload an image or PDF of your certificate',
     certificateRequired:'Please upload a certificate to sign up', certificateUploadError:'Certificate upload failed, please try again',
@@ -895,18 +825,19 @@ let state = {
   signupDraft: {},
   profileDraft: {},
   composeAttachments: [],
+  composeClipFile: null,
   viewingCoach: null,
-  viewingPlayer: null,
-  statsFull: false,
   adminPendingCoaches: [],
   adminStats: null,
   activePackages: [],
   coachReviews: [],
+  coachClips: [],
+  viewingPlayer: null, playerPublicGames: [], playerPublicClips: [], allPlayers: [],
   coachId: null,
   composeId: null,
   requests: [],
   draft: { videos:[], isDemo:false, fileName:null, category:'kids', note:'' },
-  filters: { specialty:'all', sort:'rating', country:'all', coachType:'all', generalSpec:'all', query:'', homeQuery:'' },
+  filters: { specialty:'all', sort:'rating', country:'all', coachType:'all', generalSpec:'all', query:'' },
   selectedCoach: null,
 };
 const videoUrls = {}; // reqId -> objectURL (session-only)
@@ -1070,56 +1001,25 @@ async function refreshCoachDirectory(){
     snap.forEach(doc=>{ COACHES.push(buildCoachProfile({uid:doc.id, ...doc.data()}, i)); i++; });
   }catch(e){ console.error('failed to load coach directory', e); }
 }
-function buildPlayerProfile(u, idx){
-  return {
-    id: u.uid, name:u.name||'', photo:u.photo||null,
-    country:u.country||null, club:u.club||'', dob:u.dob||null,
-    playerRole: u.playerRole||'field', positions:u.positions||[],
-    about:u.about||'', publicStats:u.publicStats||null,
-    avatarColor: AVATAR_PALETTE[idx % AVATAR_PALETTE.length]
-  };
-}
-async function loadSearchablePlayers(){
-  // Only players who explicitly opted in (searchable==true) appear in the public directory.
-  PLAYERS.length = 0;
+async function loadAllPlayers(){
   try{
-    const snap = await db.collection('users').where('searchable','==',true).get();
-    let i = 0;
-    snap.forEach(doc=>{ const d = doc.data(); if(d.role!=='coach'){ PLAYERS.push(buildPlayerProfile({uid:doc.id, ...d}, i)); i++; } });
-  }catch(e){ console.error('failed to load searchable players', e); }
-}
-function computePublicStats(){
-  const role = (state.user && state.user.playerRole) || 'field';
-  const defs = keyStatDefs(role);
-  const games = state.requests.filter(r=>r.status==='done' && r.stats && Object.keys(r.stats).length);
-  const items = defs.map(s=>{
-    if(s.type==='ratio'){
-      const vals = games.map(g=>{ const v=g.stats&&g.stats[s.key]; return (v&&v.att)?(v.made/v.att*100):null; }).filter(v=>v!=null);
-      if(!vals.length) return null;
-      return { key:s.key, ratio:true, value:Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) };
-    }
-    const vals = games.map(g=>(g.stats&&g.stats[s.key]!=null)?Number(g.stats[s.key]):null).filter(v=>v!=null);
-    if(!vals.length) return null;
-    return { key:s.key, ratio:false, value:vals.reduce((a,b)=>a+b,0) };
-  }).filter(Boolean);
-  return { role, games:games.length, items };
-}
-async function syncPublicStats(){
-  // Player denormalizes their own aggregated stats onto their user doc so opted-in
-  // profiles can display them. Cleared when the player is not searchable.
-  if(!state.user || state.user.role==='coach') return;
-  const want = state.user.searchable ? computePublicStats() : null;
-  if(JSON.stringify(want) === JSON.stringify(state.user.publicStats||null)) return;
-  try{
-    await db.collection('users').doc(state.user.uid).update({ publicStats: want });
-    state.user.publicStats = want;
-  }catch(e){ console.error('failed to sync public stats', e); }
+    const snap = await db.collection('users').where('role','==','gk').get();
+    const list = [];
+    snap.forEach(doc=>{ const d = doc.data(); list.push({ uid:doc.id, name:d.name, photo:d.photo||null, playerRole:d.playerRole||'field' }); });
+    list.sort((a,b)=> a.name.localeCompare(b.name));
+    return list;
+  }catch(e){ console.error('failed to load players directory', e); return []; }
 }
 async function loadPendingCoaches(){
   try{
-    const snap = await db.collection('users').where('role','==','coach').where('isVerified','==',false).get();
+    const roles = ['coach','agent','scout'];
+    const results = await Promise.all(roles.map(role=>
+      db.collection('users').where('role','==',role).where('isVerified','==',false).get()
+    ));
     const list = [];
-    snap.forEach(doc=>{ const d = doc.data(); if(!d.rejected) list.push({uid:doc.id, ...d}); });
+    results.forEach(snap=>{
+      snap.forEach(doc=>{ const d = doc.data(); if(!d.rejected) list.push({uid:doc.id, ...d}); });
+    });
     return list;
   }catch(e){ console.error('failed to load pending coaches', e); return []; }
 }
@@ -1153,7 +1053,6 @@ async function loadMyRequests(uid){
     const snap = await db.collection('requests').where('gkUid','==',uid).get();
     state.requests = [];
     snap.forEach(doc=> state.requests.push({id:doc.id, ...doc.data()}));
-    syncPublicStats();
   }catch(e){ console.error('failed to load my requests', e); state.requests = []; }
 }
 async function markRequestsSeen(){
@@ -1181,6 +1080,53 @@ async function loadCoachReviews(coachUid){
     reviews.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
     return reviews;
   }catch(e){ console.error('failed to load coach reviews', e); return []; }
+}
+async function loadCoachClips(coachUid){
+  try{
+    const snap = await db.collection('coachClips').where('coachUid','==',coachUid).get();
+    const raw = [];
+    snap.forEach(doc=>{
+      const d = doc.data();
+      raw.push({ gkUid:d.gkUid, gkName:d.gkName, url:d.url, createdAt:d.createdAt });
+    });
+    const uniqueUids = [...new Set(raw.map(c=>c.gkUid).filter(Boolean))];
+    const privacyByUid = {};
+    await Promise.all(uniqueUids.map(async uid=>{
+      try{
+        const doc = await db.collection('users').doc(uid).get();
+        privacyByUid[uid] = doc.exists ? (doc.data().statsPublic!==false) : true;
+      }catch(e){ privacyByUid[uid] = true; }
+    }));
+    const clips = raw
+      .filter(c=> !c.gkUid || privacyByUid[c.gkUid]!==false)
+      .map(c=> ({ gkName:c.gkName, url:c.url, createdAt:c.createdAt }));
+    clips.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+    return clips;
+  }catch(e){ console.error('failed to load coach clips', e); return []; }
+}
+async function loadPlayerProfile(gkUid){
+  try{
+    const doc = await db.collection('users').doc(gkUid).get();
+    return doc.exists ? {uid:gkUid, ...doc.data()} : null;
+  }catch(e){ console.error('failed to load player profile', e); return null; }
+}
+async function loadPlayerPublicClips(gkUid){
+  try{
+    const snap = await db.collection('coachClips').where('gkUid','==',gkUid).get();
+    const clips = [];
+    snap.forEach(doc=>{ const d = doc.data(); clips.push({ url:d.url, createdAt:d.createdAt }); });
+    clips.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+    return clips;
+  }catch(e){ console.error('failed to load player clips', e); return []; }
+}
+async function loadPlayerPublicStats(gkUid){
+  try{
+    const snap = await db.collection('playerGameStats').where('gkUid','==',gkUid).get();
+    const games = [];
+    snap.forEach(doc=>{ const d = doc.data(); games.push({ stats:d.stats, createdAt:d.createdAt }); });
+    games.sort((a,b)=> (a.createdAt||0)-(b.createdAt||0));
+    return games;
+  }catch(e){ console.error('failed to load player stats', e); return []; }
 }
 async function createRequestDoc(data){
   try{ const ref = await db.collection('requests').add(data); return ref.id; }
@@ -1286,6 +1232,8 @@ function icon(name, size=20){
     home:`<path d="M4 10.5L12 4l8 6.5V19a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4H10v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-8.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>`,
     list:`<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
     chart:`<path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    briefcase:`<rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M3 12h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`,
+    search:`<circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`,
     back:`<path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
     star:`<path d="M12 2l2.9 6.3 6.9.7-5.2 4.7 1.5 6.8L12 17l-6.1 3.5 1.5-6.8L2.2 9l6.9-.7L12 2z" fill="currentColor"/>`,
     clip:`<rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 12l2.5 2.5L16 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`,
@@ -1309,25 +1257,146 @@ function fmtHours(h){
 function fmtMinutes(min){
   return `${Math.round(min)} ${t('minutesUnit')}`;
 }
+function renderPlayerProfile(){
+  const p = state.viewingPlayer;
+  if(!p) return renderHome();
+  const isPrivate = p.statsPublic===false;
+  return `
+    <div class="coach-top" style="margin-bottom:14px">
+      ${personAvatarHtml(p.name, p.photo, 56)}
+      <div>
+        <div class="coach-name" style="font-size:17px">${p.name}</div>
+        <div class="coach-sub">${p.playerRole==='goalkeeper'?t('playerRoleGK'):t('playerRoleField')}</div>
+      </div>
+    </div>
+    ${isPrivate ? `
+      <div class="empty-state" style="padding:50px 20px">${icon('clip',30)}<b>${t('statsPrivateMsg')}</b></div>
+    ` : `
+      <div class="section-title" style="margin-top:10px">${t('statsPageTitle')}</div>
+      <div class="section-line"></div>
+      ${(!state.playerPublicGames || !state.playerPublicGames.length) ? `
+        <div class="empty-state" style="padding:30px 20px">${icon('chart',26)}<b>${t('noStatsYet')}</b></div>
+      ` : (STAT_DEFS[p.playerRole||'field']||STAT_DEFS.field).filter(s=>state.playerPublicGames.some(g=>g.stats && g.stats[s.key]!=null)).map(s=>`
+        <div class="field-label" style="margin-top:18px">${s[state.lang]}</div>
+        <div style="position:relative;width:100%;height:200px;">
+          <canvas id="pubstatchart-${s.key}"></canvas>
+        </div>
+      `).join('')}
+
+      <div class="section-title" style="margin-top:26px">${t('myClipsNav')} ${(state.playerPublicClips||[]).length?`(${state.playerPublicClips.length})`:''}</div>
+      <div class="section-line"></div>
+      ${(!state.playerPublicClips || !state.playerPublicClips.length) ? `
+        <div class="empty-state" style="padding:30px 20px">${icon('clip',26)}<b>${t('noClipsYet')}</b></div>
+      ` : state.playerPublicClips.map(c=>`
+        <video controls preload="metadata" style="width:100%;border-radius:12px;background:#000;margin-bottom:12px" src="${c.url}"></video>
+      `).join('')}
+    `}
+  `;
+}
+function initPublicStatsCharts(){
+  if(typeof Chart==='undefined') return;
+  const p = state.viewingPlayer;
+  if(!p || p.statsPublic===false) return;
+  const role = p.playerRole || 'field';
+  const defs = STAT_DEFS[role] || STAT_DEFS.field;
+  const games = state.playerPublicGames || [];
+  const labels = games.map((g,i)=> `${t('perGameLabel')} ${i+1}`);
+  defs.forEach(s=>{
+    const canvas = document.getElementById('pubstatchart-'+s.key);
+    if(!canvas) return;
+    let data;
+    if(s.type==='ratio'){
+      data = games.map(g=>{
+        const v = g.stats && g.stats[s.key];
+        if(!v || !v.att) return null;
+        return Math.round((v.made/v.att)*100);
+      });
+    } else {
+      data = games.map(g=> (g.stats && g.stats[s.key]!=null) ? g.stats[s.key] : null);
+    }
+    new Chart(canvas, {
+      type: s.type==='ratio' ? 'line' : 'bar',
+      data:{ labels, datasets:[{
+        data,
+        borderColor:'#ff6b47', backgroundColor: s.type==='ratio' ? 'rgba(255,107,71,.15)' : '#ff6b47',
+        borderWidth:2, pointRadius:4, pointBackgroundColor:'#ff6b47',
+        fill: s.type==='ratio', tension:0.3,
+        borderRadius: s.type==='count' ? 4 : 0, maxBarThickness:28
+      }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false} },
+        scales:{
+          y: s.type==='ratio'
+            ? { min:0, max:100, ticks:{color:'#9aa89e', callback:(v)=>v+'%'}, grid:{color:'rgba(154,168,158,.15)'} }
+            : { beginAtZero:true, ticks:{color:'#9aa89e', precision:0}, grid:{color:'rgba(154,168,158,.15)'} },
+          x: { ticks:{color:'#9aa89e'}, grid:{display:false} }
+        }
+      }
+    });
+  });
+}
+function renderViewerPending(){
+  return `
+    <div class="empty-state" style="padding:70px 20px">
+      ${icon('briefcase',34)}
+      <b>${t('viewerPendingApproval')}</b>
+    </div>
+    <div style="text-align:center">
+      <button class="auth-link" data-action="logout">${t('logout')}</button>
+    </div>
+  `;
+}
+function renderDirectoryPlayers(){
+  const q = (state.filters.playerQuery||'').trim().toLowerCase();
+  const list = (state.allPlayers||[]).filter(p=> !q || p.name.toLowerCase().includes(q));
+  return `
+    <div class="field-label" style="margin-top:0">${t('searchCoachLabel')}</div>
+    <input class="form-input" id="player-search-input" type="text" placeholder="${t('searchPlayerPh')}" value="${state.filters.playerQuery||''}">
+    ${list.length===0 ? `
+      <div class="empty-state" style="padding:40px 20px">${icon('search',30)}<b>${t('noStatsYet')}</b></div>
+    ` : list.map(p=>`
+      <div class="req-card" data-view-player="${p.uid}" style="cursor:pointer">
+        <div class="req-coach">
+          ${personAvatarHtml(p.name, p.photo, 40)}
+          <div style="font-size:14px">
+            <div style="font-weight:700">${p.name}</div>
+            <div class="req-meta">${p.playerRole==='goalkeeper'?t('playerRoleGK'):t('playerRoleField')}</div>
+          </div>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+function renderMyClips(){
+  const clips = state.requests
+    .filter(r=>r.status==='done' && r.highlightClipUrl)
+    .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  if(!clips.length){
+    return `<div class="empty-state" style="padding:60px 20px">${icon('clip',34)}<b>${t('noClipsYet')}</b></div>`;
+  }
+  return clips.map(r=>`
+    <div class="req-card">
+      <div class="req-coach" style="margin-bottom:10px">
+        ${avatarHtml(r.coach, 34)}
+        <div style="font-size:13px">
+          <div style="font-weight:600">${t('clipFrom')}${r.coach.name}</div>
+          <div class="req-meta">${fmtDateTime(r.createdAt)}</div>
+        </div>
+      </div>
+      <video controls preload="metadata" style="width:100%;border-radius:12px;background:#000" src="${r.highlightClipUrl}"></video>
+    </div>
+  `).join('');
+}
 function renderMyStats(){
   const role = (state.user && state.user.playerRole) || 'field';
-  const allDefs = STAT_DEFS[role] || STAT_DEFS.field;
-  const keyDefs = keyStatDefs(role);
+  const defs = STAT_DEFS[role] || STAT_DEFS.field;
   const games = state.requests
     .filter(r=>r.status==='done' && r.stats && Object.keys(r.stats).length)
     .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
   if(!games.length){
     return `<div class="empty-state" style="padding:60px 20px">${icon('chart',34)}<b>${t('noStatsYet')}</b></div>`;
   }
-  const showFull = !!state.statsFull;
-  const chartDefs = showFull ? allDefs : keyDefs;
-  const tiles = aggregatePlayerStats(games, keyDefs);
-  const tilesHtml = tiles.length ? `
-    <div class="field-label" style="margin-top:4px">${t('keyStatsTitle')}</div>
-    <div class="keystat-grid">${tiles.map(tl=>`
-      <div class="keystat-tile"><b>${tl.value}</b><span>${tl.label}<br><span style="font-size:9px;color:var(--muted)">${tl.sub}</span></span></div>
-    `).join('')}</div>` : '';
-  const charts = chartDefs.map(s=>{
+  const charts = defs.map(s=>{
     const hasData = games.some(g=> g.stats && g.stats[s.key]!=null);
     if(!hasData) return '';
     return `
@@ -1337,14 +1406,7 @@ function renderMyStats(){
       </div>
     `;
   }).join('');
-  return `
-    <button class="btn btn-primary btn-block" data-action="open-stats-share" style="margin-bottom:4px">
-      ${icon('chart',18)} ${t('shareStatsBtn')}
-    </button>
-    <div class="req-meta" style="margin:0 0 10px">${games.length} ${t('shareGamesAnalyzed')}</div>
-    ${tilesHtml}
-    <div style="padding-bottom:10px">${charts}</div>
-    <button class="btn btn-ghost btn-block" data-action="toggle-full-stats" style="margin-top:6px">${showFull ? t('viewKeyStats') : t('viewFullStats')}</button>`;
+  return `<div style="padding-bottom:10px">${charts}</div>`;
 }
 function initStatsCharts(){
   if(typeof Chart==='undefined') return;
@@ -1388,196 +1450,6 @@ function initStatsCharts(){
     });
   });
 }
-/* ---------------- STATS SHARE CARD ---------------- */
-function aggregatePlayerStats(games, defs){
-  return defs.map(s=>{
-    if(s.type==='ratio'){
-      const vals = games.map(g=>{ const v=g.stats&&g.stats[s.key]; return (v&&v.att)?(v.made/v.att*100):null; }).filter(v=>v!=null);
-      if(!vals.length) return null;
-      const avg = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
-      return { label:s[state.lang], value:avg+'%', sub:t('shareAvg') };
-    }
-    const vals = games.map(g=>(g.stats&&g.stats[s.key]!=null)?Number(g.stats[s.key]):null).filter(v=>v!=null);
-    if(!vals.length) return null;
-    const total = vals.reduce((a,b)=>a+b,0);
-    return { label:s[state.lang], value:String(total), sub:t('shareTotal') };
-  }).filter(Boolean);
-}
-
-var shareChartInstances = [];
-function closeStatsShare(){
-  (shareChartInstances||[]).forEach(c=>{ try{ c.destroy(); }catch(e){} });
-  shareChartInstances = [];
-  const ov = document.getElementById('stats-share-overlay');
-  if(ov) ov.remove();
-}
-
-function openStatsShare(){
-  const role = (state.user && state.user.playerRole) || 'field';
-  const defs = keyStatDefs(role);
-  const games = state.requests
-    .filter(r=>r.status==='done' && r.stats && Object.keys(r.stats).length)
-    .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
-  if(!games.length){ showToast(t('noStatsYet')); return; }
-
-  const u = state.user || {};
-  const age = u.dob ? calcAge(u.dob) : null;
-  const metaLine = [
-    age!=null ? age+' '+t('ageUnit') : null,
-    u.club || null,
-    u.country ? countryName(u.country) : null
-  ].filter(Boolean).join(' · ');
-  const roleLabel = role==='goalkeeper' ? t('playerRoleGK') : t('playerRoleField');
-  const initials = (u.name||'?').split(' ').map(n=>n[0]).join('').slice(0,2);
-  const tiles = aggregatePlayerStats(games, defs);
-  const dir = state.lang==='he' ? 'rtl' : 'ltr';
-
-  const avatarHtmlStr = u.photo
-    ? `<img src="${u.photo}" style="width:60px;height:60px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,107,71,.5)">`
-    : `<div style="width:60px;height:60px;border-radius:14px;background:#ff6b47;color:#0e1d16;display:flex;align-items:center;justify-content:center;font-family:'Rubik';font-weight:900;font-size:24px">${initials}</div>`;
-
-  const tilesHtml = tiles.map(tl=>`
-    <div style="background:#1d3826;border:1px solid rgba(243,241,231,.08);border-radius:14px;padding:14px 10px;text-align:center">
-      <div style="font-family:'IBM Plex Mono';font-weight:600;font-size:26px;color:#e9c46a;line-height:1">${tl.value}</div>
-      <div style="font-size:12px;color:#f3f1e7;margin-top:6px;font-weight:600;line-height:1.25">${tl.label}</div>
-      <div style="font-size:10px;color:#8fa494;margin-top:2px;text-transform:uppercase;letter-spacing:.5px">${tl.sub}</div>
-    </div>
-  `).join('');
-
-  const chartsHtml = defs.map(s=>{
-    const hasData = games.some(g=>g.stats && g.stats[s.key]!=null);
-    if(!hasData) return '';
-    return `
-      <div style="margin-top:16px">
-        <div style="font-size:12px;color:#c9d3c8;font-weight:600;margin-bottom:6px">${s[state.lang]}</div>
-        <div style="position:relative;width:100%;height:150px"><canvas id="sc-chart-${s.key}"></canvas></div>
-      </div>`;
-  }).join('');
-
-  const overlay = document.createElement('div');
-  overlay.id = 'stats-share-overlay';
-  overlay.dir = dir;
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:1000;background:rgba(7,15,11,.92);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:18px 14px 24px;font-family:\'Heebo\',sans-serif;';
-
-  overlay.innerHTML = `
-    <div style="width:100%;max-width:400px;display:flex;justify-content:flex-end;margin-bottom:10px">
-      <button id="sc-close" style="background:rgba(243,241,231,.1);border:none;color:#f3f1e7;border-radius:10px;padding:8px 14px;font-family:'Heebo';font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px">${icon('x',16)} ${t('shareClose')}</button>
-    </div>
-
-    <div id="share-card" style="width:100%;max-width:400px;background:linear-gradient(160deg,#12241a 0%,#0e1d16 100%);border:1px solid rgba(243,241,231,.1);border-radius:22px;padding:22px 20px;box-shadow:0 10px 40px rgba(0,0,0,.4)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-        <div style="display:flex;align-items:center;gap:9px">
-          <div style="width:30px;height:30px;border-radius:8px;background:#ff6b47;display:flex;align-items:center;justify-content:center;font-family:'Rubik';font-weight:900;font-size:15px;color:#0e1d16">1</div>
-          <div style="font-family:'Rubik';font-weight:800;font-size:17px;color:#f3f1e7">AnzClip</div>
-        </div>
-        <div style="font-family:'IBM Plex Mono';font-size:10px;letter-spacing:1px;color:#ff8a68;text-transform:uppercase">${t('shareTagline')}</div>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:13px;margin-bottom:18px">
-        ${avatarHtmlStr}
-        <div style="flex:1;min-width:0">
-          <div style="font-family:'Rubik';font-weight:800;font-size:19px;color:#f3f1e7;line-height:1.15">${u.name||''}</div>
-          <div style="font-size:12.5px;color:#8fa494;margin-top:3px">${[roleLabel, metaLine].filter(Boolean).join(' · ')}</div>
-        </div>
-        <div style="text-align:center;flex-shrink:0">
-          <div style="font-family:'IBM Plex Mono';font-weight:600;font-size:22px;color:#ff6b47;line-height:1">${games.length}</div>
-          <div style="font-size:9.5px;color:#8fa494;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">${t('shareGamesAnalyzed')}</div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:repeat(${Math.min(tiles.length||1,3)},1fr);gap:8px">${tilesHtml}</div>
-
-      ${chartsHtml}
-
-      <div style="margin-top:20px;padding-top:12px;border-top:1px solid rgba(243,241,231,.1);text-align:center;font-family:'IBM Plex Mono';font-size:10.5px;color:#8fa494;letter-spacing:.5px">anzclip.app</div>
-    </div>
-
-    <div style="width:100%;max-width:400px;display:flex;gap:10px;margin-top:16px">
-      <button id="sc-download" style="flex:1;background:#ff6b47;border:none;color:#1a0f0a;border-radius:14px;padding:15px;font-family:'Heebo';font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">${icon('upload',18)} ${t('shareDownload')}</button>
-      <button id="sc-share" style="flex:1;background:#1d3826;border:1px solid rgba(243,241,231,.15);color:#f3f1e7;border-radius:14px;padding:15px;font-family:'Heebo';font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">${icon('star',18)} ${t('shareShareBtn')}</button>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  // draw charts into the card
-  shareChartInstances = [];
-  if(typeof Chart !== 'undefined'){
-    const labels = games.map((g,i)=> `${t('perGameLabel')} ${i+1}`);
-    defs.forEach(s=>{
-      const canvas = document.getElementById('sc-chart-'+s.key);
-      if(!canvas) return;
-      let data;
-      if(s.type==='ratio'){
-        data = games.map(g=>{ const v=g.stats&&g.stats[s.key]; return (!v||!v.att)?null:Math.round((v.made/v.att)*100); });
-      } else {
-        data = games.map(g=>(g.stats&&g.stats[s.key]!=null)?g.stats[s.key]:null);
-      }
-      const inst = new Chart(canvas, {
-        type: s.type==='ratio' ? 'line' : 'bar',
-        data:{ labels, datasets:[{ data, borderColor:'#ff6b47',
-          backgroundColor: s.type==='ratio' ? 'rgba(255,107,71,.18)' : '#ff6b47',
-          borderWidth:2, pointRadius:3, pointBackgroundColor:'#ff6b47',
-          fill:s.type==='ratio', tension:0.3, borderRadius:s.type==='count'?4:0, maxBarThickness:26 }] },
-        options:{ responsive:true, maintainAspectRatio:false, animation:false,
-          plugins:{ legend:{display:false} },
-          scales:{
-            y: s.type==='ratio'
-              ? { min:0, max:100, ticks:{color:'#9aa89e', callback:(v)=>v+'%'}, grid:{color:'rgba(154,168,158,.15)'} }
-              : { beginAtZero:true, ticks:{color:'#9aa89e', precision:0}, grid:{color:'rgba(154,168,158,.15)'} },
-            x: { ticks:{color:'#9aa89e'}, grid:{display:false} }
-          }
-        }
-      });
-      shareChartInstances.push(inst);
-    });
-  }
-
-  const fileName = `anzclip-stats-${(u.name||'player').replace(/\s+/g,'-').toLowerCase()}.png`;
-  function buildCanvas(){
-    const card = document.getElementById('share-card');
-    return html2canvas(card, { scale:2, backgroundColor:'#0e1d16', useCORS:true, logging:false });
-  }
-
-  document.getElementById('sc-close').addEventListener('click', closeStatsShare);
-  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeStatsShare(); });
-
-  document.getElementById('sc-download').addEventListener('click', async (e)=>{
-    const btn = e.currentTarget; const orig = btn.innerHTML;
-    btn.innerHTML = t('shareGenerating'); btn.style.opacity = '.7';
-    try{
-      const canvas = await buildCanvas();
-      canvas.toBlob((blob)=>{
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = fileName; a.click();
-        setTimeout(()=>URL.revokeObjectURL(url), 4000);
-      }, 'image/png');
-    }catch(err){ console.error('stats image build failed', err); showToast(t('shareErr')); }
-    btn.innerHTML = orig; btn.style.opacity = '1';
-  });
-
-  document.getElementById('sc-share').addEventListener('click', async (e)=>{
-    const btn = e.currentTarget; const orig = btn.innerHTML;
-    btn.innerHTML = t('shareGenerating'); btn.style.opacity = '.7';
-    try{
-      const canvas = await buildCanvas();
-      const blob = await new Promise(res=>canvas.toBlob(res, 'image/png'));
-      const file = new File([blob], fileName, { type:'image/png' });
-      if(navigator.canShare && navigator.canShare({ files:[file] })){
-        await navigator.share({ files:[file], title:'AnzClip', text:`${u.name||''} · AnzClip` });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = fileName; a.click();
-        setTimeout(()=>URL.revokeObjectURL(url), 4000);
-        showToast(t('shareDownload'));
-      }
-    }catch(err){ if(err && err.name!=='AbortError'){ console.error('share failed', err); showToast(t('shareErr')); } }
-    btn.innerHTML = orig; btn.style.opacity = '1';
-  });
-}
-
 function cleanPackages(packages){
   return (packages||[])
     .filter(p=> Number(p.gameCount)>0 && Number(p.price)>=0)
@@ -1657,7 +1529,7 @@ function go(view){ state.view = view; render(); window.scrollTo(0,0); }
 function render(){
   applyDocDir();
   const app = document.getElementById('app');
-  const bareViews = ['lang-select','country-select','auth','login','signup-gk','signup-coach','verify-email','forgot-password'];
+  const bareViews = ['lang-select','country-select','auth','login','signup-gk','signup-coach','signup-viewer','verify-email','forgot-password'];
   if(bareViews.includes(state.view)){
     app.innerHTML = renderView();
     attachHandlers();
@@ -1674,9 +1546,10 @@ function render(){
 function renderTopBar(){
   const titles = {
     home:null, upload:t('titleUpload'), coaches:t('titleCoaches'), confirm:t('titleConfirm'), requests:t('titleRequests'),
-    'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'player-profile':t('playerProfileTitle'), 'admin':t('adminTitle'), 'my-stats':t('statsPageTitle')
+    'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'admin':t('adminTitle'), 'my-stats':t('statsPageTitle'), 'my-clips':t('myClipsTitle'), 'player-profile':t('playerProfileTitle'), 'directory-players':t('directoryPlayers'), 'viewer-pending':t('directoryTitle')
   };
-  const isRoot = state.view==='home' || state.view==='coach-dash' || state.view==='admin';
+  const isRoot = state.view==='home' || state.view==='coach-dash' || state.view==='admin' || state.view==='viewer-pending'
+    || (state.role==='viewer' && (state.view==='coaches' || state.view==='directory-players'));
   return `
     <div class="topbar">
       <div class="topbar-row">
@@ -1701,6 +1574,21 @@ function renderTopBar(){
 function renderBottomNav(){
   if(state.role==='admin'){
     return '';
+  }
+  if(state.view==='viewer-pending'){
+    return '';
+  }
+  if(state.role==='viewer'){
+    return `
+      <div class="bottom-nav">
+        <button class="nav-btn ${state.view==='coaches'?'active':''}" data-action="nav-viewer-coaches">
+          ${icon('star',20)}<span>${t('directoryCoaches')}</span>
+        </button>
+        <button class="nav-btn ${state.view==='directory-players'?'active':''}" data-action="nav-viewer-players">
+          ${icon('search',20)}<span>${t('directoryPlayers')}</span>
+        </button>
+      </div>
+    `;
   }
   if(state.role==='coach'){
     const newCount = state.requests.filter(r=>r.status==='requested').length;
@@ -1729,6 +1617,9 @@ function renderBottomNav(){
       <button class="nav-btn ${state.view==='my-stats'?'active':''}" data-action="nav-my-stats">
         ${icon('chart',20)}<span>${t('myStatsNav')}</span>
       </button>
+      <button class="nav-btn ${state.view==='my-clips'?'active':''}" data-action="nav-my-clips">
+        ${icon('clip',20)}<span>${t('myClipsNav')}</span>
+      </button>
     </div>
   `;
 }
@@ -1741,6 +1632,7 @@ function renderView(){
     case 'login': return renderLogin();
     case 'signup-gk': return renderSignupGK();
     case 'signup-coach': return renderSignupCoach();
+    case 'signup-viewer': return renderSignupViewer();
     case 'home': return state.role==='coach' ? renderCoachHome() : renderHome();
     case 'upload': return renderUpload();
     case 'coaches': return renderCoaches();
@@ -1750,9 +1642,12 @@ function renderView(){
     case 'coach-compose': return renderCoachCompose();
     case 'profile': return renderProfile();
     case 'coach-profile': return renderCoachProfile();
-    case 'player-profile': return renderPlayerProfile();
     case 'admin': return renderAdmin();
     case 'my-stats': return renderMyStats();
+    case 'my-clips': return renderMyClips();
+    case 'player-profile': return renderPlayerProfile();
+    case 'directory-players': return renderDirectoryPlayers();
+    case 'viewer-pending': return renderViewerPending();
     case 'verify-email': return renderVerifyEmail();
     case 'forgot-password': return renderForgotPassword();
     default: return renderHome();
@@ -1827,6 +1722,14 @@ function renderAuth(){
         <div class="auth-card" data-action="goto-signup-coach">
           ${icon('star',22, true)}
           <div><b>${t('registerCoachTitle')}</b><span>${t('registerCoachSub')}</span></div>
+        </div>
+        <div class="auth-card" data-action="goto-signup-agent">
+          ${icon('briefcase',22, true)}
+          <div><b>${t('registerAgentTitle')}</b><span>${t('registerAgentSub')}</span></div>
+        </div>
+        <div class="auth-card" data-action="goto-signup-scout">
+          ${icon('search',22, true)}
+          <div><b>${t('registerScoutTitle')}</b><span>${t('registerScoutSub')}</span></div>
         </div>
         <button class="auth-link" data-action="goto-login">${t('alreadyHaveAccount')}</button>
       </div>
@@ -2075,94 +1978,74 @@ function renderSignupCoach(){
   `;
 }
 
-/* ---------------- HOME ---------------- */
-function homeSearchResults(){
-  const q = (state.filters.homeQuery||'').trim().toLowerCase();
-  if(!q) return '';
-  const coaches = COACHES.filter(c=>c.name.toLowerCase().includes(q));
-  const players = PLAYERS.filter(p=>p.name.toLowerCase().includes(q) && (!state.user || p.id!==state.user.uid));
-  if(!coaches.length && !players.length){
-    return `<div class="empty-state" style="padding:40px 20px">${icon('ghost',32)}<b>${t('searchNoResults')}</b></div>`;
-  }
-  const coachRows = coaches.map(c=>`
-    <div class="coach-card" data-view-coach="${c.id}" style="margin-bottom:10px">
-      <div class="coach-top">
-        ${avatarHtml(c, 44)}
-        <div style="flex:1">
-          <div class="coach-name-row">
-            <div class="coach-name">${c.name} <span style="font-size:13px">${countryFlag(c.country)}</span></div>
-            <div class="rating">${c.rating!==null ? `${icon('star',13)} ${c.rating.toFixed(1)}` : `<span style="font-size:11px;color:var(--muted);font-weight:600">${t('newCoachBadge')}</span>`}</div>
-          </div>
-          <div class="coach-sub">${(c.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')} · ${c.years} ${t('yearsExp')}</div>
-        </div>
-      </div>
-    </div>`).join('');
-  const playerRows = players.map(p=>{
-    const age = p.dob ? calcAge(p.dob) : null;
-    const roleLabel = p.playerRole==='goalkeeper' ? t('playerRoleGK') : t('playerRoleField');
-    const meta = [roleLabel, age!=null?age+' '+t('ageUnit'):null, p.club||null].filter(Boolean).join(' · ');
-    return `
-    <div class="coach-card" data-view-player="${p.id}" style="margin-bottom:10px">
-      <div class="coach-top">
-        ${avatarHtml({name:p.name, photo:p.photo, avatarColor:p.avatarColor}, 44)}
-        <div style="flex:1">
-          <div class="coach-name-row">
-            <div class="coach-name">${p.name} <span style="font-size:13px">${p.country?countryFlag(p.country):''}</span></div>
-          </div>
-          <div class="coach-sub">${meta}</div>
-        </div>
-      </div>
-    </div>`;}).join('');
+/* ---------------- SIGNUP: AGENT / SCOUT (view-only accounts) ---------------- */
+function renderSignupViewer(){
+  const d = state.signupDraft;
+  const isScout = d.viewerRole==='scout';
+  const title = isScout ? t('registerScoutTitle') : t('registerAgentTitle');
+  const sub = isScout ? t('registerScoutSub') : t('registerAgentSub');
+  const certTitle = isScout ? t('viewerScoutProofTitle') : t('viewerLicenseTitle');
   return `
-    ${coaches.length ? `<div class="section-title" style="margin-top:6px">${t('searchCoachesSection')} (${coaches.length})</div><div class="section-line"></div>${coachRows}` : ''}
-    ${players.length ? `<div class="section-title" style="margin-top:${coaches.length?'18px':'6px'}">${t('searchPlayersSection')} (${players.length})</div><div class="section-line"></div>${playerRows}` : ''}
-  `;
-}
+    <div class="onboard" style="padding-top:30px">
+      <div class="onboard-top">
+        <button class="back-btn" data-action="back-to-auth" style="margin-bottom:18px">${icon('back',18)} ${t('back')}</button>
+        <h2>${title}</h2>
+        <p class="sub">${sub}</p>
 
-function renderPlayerProfile(){
-  const p = state.viewingPlayer;
-  if(!p) return renderHome();
-  const age = p.dob ? calcAge(p.dob) : null;
-  const roleLabel = p.playerRole==='goalkeeper' ? t('playerRoleGK') : t('playerRoleField');
-  const metaLine = [age!=null?age+' '+t('ageUnit'):null, p.club||null, p.country?countryName(p.country):null].filter(Boolean).join(' · ');
-  const ps = p.publicStats;
-  const defs = STAT_DEFS[(ps&&ps.role)||p.playerRole] || STAT_DEFS.field;
-  let statsHtml;
-  if(ps && ps.items && ps.items.length){
-    const tiles = ps.items.map(it=>{
-      const def = defs.find(d=>d.key===it.key);
-      const label = def ? def[state.lang] : it.key;
-      return `<div class="stat-chip" style="text-align:center"><b class="mono" style="color:var(--gold)">${it.value}${it.ratio?'%':''}</b><span>${label}<br><span style="font-size:9px;color:var(--muted)">${it.ratio?t('shareAvg'):t('shareTotal')}</span></span></div>`;
-    }).join('');
-    statsHtml = `
-      <div class="section-title" style="margin-top:22px">${t('statsPageTitle')}</div>
-      <div class="section-line"></div>
-      <div class="req-meta" style="margin-bottom:8px">${ps.games} ${t('shareGamesAnalyzed')}</div>
-      <div class="stats-strip" style="flex-wrap:wrap;gap:8px">${tiles}</div>`;
-  } else {
-    statsHtml = `<div class="section-title" style="margin-top:22px">${t('statsPageTitle')}</div><div class="section-line"></div><div class="empty-state" style="padding:30px 20px">${icon('chart',30)}<b>${t('noStatsYet')}</b></div>`;
-  }
-  const positionsHtml = (p.playerRole==='field' && p.positions && p.positions.length)
-    ? `<div class="badge-row" style="margin-top:10px">${p.positions.map(pos=>`<div class="badge">${(POSITION_LABEL[state.lang]||{})[pos]||pos}</div>`).join('')}</div>` : '';
-  return `
-    <div class="coach-top" style="margin-bottom:6px">
-      ${avatarHtml({name:p.name, photo:p.photo, avatarColor:p.avatarColor}, 56)}
-      <div style="flex:1">
-        <div class="coach-name" style="font-size:17px">${p.name} ${p.country?countryFlag(p.country):''}</div>
-        <div class="coach-sub">${[roleLabel, metaLine].filter(Boolean).join(' · ')}</div>
+        <label class="avatar-upload" for="photo-input">
+          ${d.photo ? `<img src="${d.photo}">` : icon('ghost',30)}
+        </label>
+        <input type="file" id="photo-input" accept="image/*">
+        <div class="photo-hint">${t('photoHint')}</div>
+
+        <div class="field-label" style="margin-top:0">${t('fieldFullName')}</div>
+        <input class="form-input" id="su-name" type="text" value="${d.name||''}">
+
+        <div class="field-label">${t('fieldEmail')}</div>
+        <input class="form-input" id="su-email" type="email" value="${d.email||''}" autocomplete="email">
+
+        <div class="field-label">${t('fieldPassword')}</div>
+        <div class="password-field">
+          <input class="form-input" id="su-password" type="password" value="${d.password||''}" autocomplete="new-password">
+          <button type="button" class="password-toggle" data-toggle-password="su-password">${icon('eye',18)}</button>
+        </div>
+        <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('passwordHint')}</div>
+
+        <div class="field-label">${t('country')}</div>
+        <select class="form-input" id="su-country">
+          ${COUNTRIES.map(c=>`<option value="${c.code}" ${d.country===c.code?'selected':''}>${c.flag} ${state.lang==='he'?c.he:c.en}</option>`).join('')}
+        </select>
+
+        <div class="field-label">${t('fieldYears')}</div>
+        <input class="form-input" id="su-years" type="number" min="0" max="50" value="${d.years||''}">
+
+        ${isScout ? `
+          <div class="field-label">${t('representingClubLabel')}</div>
+          <input class="form-input" id="su-club" type="text" value="${d.club||''}">
+        ` : ''}
+
+        <div class="field-label">${certTitle}</div>
+        <label class="attach-dropzone" for="cert-input">
+          ${d.certificateFile ? icon('file',24) : icon('paperclip',24)}
+          <span style="font-size:13px">${d.certificateFile ? d.certificateFile.name : t('certificateHint')}</span>
+        </label>
+        <input type="file" id="cert-input" accept="image/*,.pdf" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
+
+        <label class="consent-row">
+          <input type="checkbox" id="su-agree-terms" ${d.agreedTerms?'checked':''}>
+          <span>${t('agreeTermsPrefix')}<a href="/terms.html" target="_blank">${t('agreeTermsLink')}</a>${t('agreeAnd')}<a href="/privacy.html" target="_blank">${t('agreePrivacyLink')}</a></span>
+        </label>
       </div>
+      <button class="btn btn-primary btn-block" style="margin-top:22px" data-action="finish-signup-viewer">${t('finishSignup')}</button>
     </div>
-    ${positionsHtml}
-    ${p.about ? `<div class="section-title" style="margin-top:22px">${t('fieldAbout')}</div><div class="section-line"></div><p style="font-size:13.5px;color:var(--chalk-dim);line-height:1.6;margin:0 0 4px">${p.about}</p>` : ''}
-    ${statsHtml}
   `;
 }
 
+/* ---------------- HOME ---------------- */
 function renderHome(){
   const completed = state.requests.filter(r=>r.status==='done').length;
   const u = state.user;
   const age = u ? calcAge(u.dob) : null;
-  const hasQuery = !!(state.filters.homeQuery && state.filters.homeQuery.trim());
   return `
     ${u ? `
       <div class="profile-strip">
@@ -2175,13 +2058,6 @@ function renderHome(){
         <button class="demo-link" data-action="switch-user" style="margin:0">${t('switchUser')}</button>
       </div>
     ` : ''}
-
-    <div style="position:relative;margin-bottom:4px">
-      <input class="form-input" id="home-search-input" type="text" placeholder="${t('searchHomePh')}" value="${state.filters.homeQuery||''}" style="padding-inline-start:40px">
-      <span style="position:absolute;inset-inline-start:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none">${icon('eye',18)}</span>
-    </div>
-
-    ${hasQuery ? homeSearchResults() : `
     <section class="hero">
       <div class="hero-num">1</div>
       <div class="eyebrow">${t('tagline')}</div>
@@ -2209,7 +2085,6 @@ function renderHome(){
       <div class="step-num">3</div>
       <div class="step-text"><b>${t('step3t')}</b><span>${t('step3s')}</span></div>
     </div>
-    `}
   `;
 }
 
@@ -2328,44 +2203,24 @@ function videosViewHtml(r){
   }
   return `<div style="display:flex;flex-direction:column;gap:10px">${r.videos.map(v=>`<div class="video-preview"><video src="${v.url}" controls></video></div>`).join('')}</div>`;
 }
-function statRowDisplay(s, v){
-  if(s.type==='ratio'){
-    if(!v || typeof v!=='object' || v.made==null || v.att==null || v.att===0) return null;
-    return `${v.made}/${v.att} (${Math.round((v.made/v.att)*100)}%)`;
-  }
-  if(v==null || typeof v==='object') return null;
-  return String(v);
-}
 function statsViewHtml(stats, role){
   if(!stats || !Object.keys(stats).length) return '';
   const defs = STAT_DEFS[role] || STAT_DEFS.field;
-  const cats = []; const byCat = {};
-  defs.filter(s=>stats[s.key]!=null).forEach(s=>{
-    const disp = statRowDisplay(s, stats[s.key]);
-    if(disp==null) return;
-    if(!byCat[s.cat]){ byCat[s.cat] = []; cats.push(s.cat); }
-    byCat[s.cat].push(`<div class="summary-row"><span>${s[state.lang]}</span><span class="mono">${disp}</span></div>`);
-  });
-  if(!cats.length) return '';
-  const body = cats.map(cat=>`
-    <div class="stat-cat-label">${(CAT_LABEL[state.lang]||{})[cat]||cat}</div>
-    <div class="summary-card" style="margin-bottom:10px">${byCat[cat].join('')}</div>
-  `).join('');
-  return `
-    <div class="field-label" style="margin-top:14px">${t('statsTitle')}</div>
-    ${body}
-  `;
-}
-function ratingsViewHtml(ratings, role){
-  if(!ratings || !Object.keys(ratings).length) return '';
-  const defs = RATING_DEFS[role] || RATING_DEFS.field;
-  const rows = defs.filter(rt=>ratings[rt.key]!=null).map(rt=>{
-    const v = ratings[rt.key];
-    return `<div class="rating-view-row"><span>${rt[state.lang]}</span><div class="rating-bar"><div class="rating-bar-fill" style="width:${Math.max(0,Math.min(10,v))*10}%"></div></div><b class="mono">${v}</b></div>`;
+  const rows = defs.filter(s=>stats[s.key]!=null).map(s=>{
+    const v = stats[s.key];
+    let display;
+    if(s.type==='ratio'){
+      if(v.made==null || v.att==null || v.att===0) return '';
+      const pct = Math.round((v.made/v.att)*100);
+      display = `${v.made}/${v.att} (${pct}%)`;
+    } else {
+      display = String(v);
+    }
+    return `<div class="summary-row"><span>${s[state.lang]}</span><span class="mono">${display}</span></div>`;
   }).join('');
   if(!rows) return '';
   return `
-    <div class="field-label" style="margin-top:14px">${t('coachRatingsTitle')}</div>
+    <div class="field-label" style="margin-top:14px">${t('statsTitle')}</div>
     <div class="summary-card">${rows}</div>
   `;
 }
@@ -2525,7 +2380,7 @@ function renderCoachProfile(){
       <p style="font-size:13.5px;color:var(--chalk-dim);line-height:1.6;margin:0 0 18px">${state.lang==='he'?c.bio:c.bio_en}</p>
     ` : ''}
 
-    ${!c.isFullyBooked ? `
+    ${(!c.isFullyBooked && state.role!=='viewer') ? `
       ${activePackages.length ? `
         <div class="field-label" style="margin-top:0">${t('myActivePackages')}</div>
         <div class="chip-row">
@@ -2554,6 +2409,14 @@ function renderCoachProfile(){
       </div>
     ` : ''}
 
+    ${(state.coachClips||[]).length ? `
+      <div class="section-title" style="margin-top:22px">${t('sampleClipsTitle')} (${state.coachClips.length})</div>
+      <div class="section-line"></div>
+      ${state.coachClips.map(clip=>`
+        <video controls preload="metadata" style="width:100%;border-radius:12px;background:#000;margin-bottom:12px" src="${clip.url}"></video>
+      `).join('')}
+    ` : ''}
+
     <div class="section-title" style="margin-top:22px">${t('reviewsTitle')} ${reviews.length?`(${reviews.length})`:''}</div>
     <div class="section-line"></div>
     ${reviews.length===0 ? `
@@ -2572,11 +2435,15 @@ function renderCoachProfile(){
       </div>
     `).join('')}
 
-    <div class="sticky-cta">
-      ${c.isFullyBooked
-        ? `<button class="btn btn-primary btn-block" disabled style="opacity:.5;cursor:not-allowed">${t('notAvailableBtn')}</button>`
-        : `<button class="btn btn-primary btn-block" data-select-coach="${c.id}">${t('continueToCoaches')}</button>`}
-    </div>
+    ${state.role==='viewer' ? `
+      <div class="req-meta" style="text-align:center;margin-top:22px">${t('viewerReadOnlyNote')}</div>
+    ` : `
+      <div class="sticky-cta">
+        ${c.isFullyBooked
+          ? `<button class="btn btn-primary btn-block" disabled style="opacity:.5;cursor:not-allowed">${t('notAvailableBtn')}</button>`
+          : `<button class="btn btn-primary btn-block" data-select-coach="${c.id}">${t('continueToCoaches')}</button>`}
+      </div>
+    `}
   `;
 }
 
@@ -2604,7 +2471,11 @@ function renderAdmin(){
           ${personAvatarHtml(c.name, c.photo, 44)}
           <div style="flex:1">
             <div class="coach-name">${c.name} ${countryFlag(c.country)}</div>
-            <div class="coach-sub">${c.email} · ${(c.coachTypes||['goalkeeper']).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')} · ${c.years||0} ${t('yearsExp')}</div>
+            <div class="coach-sub">${c.email} · ${
+              c.role==='agent' ? t('registerAgentTitle')
+              : c.role==='scout' ? `${t('registerScoutTitle')}${c.club?' · '+c.club:''}`
+              : (c.coachTypes||['goalkeeper']).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')
+            } · ${c.years||0} ${t('yearsExp')}</div>
           </div>
         </div>
         ${c.certificateUrl ? `
@@ -2728,7 +2599,10 @@ function renderRequests(){
             ${attachmentsViewHtml(r.attachments)}
           </div>
           ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
-          ${ratingsViewHtml(r.ratings, r.gkPlayerRole||'field')}
+          ${r.highlightClipUrl ? `
+            <div class="field-label" style="margin-top:14px">${t('highlightClipTitle')}</div>
+            <video controls preload="metadata" style="width:100%;border-radius:12px;background:#000" src="${r.highlightClipUrl}"></video>
+          ` : ''}
           ${r.gkRating ? `
             <div class="rating-given">${t('yourRating')}: ${starsHtml(r.gkRating,18)}</div>
             ${r.reviewText ? `<div class="req-meta" style="margin-top:6px">"${r.reviewText}"</div>` : ''}
@@ -2829,7 +2703,7 @@ function renderCoachDash(){
             </div>
             <div class="status-badge ${statusClass}">${statusLabel}</div>
           </div>
-          <div class="req-coach">
+          <div class="req-coach" data-view-player="${r.gkUid}" style="cursor:pointer">
             ${personAvatarHtml(r.gkName, r.gkPhoto, 34)}
             <div style="font-size:13px">
               <div style="font-weight:600">${r.gkName || '—'}</div>
@@ -2864,7 +2738,6 @@ function renderCoachDash(){
               ${attachmentsViewHtml(r.attachments)}
             </div>
             ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
-          ${ratingsViewHtml(r.ratings, r.gkPlayerRole||'field')}
           `}
         `}
         </div>
@@ -2901,31 +2774,16 @@ function renderAttachList(){
 
 function statsInputHtml(role){
   const defs = STAT_DEFS[role] || STAT_DEFS.field;
-  const cats = []; const byCat = {};
-  defs.forEach(s=>{ if(!byCat[s.cat]){ byCat[s.cat] = []; cats.push(s.cat); } byCat[s.cat].push(s); });
-  return cats.map(cat=>`
-    <div class="stat-cat-label">${(CAT_LABEL[state.lang]||{})[cat]||cat}</div>
-    ${byCat[cat].map(s=>`
-      <div class="stat-row">
-        <span class="stat-row-label">${s[state.lang]}</span>
-        ${s.type==='ratio' ? `
-          <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="made" placeholder="${t('statMade')}">
-          <span class="stat-row-sep">/</span>
-          <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="att" placeholder="${t('statAttempts')}">
-        ` : `
-          <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="count" placeholder="0">
-        `}
-      </div>
-    `).join('')}
-  `).join('');
-}
-function ratingsInputHtml(role){
-  const defs = RATING_DEFS[role] || RATING_DEFS.field;
-  return defs.map(rt=>`
-    <div class="rating-input-row">
-      <span class="stat-row-label">${rt[state.lang]}</span>
-      <input type="range" min="1" max="10" step="1" value="7" data-rating-key="${rt.key}" class="rating-range">
-      <b class="mono" data-rating-val="${rt.key}">7</b>
+  return defs.map(s=>`
+    <div class="stat-row">
+      <span class="stat-row-label">${s[state.lang]}</span>
+      ${s.type==='ratio' ? `
+        <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="made" placeholder="${t('statMade')}">
+        <span class="stat-row-sep">/</span>
+        <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="att" placeholder="${t('statAttempts')}">
+      ` : `
+        <input type="number" min="0" class="form-input stat-mini" data-stat-key="${s.key}" data-stat-field="count" placeholder="0">
+      `}
     </div>
   `).join('');
 }
@@ -2957,12 +2815,7 @@ function renderCoachCompose(){
       <input type="range" id="score-range" min="1" max="10" step="0.1" value="8.0">
     </div>
 
-    <div class="field-label">${t('attributeRatingsLabel')} <span style="font-weight:400;color:var(--muted);font-size:12px">(${t('statsOptional')})</span></div>
-    <div class="photo-hint" style="margin:0 0 8px">${t('attributeRatingsHint')}</div>
-    <div id="ratings-inputs" class="ratings-card">${ratingsInputHtml(r.gkPlayerRole||'field')}</div>
-
-    <div class="field-label">${t('detailedStatsLabel')} <span style="font-weight:400;color:var(--muted);font-size:12px">(${t('statsOptional')})</span></div>
-    <div class="photo-hint" style="margin:0 0 8px">${t('statsOptionalHint')}</div>
+    <div class="field-label">${t('statsTitle')} <span style="font-weight:400;color:var(--muted);font-size:12px">(${t('statsOptional')})</span></div>
     <div id="stats-inputs">${statsInputHtml(r.gkPlayerRole||'field')}</div>
 
     <div class="field-label">${t('coachAnalysisTitle')}</div>
@@ -2975,6 +2828,15 @@ function renderCoachCompose(){
     </label>
     <input type="file" id="attach-input" multiple style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
     <div class="attach-list" id="attach-list"></div>
+
+    ${r.wantsHighlightClip ? `
+      <div class="field-label">${t('highlightClipUploadTitle')}</div>
+      <label class="attach-dropzone" for="clip-file-input">
+        ${state.composeClipFile ? icon('file',24) : icon('clip',24)}
+        <span style="font-size:13px">${state.composeClipFile ? state.composeClipFile.name : t('highlightClipUploadHint')}</span>
+      </label>
+      <input type="file" id="clip-file-input" accept="video/*" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
+    ` : ''}
 
     <div class="sticky-cta">
       <button class="btn btn-primary btn-block" data-action="submit-analysis">${t('sendAnalysis')}</button>
@@ -3079,11 +2941,11 @@ function renderProfile(){
       <div class="field-label">${t('fieldHeight')}</div>
       <input class="form-input" id="pf-height" type="number" min="100" max="230" value="${d.height||''}">
 
-      <div class="field-label">${t('pfSearchableTitle')}</div>
-      <div class="chip-row" id="pf-searchable-toggle">
-        <div class="chip ${d.searchable?'active':''}" data-pf-searchable="1">${t('pfSearchableLabel')}</div>
-      </div>
-      <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('pfSearchableHint')}</div>
+      <div class="field-label">${t('statsPrivacyTitle')}</div>
+      <label class="consent-row" style="margin-top:0">
+        <input type="checkbox" id="pf-stats-public" ${d.statsPublic!==false?'checked':''}>
+        <span>${t('statsPrivacyLabel')}</span>
+      </label>
     `}
 
     <div class="field-label">${t('fieldAbout')}</div>
@@ -3133,6 +2995,7 @@ function attachHandlers(){
     else if(state.view==='coach-profile') go('coaches');
     else if(state.view==='coaches') go('home');
     else if(state.view==='coach-compose') go('coach-dash');
+    else if(state.view==='player-profile') go(state.role==='coach' ? 'coach-dash' : 'home');
     else go('home');
   });
   app.querySelector('[data-action="nav-home"]')?.addEventListener('click', ()=>go('home'));
@@ -3146,25 +3009,24 @@ function attachHandlers(){
     if(state.user) await loadMyRequests(state.user.uid);
     go('my-stats');
   });
-  app.querySelector('[data-action="open-stats-share"]')?.addEventListener('click', ()=>openStatsShare());
-  app.querySelector('[data-action="toggle-full-stats"]')?.addEventListener('click', ()=>{ state.statsFull = !state.statsFull; render(); });
-
-  // home unified search (coaches + opted-in players)
-  app.querySelector('#home-search-input')?.addEventListener('input', (e)=>{
-    state.filters.homeQuery = e.target.value;
+  app.querySelector('[data-action="nav-my-clips"]')?.addEventListener('click', async ()=>{
+    if(state.user) await loadMyRequests(state.user.uid);
+    go('my-clips');
+  });
+  app.querySelector('[data-action="nav-viewer-coaches"]')?.addEventListener('click', async ()=>{
+    await refreshCoachDirectory();
+    go('coaches');
+  });
+  app.querySelector('[data-action="nav-viewer-players"]')?.addEventListener('click', async ()=>{
+    state.allPlayers = await loadAllPlayers();
+    go('directory-players');
+  });
+  app.querySelector('#player-search-input')?.addEventListener('input', (e)=>{
+    state.filters.playerQuery = e.target.value;
     const caret = e.target.selectionStart;
     render();
-    const input = document.getElementById('home-search-input');
-    if(input){ input.focus(); if(caret!=null) input.setSelectionRange(caret, caret); }
-  });
-  app.querySelectorAll('[data-view-player]').forEach(el=>{
-    el.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      const p = PLAYERS.find(x=>x.id===el.dataset.viewPlayer);
-      if(!p) return;
-      state.viewingPlayer = p;
-      go('player-profile');
-    });
+    const input = document.getElementById('player-search-input');
+    if(input){ input.focus(); input.setSelectionRange(caret, caret); }
   });
   app.querySelectorAll('[data-action="nav-coach-dash"]').forEach(el=>{
     el.addEventListener('click', async ()=>{
@@ -3207,6 +3069,12 @@ function attachHandlers(){
   app.querySelector('[data-action="goto-signup-coach"]')?.addEventListener('click', ()=>{
     state.signupRole = 'coach'; state.signupDraft = { specialties:[] }; go('signup-coach');
   });
+  app.querySelector('[data-action="goto-signup-agent"]')?.addEventListener('click', ()=>{
+    state.signupRole = 'agent'; state.signupDraft = { viewerRole:'agent' }; go('signup-viewer');
+  });
+  app.querySelector('[data-action="goto-signup-scout"]')?.addEventListener('click', ()=>{
+    state.signupRole = 'scout'; state.signupDraft = { viewerRole:'scout' }; go('signup-viewer');
+  });
   app.querySelectorAll('[data-action="back-to-auth"]').forEach(el=>{
     el.addEventListener('click', ()=>go('auth'));
   });
@@ -3234,10 +3102,17 @@ function attachHandlers(){
         go('admin');
         return;
       }
-      state.role = state.user.role==='coach' ? 'coach' : 'player';
+      state.role = (state.user.role==='agent'||state.user.role==='scout') ? 'viewer' : (state.user.role==='coach' ? 'coach' : 'player');
       if(!res.emailVerified){
         state.postVerifyDestination = 'home';
         go('verify-email');
+        return;
+      }
+      if(state.role==='viewer'){
+        if(!state.user.isVerified){ go('viewer-pending'); return; }
+        await refreshCoachDirectory();
+        showToast(t('welcomeBack')+', '+state.user.name);
+        go('coaches');
         return;
       }
       if(state.role==='coach'){
@@ -3248,7 +3123,6 @@ function attachHandlers(){
       } else {
         await loadMyRequests(state.user.uid);
         await refreshCoachDirectory();
-        await loadSearchablePlayers();
       }
       showToast(t('welcomeBack')+', '+state.user.name);
       await savePrefs();
@@ -3292,7 +3166,6 @@ function attachHandlers(){
     } else {
       await loadMyRequests(state.user.uid);
       await refreshCoachDirectory();
-      await loadSearchablePlayers();
     }
     await savePrefs();
     if(dest==='country-select'){
@@ -3320,6 +3193,9 @@ function attachHandlers(){
   });
   app.querySelector('#su-agree-terms')?.addEventListener('change', (e)=>{
     state.signupDraft.agreedTerms = e.target.checked;
+  });
+  app.querySelector('#pf-stats-public')?.addEventListener('change', (e)=>{
+    state.profileDraft.statsPublic = e.target.checked;
   });
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -3483,6 +3359,49 @@ function attachHandlers(){
     state.postVerifyDestination = 'home';
     go('verify-email');
   });
+  app.querySelector('[data-action="finish-signup-viewer"]')?.addEventListener('click', async (e)=>{
+    const btn = e.currentTarget;
+    const d = state.signupDraft;
+    if(!d.name || !d.name.trim()){ showToast(t('requiredName')); return; }
+    if(!EMAIL_RE.test((d.email||'').trim())){ showToast(t('invalidEmail')); return; }
+    if(!d.password || d.password.length<6){ showToast(t('invalidPassword')); return; }
+    if(!d.certificateFile){ showToast(t('certificateRequired')); return; }
+    if(!d.agreedTerms){ showToast(t('mustAgreeTerms')); return; }
+    const isScout = d.viewerRole==='scout';
+    const emailLower = d.email.trim().toLowerCase();
+    const profile = {
+      role: isScout ? 'scout' : 'agent', name:d.name.trim(), email:emailLower,
+      photo:d.photo||null,
+      country: d.country || COUNTRIES[0].code,
+      years: Number(d.years)||0,
+      club: isScout ? (d.club||'') : '',
+      isVerified: false, certificateUrl: null, certificateName: d.certificateFile.name,
+      acceptedTermsAt: Date.now()
+    };
+    const res = await firebaseSignUp(emailLower, d.password, profile);
+    if(!res.ok){ showToast(t(res.errorKey)); return; }
+
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = t('uploadingAttachments');
+    const certUrl = await uploadFileToStorage(d.certificateFile, `certificates/${res.uid}`, (pct)=>{
+      btn.textContent = `${t('uploadingAttachments')} ${pct}%`;
+    });
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+    if(certUrl){
+      try{ await db.collection('users').doc(res.uid).update({ certificateUrl: certUrl }); profile.certificateUrl = certUrl; }
+      catch(err){ console.error('failed to save certificate url', err); }
+    } else {
+      showToast(t('certificateUploadError'));
+    }
+
+    state.user = {uid:res.uid, ...profile};
+    state.role = profile.role;
+    state.requests = [];
+    state.postVerifyDestination = 'home';
+    go('verify-email');
+  });
   app.querySelector('[data-action="switch-user"]')?.addEventListener('click', async ()=>{
     await firebaseLogout();
     state.user = null;
@@ -3618,10 +3537,6 @@ function attachHandlers(){
     state.profileDraft.highlightClipEnabled = !state.profileDraft.highlightClipEnabled;
     render();
   });
-  app.querySelector('[data-pf-searchable]')?.addEventListener('click', ()=>{
-    state.profileDraft.searchable = !state.profileDraft.searchable;
-    render();
-  });
   app.querySelector('#pf-cert-input')?.addEventListener('change', (e)=>{
     const f = e.target.files[0];
     if(!f) return;
@@ -3674,15 +3589,14 @@ function attachHandlers(){
       name: d.name.trim(), photo: d.photo||null,
       playerRole: d.playerRole || 'field',
       positions: d.playerRole==='goalkeeper' ? ['goalkeeper'] : (d.positions || []),
-      dob: d.dob||null, club: d.club||'', height: d.height||'', about: d.about||'',
-      searchable: !!d.searchable
+      statsPublic: d.statsPublic!==false,
+      dob: d.dob||null, club: d.club||'', height: d.height||'', about: d.about||''
     };
     try{
       await db.collection('users').doc(state.user.uid).update(updates);
     }catch(e){ console.error('profile update failed', e); showToast(t('saveError')); return; }
     state.user = { ...state.user, ...updates };
     if(isCoach) await refreshCoachDirectory();
-    else await syncPublicStats();
     showToast(t('profileSaved'));
     go('home');
   });
@@ -3711,6 +3625,7 @@ function attachHandlers(){
     el.addEventListener('click', ()=>{
       state.composeId = el.dataset.openCompose;
       state.composeAttachments = [];
+      state.composeClipFile = null;
       go('coach-compose');
     });
   });
@@ -3764,13 +3679,6 @@ function attachHandlers(){
   scoreRange?.addEventListener('input', (e)=>{
     app.querySelector('#score-display').textContent = parseFloat(e.target.value).toFixed(1);
   });
-  // coach compose: live attribute-rating values
-  app.querySelectorAll('#ratings-inputs [data-rating-key]').forEach(rng=>{
-    rng.addEventListener('input', ()=>{
-      const out = app.querySelector(`#ratings-inputs [data-rating-val="${rng.dataset.ratingKey}"]`);
-      if(out) out.textContent = rng.value;
-    });
-  });
 
   // coach compose: attachments
   if(app.querySelector('#attach-list')) renderAttachList();
@@ -3781,6 +3689,10 @@ function attachHandlers(){
       renderAttachList();
     }
     e.target.value = '';
+  });
+  app.querySelector('#clip-file-input')?.addEventListener('change', (e)=>{
+    const f = e.target.files && e.target.files[0];
+    if(f){ state.composeClipFile = f; render(); }
   });
 
   app.querySelectorAll('#stats-inputs [data-stat-key]').forEach(inp=>{
@@ -3824,11 +3736,6 @@ function attachHandlers(){
       }
     }
 
-    const ratings = {};
-    app.querySelectorAll('#ratings-inputs [data-rating-key]').forEach(rng=>{
-      ratings[rng.dataset.ratingKey] = Number(rng.value);
-    });
-
     const files = state.composeAttachments || [];
     const uploadedAttachments = [];
     let failedCount = 0;
@@ -3848,16 +3755,43 @@ function attachHandlers(){
       btn.textContent = originalLabel;
     }
 
-    const ok = await updateRequestDoc(r.id, {status:'done', score:scoreVal, analysis:analysisText, attachments:uploadedAttachments, stats, ratings, gkSeen:false});
+    let highlightClipUrl = null;
+    if(r.wantsHighlightClip && state.composeClipFile){
+      btn.disabled = true;
+      const originalLabel = btn.textContent;
+      btn.textContent = `${t('uploadingVideo')} 0%`;
+      highlightClipUrl = await uploadFileToStorage(state.composeClipFile, `highlight-clips/${r.id}`, (pct)=>{
+        btn.textContent = `${t('uploadingVideo')} ${pct}%`;
+      });
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+
+    const ok = await updateRequestDoc(r.id, {status:'done', score:scoreVal, analysis:analysisText, attachments:uploadedAttachments, stats, highlightClipUrl, gkSeen:false});
     if(!ok){ showToast(t('saveError')); return; }
     r.status = 'done';
     r.score = scoreVal;
     r.analysis = analysisText;
     r.attachments = uploadedAttachments;
     r.stats = stats;
-    r.ratings = ratings;
+    r.highlightClipUrl = highlightClipUrl;
     r.gkSeen = false;
     state.composeAttachments = [];
+    state.composeClipFile = null;
+    if(highlightClipUrl){
+      try{
+        await db.collection('coachClips').add({
+          coachUid: r.coachUid, gkUid: r.gkUid, gkName: r.gkName||'', url: highlightClipUrl, createdAt: Date.now(), requestId: r.id
+        });
+      }catch(err){ console.error('failed to create public coach clip', err); }
+    }
+    if(Object.keys(stats).length){
+      try{
+        await db.collection('playerGameStats').add({
+          gkUid: r.gkUid, coachUid: r.coachUid, gkPlayerRole: r.gkPlayerRole||'field', stats, createdAt: Date.now(), requestId: r.id
+        });
+      }catch(err){ console.error('failed to create public player stats', err); }
+    }
     sendEmailNotification(
       r.gkEmail,
       `הניתוח שלכם מ-${r.coach.name} מוכן!`,
@@ -3983,9 +3917,28 @@ function attachHandlers(){
       state.draft.wantsHighlightClip = false;
       state.draft.paymentChoice = null;
       state.coachReviews = await loadCoachReviews(coach.id);
+      state.coachClips = await loadCoachClips(coach.id);
       state.activePackages = state.user ? await loadActivePackages(state.user.uid, coach.id) : [];
       state.draft.paymentChoice = state.activePackages.length ? ('existing:'+state.activePackages[0].id) : 'single';
       go('coach-profile');
+    });
+  });
+  app.querySelectorAll('[data-view-player]').forEach(el=>{
+    el.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const gkUid = el.dataset.viewPlayer;
+      if(!gkUid) return;
+      const player = await loadPlayerProfile(gkUid);
+      if(!player) return;
+      state.viewingPlayer = player;
+      if(player.statsPublic!==false){
+        state.playerPublicGames = await loadPlayerPublicStats(gkUid);
+        state.playerPublicClips = await loadPlayerPublicClips(gkUid);
+      } else {
+        state.playerPublicGames = [];
+        state.playerPublicClips = [];
+      }
+      go('player-profile');
     });
   });
   app.querySelector('[data-toggle-clip]')?.addEventListener('click', ()=>{
@@ -4148,6 +4101,7 @@ function attachHandlers(){
   });
 
   if(state.view==='my-stats') initStatsCharts();
+  if(state.view==='player-profile') initPublicStatsCharts();
 }
 
 /* countdown ticker */
@@ -4167,10 +4121,13 @@ setInterval(()=>{
       const doc = await db.collection('users').doc(fbUser.uid).get();
       if(doc.exists){
         state.user = {uid:fbUser.uid, ...doc.data()};
-        state.role = state.user.role==='coach' ? 'coach' : 'player';
+        state.role = (state.user.role==='agent'||state.user.role==='scout') ? 'viewer' : (state.user.role==='coach' ? 'coach' : 'player');
         if(!fbUser.emailVerified){
           state.postVerifyDestination = 'home';
           state.view = 'verify-email';
+        } else if(state.role==='viewer'){
+          if(state.user.isVerified){ await refreshCoachDirectory(); }
+          state.view = state.user.isVerified ? 'coaches' : 'viewer-pending';
         } else if(state.role==='coach'){
           await refreshCoachDirectory();
           state.coachId = state.user.uid;
@@ -4180,7 +4137,6 @@ setInterval(()=>{
         } else {
           await loadMyRequests(state.user.uid);
           await refreshCoachDirectory();
-          await loadSearchablePlayers();
           state.view = 'home';
         }
       } else if(fbUser.email && fbUser.email.toLowerCase()===ADMIN_EMAIL.toLowerCase()){

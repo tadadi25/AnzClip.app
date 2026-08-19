@@ -832,7 +832,7 @@ let state = {
   activePackages: [],
   coachReviews: [],
   coachClips: [],
-  viewingPlayer: null, playerPublicGames: [], playerPublicClips: [], allPlayers: [],
+  viewingPlayer: null, playerPublicGames: [], playerPublicClips: [], allPlayers: [], allAgents: [], allScouts: [], viewingContact: null,
   coachId: null,
   composeId: null,
   requests: [],
@@ -1009,6 +1009,19 @@ async function loadAllPlayers(){
     list.sort((a,b)=> a.name.localeCompare(b.name));
     return list;
   }catch(e){ console.error('failed to load players directory', e); return []; }
+}
+async function loadViewerDirectory(role){
+  try{
+    const snap = await db.collection('users').where('role','==',role).where('isVerified','==',true).get();
+    const list = [];
+    snap.forEach(doc=>{
+      const d = doc.data();
+      if(d.rejected) return;
+      list.push({ uid:doc.id, name:d.name, photo:d.photo||null, years:d.years||0, club:d.club||'', role });
+    });
+    list.sort((a,b)=> a.name.localeCompare(b.name));
+    return list;
+  }catch(e){ console.error(`failed to load ${role} directory`, e); return []; }
 }
 async function loadPendingCoaches(){
   try{
@@ -1347,14 +1360,21 @@ function renderViewerPending(){
   `;
 }
 function renderDirectoryPlayers(){
+  const cat = state.filters.directoryCategory || 'players';
   const q = (state.filters.playerQuery||'').trim().toLowerCase();
-  const list = (state.allPlayers||[]).filter(p=> !q || p.name.toLowerCase().includes(q));
+  const rawList = cat==='players' ? (state.allPlayers||[]) : cat==='agents' ? (state.allAgents||[]) : (state.allScouts||[]);
+  const list = rawList.filter(p=> !q || p.name.toLowerCase().includes(q));
   return `
+    <div class="filter-bar" style="margin-bottom:14px">
+      <div class="chip ${cat==='players'?'active':''}" data-directory-cat="players">${t('directoryPlayers')}</div>
+      <div class="chip ${cat==='agents'?'active':''}" data-directory-cat="agents">${t('registerAgentTitle')}</div>
+      <div class="chip ${cat==='scouts'?'active':''}" data-directory-cat="scouts">${t('registerScoutTitle')}</div>
+    </div>
     <div class="field-label" style="margin-top:0">${t('searchCoachLabel')}</div>
     <input class="form-input" id="player-search-input" type="text" placeholder="${t('searchPlayerPh')}" value="${state.filters.playerQuery||''}">
     ${list.length===0 ? `
       <div class="empty-state" style="padding:40px 20px">${icon('search',30)}<b>${t('noStatsYet')}</b></div>
-    ` : list.map(p=>`
+    ` : cat==='players' ? list.map(p=>`
       <div class="req-card" data-view-player="${p.uid}" style="cursor:pointer">
         <div class="req-coach">
           ${personAvatarHtml(p.name, p.photo, 40)}
@@ -1364,7 +1384,34 @@ function renderDirectoryPlayers(){
           </div>
         </div>
       </div>
+    `).join('') : list.map(p=>`
+      <div class="req-card" data-view-contact="${p.uid}" style="cursor:pointer">
+        <div class="req-coach">
+          ${personAvatarHtml(p.name, p.photo, 40)}
+          <div style="font-size:14px">
+            <div style="font-weight:700">${p.name}</div>
+            <div class="req-meta">${p.years} ${t('yearsExp')}${p.club?' · '+p.club:''}</div>
+          </div>
+        </div>
+      </div>
     `).join('')}
+  `;
+}
+function renderContactProfile(){
+  const p = state.viewingContact;
+  if(!p) return renderDirectoryPlayers();
+  return `
+    <div class="coach-top" style="margin-bottom:14px">
+      ${personAvatarHtml(p.name, p.photo, 56)}
+      <div>
+        <div class="coach-name" style="font-size:17px">${p.name}</div>
+        <div class="coach-sub">${p.role==='agent'?t('registerAgentTitle'):t('registerScoutTitle')}</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-row"><span>${t('fieldYears')}</span><span class="mono">${p.years||0}</span></div>
+      ${p.club ? `<div class="summary-row"><span>${t('representingClubLabel')}</span><span>${p.club}</span></div>` : ''}
+    </div>
   `;
 }
 function renderMyClips(){
@@ -1546,7 +1593,7 @@ function render(){
 function renderTopBar(){
   const titles = {
     home:null, upload:t('titleUpload'), coaches:t('titleCoaches'), confirm:t('titleConfirm'), requests:t('titleRequests'),
-    'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'admin':t('adminTitle'), 'my-stats':t('statsPageTitle'), 'my-clips':t('myClipsTitle'), 'player-profile':t('playerProfileTitle'), 'directory-players':t('directoryPlayers'), 'viewer-pending':t('directoryTitle')
+    'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'admin':t('adminTitle'), 'my-stats':t('statsPageTitle'), 'my-clips':t('myClipsTitle'), 'player-profile':t('playerProfileTitle'), 'directory-players':t('directoryPlayers'), 'viewer-pending':t('directoryTitle'), 'contact-profile':t('directoryTitle')
   };
   const isRoot = state.view==='home' || state.view==='coach-dash' || state.view==='admin' || state.view==='viewer-pending'
     || (state.role==='viewer' && (state.view==='coaches' || state.view==='directory-players'));
@@ -1647,6 +1694,7 @@ function renderView(){
     case 'my-clips': return renderMyClips();
     case 'player-profile': return renderPlayerProfile();
     case 'directory-players': return renderDirectoryPlayers();
+    case 'contact-profile': return renderContactProfile();
     case 'viewer-pending': return renderViewerPending();
     case 'verify-email': return renderVerifyEmail();
     case 'forgot-password': return renderForgotPassword();
@@ -2995,7 +3043,8 @@ function attachHandlers(){
     else if(state.view==='coach-profile') go('coaches');
     else if(state.view==='coaches') go('home');
     else if(state.view==='coach-compose') go('coach-dash');
-    else if(state.view==='player-profile') go(state.role==='coach' ? 'coach-dash' : 'home');
+    else if(state.view==='player-profile') go(state.role==='viewer' ? 'directory-players' : (state.role==='coach' ? 'coach-dash' : 'home'));
+    else if(state.view==='contact-profile') go('directory-players');
     else go('home');
   });
   app.querySelector('[data-action="nav-home"]')?.addEventListener('click', ()=>go('home'));
@@ -3018,6 +3067,7 @@ function attachHandlers(){
     go('coaches');
   });
   app.querySelector('[data-action="nav-viewer-players"]')?.addEventListener('click', async ()=>{
+    state.filters.directoryCategory = 'players';
     state.allPlayers = await loadAllPlayers();
     go('directory-players');
   });
@@ -3027,6 +3077,27 @@ function attachHandlers(){
     render();
     const input = document.getElementById('player-search-input');
     if(input){ input.focus(); input.setSelectionRange(caret, caret); }
+  });
+  app.querySelectorAll('[data-directory-cat]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const cat = el.dataset.directoryCat;
+      state.filters.directoryCategory = cat;
+      if(cat==='players' && !state.allPlayers.length) state.allPlayers = await loadAllPlayers();
+      if(cat==='agents' && !state.allAgents.length) state.allAgents = await loadViewerDirectory('agent');
+      if(cat==='scouts' && !state.allScouts.length) state.allScouts = await loadViewerDirectory('scout');
+      render();
+    });
+  });
+  app.querySelectorAll('[data-view-contact]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const uid = el.dataset.viewContact;
+      const cat = state.filters.directoryCategory;
+      const source = cat==='agents' ? state.allAgents : state.allScouts;
+      const contact = (source||[]).find(p=>p.uid===uid);
+      if(!contact) return;
+      state.viewingContact = contact;
+      go('contact-profile');
+    });
   });
   app.querySelectorAll('[data-action="nav-coach-dash"]').forEach(el=>{
     el.addEventListener('click', async ()=>{
@@ -3163,6 +3234,12 @@ function attachHandlers(){
       state.coachId = state.user.uid;
       state.coachReviews = await loadCoachReviews(state.user.uid);
       await loadIncomingRequests(state.user.uid);
+    } else if(state.role==='viewer'){
+      if(!state.user.isVerified){ go('viewer-pending'); return; }
+      await refreshCoachDirectory();
+      await savePrefs();
+      go('coaches');
+      return;
     } else {
       await loadMyRequests(state.user.uid);
       await refreshCoachDirectory();
@@ -3397,7 +3474,7 @@ function attachHandlers(){
     }
 
     state.user = {uid:res.uid, ...profile};
-    state.role = profile.role;
+    state.role = 'viewer';
     state.requests = [];
     state.postVerifyDestination = 'home';
     go('verify-email');

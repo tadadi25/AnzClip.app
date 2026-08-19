@@ -383,7 +383,13 @@
     width:100%; background:var(--surface); border:1px solid rgba(243,241,231,.12); border-radius:14px;
     color:var(--chalk); font-family:'Heebo'; font-size:14px; padding:12px 14px;
   }
-  select.form-input{appearance:none; cursor:pointer;}
+  select.form-input{
+    appearance:none; cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa89e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-size:16px;
+  }
+  #html-root[dir="rtl"] select.form-input{ background-position:left 12px center; padding-left:34px; }
+  #html-root[dir="ltr"] select.form-input{ background-position:right 12px center; padding-right:34px; }
   .password-field{position:relative;}
   .password-field input{padding-inline-end:44px;}
   .consent-row{
@@ -511,6 +517,11 @@ const COMBINED_STAT_DEFS = (()=>{
   [...STAT_DEFS.goalkeeper, ...STAT_DEFS.field].forEach(s=>{ if(!seen[s.key]) seen[s.key] = s; });
   return Object.values(seen);
 })();
+function relevantStatDefsForPosition(position){
+  if(position==='goalkeeper') return STAT_DEFS.goalkeeper;
+  if(position) return STAT_DEFS.field;
+  return COMBINED_STAT_DEFS;
+}
 
 const SAMPLE_ANALYSIS = {
   he:'עמידה ומיקום בשער תקינים ברוב המצבים, אך יש נטייה לאבד את קו השער בכדורים חוצים — מומלץ לתרגל קריאת זוויות מול מסירות רוחביות. יציאות מהקו נעשות בתזמון טוב ברוב המקרים, למעט שתי סיטואציות של יציאה מוקדמת מדי שיצרה סיכון לכדור מעל. הנפילה הצדדית חלקה ובטוחה עם שימוש טוב בידיים, אך יש מקום לשיפור בזמן ההתאוששות לאחר נפילה כפולה. משחק הרגליים מדויק תחת לחץ נמוך, אך תחת לחץ גבוה נראתה חוסר ביטחון — מומלץ תרגול בלחץ מדורג.',
@@ -1465,7 +1476,7 @@ function renderViewerHome(){
     </div>
 
     <div class="field-label">${t('statFilterTitle')}</div>
-    <div id="adv-stat-filters">${statFilterRowsHtml(state.advancedSearch.statFilters)}</div>
+    <div id="adv-stat-filters">${statFilterRowsHtml(state.advancedSearch.statFilters, relevantStatDefsForPosition(state.advancedSearch.position))}</div>
     <button type="button" class="demo-link" data-add-stat-filter="1" style="display:block;margin-top:4px">+ ${t('addStatFilter')}</button>
 
     <button class="btn btn-primary btn-block" style="margin-top:18px" data-action="run-advanced-search">${t('runAdvancedSearch')}</button>
@@ -1489,14 +1500,14 @@ function renderViewerHome(){
     ` : ''}
   `;
 }
-function statFilterRowsHtml(filters){
+function statFilterRowsHtml(filters, statDefs){
   if(!filters.length) return '';
   return filters.map((f,i)=>`
     <div class="package-row" data-stat-filter-index="${i}">
       <div style="flex:1">
         <div class="photo-hint" style="margin:0 0 4px">${t('statFilterTitle')}</div>
         <select class="form-input" data-stat-filter-field="key">
-          ${COMBINED_STAT_DEFS.map(s=>`<option value="${s.key}" ${f.key===s.key?'selected':''}>${s[state.lang]}${s.type==='ratio'?' (%)':''}</option>`).join('')}
+          ${statDefs.map(s=>`<option value="${s.key}" ${f.key===s.key?'selected':''}>${s[state.lang]}${s.type==='ratio'?' (%)':''}</option>`).join('')}
         </select>
       </div>
       <div style="flex:1">
@@ -3241,11 +3252,17 @@ function attachHandlers(){
   app.querySelectorAll('[data-adv-position]').forEach(el=>{
     el.addEventListener('click', ()=>{
       state.advancedSearch.position = el.dataset.advPosition;
+      const relevant = relevantStatDefsForPosition(state.advancedSearch.position);
+      const relevantKeys = relevant.map(s=>s.key);
+      state.advancedSearch.statFilters.forEach(f=>{
+        if(!relevantKeys.includes(f.key)) f.key = relevant[0].key;
+      });
       render();
     });
   });
   app.querySelector('[data-add-stat-filter]')?.addEventListener('click', ()=>{
-    state.advancedSearch.statFilters.push({ key: COMBINED_STAT_DEFS[0].key, minValue:'' });
+    const relevant = relevantStatDefsForPosition(state.advancedSearch.position);
+    state.advancedSearch.statFilters.push({ key: relevant[0].key, minValue:'' });
     render();
   });
   app.querySelectorAll('#adv-stat-filters [data-stat-filter-field]').forEach(el=>{

@@ -522,39 +522,28 @@ const STAT_DEFS = {
     { key:'passesIntoBox', type:'ratio', category:'playmaking', he:'מסירות מדויקות לרחבה', en:'Accurate passes into box' },
     { key:'passesFinalThird', type:'ratio', category:'playmaking', he:'מסירות מדויקות בשליש האחרון', en:'Accurate passes in final third' },
     { key:'crosses', type:'ratio', category:'playmaking', he:'הרמות מדויקות', en:'Accurate crosses' },
-    { key:'layoffs', type:'ratio', category:'playmaking', he:'הנחות מדויקות', en:'Accurate layoffs' },
 
     { key:'passAccuracy', type:'ratio', category:'progression', he:'מסירות מדויקות', en:'Accurate passes' },
-    { key:'passesIntoFinalThird', type:'ratio', category:'progression', he:'מסירות מדויקות לשליש האחרון', en:'Accurate passes into final third' },
     { key:'longPasses', type:'ratio', category:'progression', he:'מסירות ארוכות מדויקות', en:'Accurate long passes' },
     { key:'touches', type:'count', category:'progression', he:'נגיעות בכדור', en:'Touches' },
-    { key:'progressivePasses', type:'ratio', category:'progression', he:'מסירות מתקדמות', en:'Progressive passes' },
 
     { key:'duelsWon', type:'ratio', category:'defending', he:'מאבקים שנוצחו', en:'Duels won' },
     { key:'aerialDuels', type:'ratio', category:'defending', he:'מאבקי אוויר שנוצחו', en:'Aerial duels won' },
     { key:'groundDuels', type:'ratio', category:'defending', he:'מאבקי קרקע שנוצחו', en:'Ground duels won' },
     { key:'tacklesWon', type:'ratio', category:'defending', he:'חטיפות מוצלחות', en:'Tackles won' },
-    { key:'dribbledPast', type:'count', category:'defending', he:'נדרבל', en:'Dribbled past' },
     { key:'foulsCommitted', type:'count', category:'defending', he:'עבירות שביצע', en:'Fouls committed' },
-    { key:'interceptions', type:'count', category:'defending', he:'יירוטים', en:'Interceptions' },
-    { key:'clearances', type:'count', category:'defending', he:'חילוצים', en:'Clearances' },
     { key:'recoveries', type:'count', category:'defending', he:'כדורים שהוחזרו', en:'Recoveries' },
-    { key:'blocks', type:'count', category:'defending', he:'חסימות', en:'Outfielder blocks' },
   ],
   goalkeeper: [
     { key:'gkGoals', type:'count', category:'general', he:'שערים', en:'Goals' },
     { key:'gkAssists', type:'count', category:'general', he:'בישולים', en:'Assists' },
 
-    { key:'gkSaves', type:'count', category:'goalkeeping', he:'הצלות שוער', en:'Goalkeeper saves' },
+    { key:'gkSaves', type:'ratio', category:'goalkeeping', he:'הצלות', en:'Saves' },
     { key:'goalsConceded', type:'count', category:'goalkeeping', he:'שערים שספג', en:'Goals conceded' },
-    { key:'goalsPrevented', type:'decimal', category:'goalkeeping', he:'שערים שנמנעו', en:'Goals prevented' },
-    { key:'xGOTFaced', type:'decimal', category:'goalkeeping', he:'שערים צפויים למסגרת שניצב מולם', en:'xGOT faced' },
-    { key:'highClaims', type:'count', category:'goalkeeping', he:'תפיסות גבוהות מוצלחות', en:'Successful high claims' },
-    { key:'punches', type:'count', category:'goalkeeping', he:'הרחקות באגרוף', en:'Punches' },
-    { key:'sweeperActions', type:'count', category:'goalkeeping', he:'פעולות כשוער-סוויפר', en:'Acted as sweeper' },
+    { key:'highClaims', type:'ratio', category:'goalkeeping', he:'תפיסות מוצלחות בגובה', en:'Successful high claims' },
+    { key:'punches', type:'ratio', category:'goalkeeping', he:'הרחקות באגרוף', en:'Punches' },
     { key:'passAccuracy', type:'ratio', category:'goalkeeping', he:'מסירות מדויקות', en:'Accurate passes' },
     { key:'longPasses', type:'ratio', category:'goalkeeping', he:'מסירות ארוכות מדויקות', en:'Accurate long passes' },
-    { key:'passesIntoFinalThird', type:'ratio', category:'goalkeeping', he:'מסירות מדויקות לשליש האחרון', en:'Accurate passes into final third' },
     { key:'touches', type:'count', category:'goalkeeping', he:'נגיעות בכדור', en:'Touches' },
   ],
 };
@@ -2727,7 +2716,7 @@ function renderCoachProfile(){
       </div>
     ` : ''}
 
-    ${(state.coachClips||[]).length ? `
+    ${(state.role==='viewer' && (state.coachClips||[]).length) ? `
       <div class="section-title" style="margin-top:22px">${t('sampleClipsTitle')} (${state.coachClips.length})</div>
       <div class="section-line"></div>
       ${state.coachClips.map(clip=>`

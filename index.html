@@ -512,14 +512,13 @@ function statLabel(key, role){
   const def = (STAT_DEFS[role]||[]).find(s=>s.key===key);
   return def ? def[state.lang] : key;
 }
-const COMBINED_STAT_DEFS = (()=>{
-  const seen = {};
-  [...STAT_DEFS.goalkeeper, ...STAT_DEFS.field].forEach(s=>{ if(!seen[s.key]) seen[s.key] = s; });
-  return Object.values(seen);
-})();
+const COMBINED_STAT_DEFS = [
+  ...STAT_DEFS.goalkeeper.map(s=>({ ...s, role:'goalkeeper', id:'goalkeeper:'+s.key })),
+  ...STAT_DEFS.field.map(s=>({ ...s, role:'field', id:'field:'+s.key })),
+];
 function relevantStatDefsForPosition(position){
-  if(position==='goalkeeper') return STAT_DEFS.goalkeeper;
-  if(position) return STAT_DEFS.field;
+  if(position==='goalkeeper') return STAT_DEFS.goalkeeper.map(s=>({ ...s, role:'goalkeeper', id:'goalkeeper:'+s.key }));
+  if(position) return STAT_DEFS.field.map(s=>({ ...s, role:'field', id:'field:'+s.key }));
   return COMBINED_STAT_DEFS;
 }
 
@@ -1181,18 +1180,19 @@ async function searchPlayersByCriteria(position, statFilters){
       const d = doc.data();
       if(!d.gkUid) return;
       if(!byPlayer[d.gkUid]) byPlayer[d.gkUid] = [];
-      byPlayer[d.gkUid].push(d.stats||{});
+      byPlayer[d.gkUid].push({ role: d.gkPlayerRole||'field', stats: d.stats||{} });
     });
 
     const matchingUids = new Set();
     Object.keys(byPlayer).forEach(uid=>{
       const games = byPlayer[uid];
       const passesAll = statFilters.every(f=>{
-        const def = COMBINED_STAT_DEFS.find(s=>s.key===f.key);
+        const def = (STAT_DEFS[f.role]||[]).find(s=>s.key===f.key);
         if(!def) return false;
         const values = [];
         games.forEach(g=>{
-          const v = g[f.key];
+          if(f.role && g.role!==f.role) return;
+          const v = g.stats[f.key];
           if(v==null) return;
           if(def.type==='ratio'){
             if(v.att) values.push((v.made/v.att)*100);
@@ -1505,12 +1505,13 @@ function renderViewerHome(){
 }
 function statFilterRowsHtml(filters, statDefs){
   if(!filters.length) return '';
+  const isCombined = new Set(statDefs.map(s=>s.role)).size > 1;
   return filters.map((f,i)=>`
     <div class="package-row" data-stat-filter-index="${i}">
       <div style="flex:1">
         <div class="photo-hint" style="margin:0 0 4px">${t('statFilterTitle')}</div>
-        <select class="form-input" data-stat-filter-field="key">
-          ${statDefs.map(s=>`<option value="${s.key}" ${f.key===s.key?'selected':''}>${s[state.lang]}${s.type==='ratio'?' (%)':''}</option>`).join('')}
+        <select class="form-input" data-stat-filter-field="id">
+          ${statDefs.map(s=>`<option value="${s.id}" ${f.id===s.id?'selected':''}>${s[state.lang]}${s.type==='ratio'?' (%)':''}${isCombined && s.role==='goalkeeper' ? ` (${t('playerRoleGK')})` : ''}</option>`).join('')}
         </select>
       </div>
       <div style="flex:1">
@@ -3286,16 +3287,16 @@ function attachHandlers(){
     el.addEventListener('click', ()=>{
       state.advancedSearch.position = el.dataset.advPosition;
       const relevant = relevantStatDefsForPosition(state.advancedSearch.position);
-      const relevantKeys = relevant.map(s=>s.key);
+      const relevantIds = relevant.map(s=>s.id);
       state.advancedSearch.statFilters.forEach(f=>{
-        if(!relevantKeys.includes(f.key)) f.key = relevant[0].key;
+        if(!relevantIds.includes(f.id)) f.id = relevant[0].id;
       });
       render();
     });
   });
   app.querySelector('[data-add-stat-filter]')?.addEventListener('click', ()=>{
     const relevant = relevantStatDefsForPosition(state.advancedSearch.position);
-    state.advancedSearch.statFilters.push({ key: relevant[0].key, minValue:'' });
+    state.advancedSearch.statFilters.push({ id: relevant[0].id, minValue:'' });
     render();
   });
   app.querySelectorAll('#adv-stat-filters [data-stat-filter-field]').forEach(el=>{
@@ -3303,7 +3304,7 @@ function attachHandlers(){
       const row = e.target.closest('[data-stat-filter-index]');
       const idx = parseInt(row.dataset.statFilterIndex, 10);
       const field = e.target.dataset.statFilterField;
-      state.advancedSearch.statFilters[idx][field] = field==='minValue' ? e.target.value : e.target.value;
+      state.advancedSearch.statFilters[idx][field] = e.target.value;
     });
   });
   app.querySelectorAll('[data-remove-stat-filter]').forEach(el=>{
@@ -3316,7 +3317,10 @@ function attachHandlers(){
     const btn = e.currentTarget;
     const validFilters = state.advancedSearch.statFilters
       .filter(f=>f.minValue!=null && f.minValue!=='')
-      .map(f=>({ key:f.key, minValue:Number(f.minValue) }));
+      .map(f=>{
+        const [role, key] = f.id.split(':');
+        return { role, key, minValue:Number(f.minValue) };
+      });
     btn.disabled = true;
     const originalLabel = btn.textContent;
     btn.textContent = '...';

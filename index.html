@@ -507,7 +507,6 @@ const STAT_DEFS = {
     { key:'assists', type:'count', category:'general', he:'בישולים', en:'Assists' },
 
     { key:'totalShots', type:'count', category:'attacking', he:'סה״כ בעיטות', en:'Total shots' },
-    { key:'xG', type:'decimal', category:'attacking', he:'שערים צפויים (xG)', en:'Expected goals (xG)' },
     { key:'xGOT', type:'decimal', category:'attacking', he:'שערים צפויים למסגרת (xGOT)', en:'xG on target (xGOT)' },
     { key:'shotsOnTarget', type:'count', category:'attacking', he:'בעיטות למסגרת', en:'Shots on target' },
     { key:'shotsOffTarget', type:'count', category:'attacking', he:'בעיטות מחוץ למסגרת', en:'Shots off target' },
@@ -518,7 +517,6 @@ const STAT_DEFS = {
     { key:'offsides', type:'count', category:'attacking', he:'נבדלים', en:'Offsides' },
 
     { key:'keyPasses', type:'count', category:'playmaking', he:'מסירות מפתח', en:'Key passes' },
-    { key:'xA', type:'decimal', category:'playmaking', he:'בישולים צפויים (xA)', en:'Expected assists (xA)' },
     { key:'passesIntoBox', type:'ratio', category:'playmaking', he:'מסירות מדויקות לרחבה', en:'Accurate passes into box' },
     { key:'passesFinalThird', type:'ratio', category:'playmaking', he:'מסירות מדויקות בשליש האחרון', en:'Accurate passes in final third' },
     { key:'crosses', type:'ratio', category:'playmaking', he:'הרמות מדויקות', en:'Accurate crosses' },
@@ -706,7 +704,7 @@ const STR = {
     perGameLabel:'משחק',
     filterCoachType:'סוג מאמן', filterAllTypes:'הכל', filterSpecialization:'התמחות',
     writeReview:'כתבו ביקורת (אופציונלי)', reviewPlaceholder:'איך היה הניתוח? מה עבד טוב?',
-    reviewsTitle:'ביקורות', noReviewsYet:'עדיין אין ביקורות', submitRating:'שלחו דירוג',
+    reviewsTitle:'ביקורות', noReviewsYet:'עדיין אין ביקורות', submitRating:'שלחו דירוג', showMoreReviews:'הצג עוד ביקורות',
     sampleClipsTitle:'קליפים לדוגמה',
     statsPrivacyTitle:'פרטיות', statsPrivacyLabel:'הצגת הסטטיסטיקה והקליפים שלי לכל משתמש מחובר באפליקציה',
     playerProfileTitle:'פרופיל שחקן', statsPrivateMsg:'השחקן/ית הגדיר/ה שהמידע הזה פרטי',
@@ -857,7 +855,7 @@ const STR = {
     perGameLabel:'Game',
     filterCoachType:'Coach type', filterAllTypes:'All', filterSpecialization:'Specialization',
     writeReview:'Write a review (optional)', reviewPlaceholder:'How was the analysis? What worked well?',
-    reviewsTitle:'Reviews', noReviewsYet:'No reviews yet', submitRating:'Submit rating',
+    reviewsTitle:'Reviews', noReviewsYet:'No reviews yet', submitRating:'Submit rating', showMoreReviews:'Show more reviews',
     sampleClipsTitle:'Sample clips',
     statsPrivacyTitle:'Privacy', statsPrivacyLabel:'Show my stats and clips to any logged-in user',
     playerProfileTitle:'Player profile', statsPrivateMsg:'This player has set this information as private',
@@ -890,7 +888,7 @@ let state = {
   adminPendingCoaches: [],
   adminStats: null,
   activePackages: [],
-  coachReviews: [],
+  coachReviews: [], reviewsExpanded: false,
   coachClips: [],
   viewingPlayer: null, playerPublicGames: [], playerPublicClips: [], allPlayers: [], allAgents: [], allScouts: [], viewingContact: null,
   advancedSearch: { position:'', statFilters:[], results:null },
@@ -2734,7 +2732,7 @@ function renderCoachProfile(){
     <div class="section-line"></div>
     ${reviews.length===0 ? `
       <div class="empty-state" style="padding:30px 20px">${icon('star',30)}<b>${t('noReviewsYet')}</b></div>
-    ` : reviews.map(rv=>`
+    ` : (state.reviewsExpanded ? reviews : reviews.slice(0,5)).map(rv=>`
       <div class="review-item">
         <div class="review-head">
           ${personAvatarHtml(rv.gkName, rv.gkPhoto, 30)}
@@ -2747,6 +2745,9 @@ function renderCoachProfile(){
         ${rv.text ? `<div class="review-text">${rv.text}</div>` : ''}
       </div>
     `).join('')}
+    ${(!state.reviewsExpanded && reviews.length>5) ? `
+      <button class="demo-link" data-action="show-more-reviews" style="display:block;margin:6px auto 0">${t('showMoreReviews')}</button>
+    ` : ''}
 
     ${state.role==='viewer' ? `
       <div class="req-meta" style="text-align:center;margin-top:22px">${t('viewerReadOnlyNote')}</div>
@@ -3355,6 +3356,10 @@ function attachHandlers(){
     if(state.user) await loadMyRequests(state.user.uid);
     go('my-clips');
   });
+  app.querySelector('[data-action="show-more-reviews"]')?.addEventListener('click', ()=>{
+    state.reviewsExpanded = true;
+    render();
+  });
   app.querySelector('[data-action="nav-viewer-home"]')?.addEventListener('click', async ()=>{
     if(!COACHES.length) await refreshCoachDirectory();
     if(!state.allPlayers.length) state.allPlayers = await loadAllPlayers();
@@ -3425,6 +3430,7 @@ function attachHandlers(){
         state.selectedCoach = coach;
         state.draft.wantsHighlightClip = false;
         state.draft.paymentChoice = null;
+        state.reviewsExpanded = false;
         state.coachReviews = await loadCoachReviews(coach.id);
         state.coachClips = await loadCoachClips(coach.id);
         go('coach-profile');
@@ -4380,6 +4386,7 @@ function attachHandlers(){
       state.selectedCoach = coach;
       state.draft.wantsHighlightClip = false;
       state.draft.paymentChoice = null;
+      state.reviewsExpanded = false;
       state.coachReviews = await loadCoachReviews(coach.id);
       state.coachClips = await loadCoachClips(coach.id);
       state.activePackages = state.user ? await loadActivePackages(state.user.uid, coach.id) : [];

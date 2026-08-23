@@ -581,8 +581,8 @@ const STR = {
     statCoaches:'מאמנים/אנליסטים', statCoachesGK:'מאמני שוערים/אנליסטים', statDone:'ניתוחים שהושלמו', statTurnaround:'זמן מסירה',
     howTitle:'איך זה עובד',
     step1t:'בוחרים מאמן/אנליסט', step1s:'לפי סוג, התמחות, ותק, דירוג ומחיר.',
-    step2t:'מעלים סרטון', step2s:'מאימון, משחק או תרגול עצמאי — כל קטע שבו רואים אתכם בפעולה.',
-    step3t:'מקבלים ניתוח מפורט', step3s:'המאמן מתחייב לפרק זמן מסירה קבוע מראש, בלי הפתעות.',
+    step2t:'מעלים סרטון של משחק שתרצו לנתח', step2s:'מאימון, משחק או תרגול עצמאי — כל קטע שבו רואים אתכם בפעולה.',
+    step3t:'מקבלים ניתוח מפורט', step3s:'המאמן/אנליסט מתחייב לפרק זמן מסירה קבוע מראש, בלי הפתעות.',
     changePrefs:'שינוי שפה ומדינה',
     dropTitle:'גררו לכאן סרטון או לחצו לבחירה', dropSub:'MP4, MOV — עד כמה דקות של אימון או משחק',
     demoFileBtn:'אין אפשרות לבחור קובץ כאן? המשיכו עם סרטון לדוגמה',
@@ -732,8 +732,8 @@ const STR = {
     statCoaches:'Coaches/analysts', statCoachesGK:'GK coaches/analysts', statDone:'Analyses done', statTurnaround:'Turnaround',
     howTitle:'How it works',
     step1t:'Choose a coach/analyst', step1s:'By type, specialty, experience, rating and price.',
-    step2t:'Upload a video', step2s:'From training, a match, or solo practice — any clip that shows you in action.',
-    step3t:'Get a detailed analysis', step3s:'The coach commits to a fixed turnaround time, no surprises.',
+    step2t:'Upload a video of the game you want analyzed', step2s:'From training, a match, or solo practice — any clip that shows you in action.',
+    step3t:'Get a detailed analysis', step3s:'The coach/analyst commits to a fixed turnaround time, no surprises.',
     changePrefs:'Change language & country',
     dropTitle:'Drag a video here or tap to choose', dropSub:'MP4, MOV — up to a few minutes of training or a match',
     demoFileBtn:"Can't pick a file here? Continue with a sample video",
@@ -1481,14 +1481,20 @@ function renderViewerHome(){
   if(q){
     const coachHits = (COACHES||[]).filter(c=>c.name.toLowerCase().includes(q)).map(c=>({type:'coach', uid:c.id, name:c.name, photo:c.photo, sub:(c.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')}));
     const playerHits = (state.allPlayers||[]).filter(p=>p.name.toLowerCase().includes(q)).map(p=>({type:'player', uid:p.uid, name:p.name, photo:p.photo, sub:p.playerRole==='goalkeeper'?t('playerRoleGK'):t('playerRoleField')}));
-    results = [...coachHits, ...playerHits];
+    const agentHits = (state.allAgents||[]).filter(p=>p.name.toLowerCase().includes(q)).map(p=>({type:'agent', uid:p.uid, name:p.name, photo:p.photo, sub:t('registerAgentTitle')}));
+    const scoutHits = (state.allScouts||[]).filter(p=>p.name.toLowerCase().includes(q)).map(p=>({type:'scout', uid:p.uid, name:p.name, photo:p.photo, sub:t('registerScoutTitle')+(p.club?' · '+p.club:'')}));
+    results = [...coachHits, ...playerHits, ...agentHits, ...scoutHits];
   }
+  const roleSub = u.role==='scout' ? t('registerScoutTitle')
+    : u.role==='agent' ? t('registerAgentTitle')
+    : u.role==='coach' ? (u.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')
+    : '';
   return `
     <div class="coach-top" style="margin-bottom:10px">
       ${personAvatarHtml(u.name, u.photo, 56)}
       <div style="flex:1">
         <div class="coach-name" style="font-size:17px">${u.name}</div>
-        <div class="coach-sub">${u.role==='scout'?t('registerScoutTitle'):t('registerAgentTitle')}${u.club?' · '+u.club:''}</div>
+        <div class="coach-sub">${roleSub}${u.club?' · '+u.club:''}</div>
       </div>
     </div>
     <button class="select-btn" style="width:100%;margin-bottom:22px" data-action="open-profile">${t('editProfile')}</button>
@@ -1896,8 +1902,8 @@ function renderBottomNav(){
           <span class="nav-icon-wrap">${icon('list',20)}${newCount>0?`<span class="nav-badge">${newCount>9?'9+':newCount}</span>`:''}</span>
           <span>${t('navIncoming')}</span>
         </button>
-        <button class="nav-btn ${state.view==='home'?'active':''}" data-action="nav-home">
-          ${icon('home',20)}<span>${t('navHome')}</span>
+        <button class="nav-btn ${state.view==='viewer-home'?'active':''}" data-action="nav-viewer-home">
+          ${icon('search',20)}<span>${t('directoryTitle')}</span>
         </button>
       </div>
     `;
@@ -3331,6 +3337,7 @@ function attachHandlers(){
     else if(state.view==='contact-profile') go('viewer-home');
     else if(state.view==='directory-players') go('viewer-home');
     else if(state.view==='profile' && state.role==='viewer') go('viewer-home');
+    else if(state.view==='profile' && state.role==='coach') go('coach-dash');
     else go('home');
   });
   app.querySelector('[data-action="nav-home"]')?.addEventListener('click', ()=>go('home'));
@@ -3348,7 +3355,11 @@ function attachHandlers(){
     if(state.user) await loadMyRequests(state.user.uid);
     go('my-clips');
   });
-  app.querySelector('[data-action="nav-viewer-home"]')?.addEventListener('click', ()=>{
+  app.querySelector('[data-action="nav-viewer-home"]')?.addEventListener('click', async ()=>{
+    if(!COACHES.length) await refreshCoachDirectory();
+    if(!state.allPlayers.length) state.allPlayers = await loadAllPlayers();
+    if(!state.allAgents.length) state.allAgents = await loadViewerDirectory('agent');
+    if(!state.allScouts.length) state.allScouts = await loadViewerDirectory('scout');
     go('viewer-home');
   });
   app.querySelector('#unified-search-input')?.addEventListener('input', (e)=>{
@@ -3429,6 +3440,12 @@ function attachHandlers(){
           state.playerPublicClips = [];
         }
         go('player-profile');
+      } else if(type==='agent' || type==='scout'){
+        const source = type==='agent' ? state.allAgents : state.allScouts;
+        const contact = (source||[]).find(p=>p.uid===uid);
+        if(!contact) return;
+        state.viewingContact = contact;
+        go('contact-profile');
       }
     });
   });
@@ -4045,7 +4062,7 @@ function attachHandlers(){
     state.user = { ...state.user, ...updates };
     if(isCoach) await refreshCoachDirectory();
     showToast(t('profileSaved'));
-    go(isViewer ? 'viewer-home' : 'home');
+    go(isViewer ? 'viewer-home' : (isCoach ? 'coach-dash' : 'home'));
   });
   app.querySelector('[data-action="change-password"]')?.addEventListener('click', async ()=>{
     const current = app.querySelector('#pf-current-pw')?.value||'';

@@ -736,6 +736,7 @@ const STR = {
     welcomeTitle:'ברוכים הבאים ל-AnzClip', welcomeSub:'איך תרצו להשתמש בפלטפורמה?',
     registerGKTitle:'הרשמה כשחקן/ית', registerGKSub:'העלו סרטונים וקבלו ניתוח ממאמן מקצועי',
     registerCoachTitle:'הרשמה כמאמן/אנליסט', registerCoachSub:'קבלו בקשות ניתוח משחקנים ובנו לעצמכם הכנסה',
+    registerMentalTitle:'הרשמה כמאמן מנטלי', registerMentalSub:'קבלו בקשות לשיחות ייעוץ מנטלי מהשחקנים',
     registerAgentTitle:'הרשמה כסוכן', registerAgentSub:'צפו בפרופילים של מאמנים, אנליסטים, סקאוטים ושחקנים',
     registerScoutTitle:'הרשמה כסקאוט', registerScoutSub:'צפו בפרופילים של מאמנים, אנליסטים, סקאוטים ושחקנים',
     viewerLicenseTitle:'העלאת רישיון סוכן בתוקף', viewerScoutProofTitle:'העלאת אישור ייצוג קבוצה',
@@ -904,6 +905,7 @@ const STR = {
     welcomeTitle:'Welcome to AnzClip', welcomeSub:'How would you like to use the platform?',
     registerGKTitle:'Sign up as a player', registerGKSub:'Upload videos and get analysis from a professional coach',
     registerCoachTitle:'Sign up as a coach/analyst', registerCoachSub:'Get analysis requests from players and build your income',
+    registerMentalTitle:'Sign up as a mental coach', registerMentalSub:'Get requests for mental coaching calls from players',
     registerAgentTitle:'Sign up as an agent', registerAgentSub:'Browse profiles of coaches, analysts, scouts and players',
     registerScoutTitle:'Sign up as a scout', registerScoutSub:'Browse profiles of coaches, analysts, scouts and players',
     viewerLicenseTitle:'Upload a valid agent license', viewerScoutProofTitle:'Upload proof of club representation',
@@ -2350,7 +2352,7 @@ function go(view){ state.view = view; render(); window.scrollTo(0,0); }
 function render(){
   applyDocDir();
   const app = document.getElementById('app');
-  const bareViews = ['lang-select','country-select','auth','login','signup-gk','signup-coach','signup-viewer','verify-email','forgot-password'];
+  const bareViews = ['lang-select','country-select','auth','login','signup-gk','signup-coach','signup-mental','signup-viewer','verify-email','forgot-password'];
   if(bareViews.includes(state.view)){
     app.innerHTML = renderView();
     attachHandlers();
@@ -2471,6 +2473,7 @@ function renderView(){
     case 'login': return renderLogin();
     case 'signup-gk': return renderSignupGK();
     case 'signup-coach': return renderSignupCoach();
+    case 'signup-mental': return renderSignupMental();
     case 'signup-viewer': return renderSignupViewer();
     case 'home': return state.role==='coach' ? renderCoachHome() : renderHome();
     case 'upload': return renderUpload();
@@ -2567,6 +2570,10 @@ function renderAuth(){
         <div class="auth-card" data-action="goto-signup-coach">
           ${icon('star',22, true)}
           <div><b>${t('registerCoachTitle')}</b><span>${t('registerCoachSub')}</span></div>
+        </div>
+        <div class="auth-card" data-action="goto-signup-mental">
+          ${icon('check',22, true)}
+          <div><b>${t('registerMentalTitle')}</b><span>${t('registerMentalSub')}</span></div>
         </div>
         <div class="auth-card" data-action="goto-signup-agent">
           ${icon('briefcase',22, true)}
@@ -2717,6 +2724,74 @@ function renderSignupGK(){
 }
 
 /* ---------------- SIGNUP: COACH ---------------- */
+/* ---------------- SIGNUP: MENTAL COACH (dedicated, separate from video-analysis coach) ---------------- */
+function renderSignupMental(){
+  const d = state.signupDraft;
+  return `
+    <div class="onboard" style="padding-top:30px">
+      <div class="onboard-top">
+        <button class="back-btn" data-action="back-to-auth" style="margin-bottom:18px">${icon('back',18)} ${t('back')}</button>
+        <h2>${t('registerMentalTitle')}</h2>
+        <p class="sub">${t('registerMentalSub')}</p>
+
+        <label class="avatar-upload" for="photo-input">
+          ${d.photo ? `<img src="${d.photo}">` : icon('ghost',30)}
+        </label>
+        <input type="file" id="photo-input" accept="image/*">
+        <div class="photo-hint">${t('photoHint')}</div>
+
+        <div class="field-label" style="margin-top:0">${t('fieldFullName')}</div>
+        <input class="form-input" id="su-name" type="text" value="${d.name||''}">
+
+        <div class="field-label">${t('fieldEmail')}</div>
+        <input class="form-input" id="su-email" type="email" value="${d.email||''}" autocomplete="email">
+
+        <div class="field-label">${t('fieldPassword')}</div>
+        <div class="password-field">
+          <input class="form-input" id="su-password" type="password" value="${d.password||''}" autocomplete="new-password">
+          <button type="button" class="password-toggle" data-toggle-password="su-password">${icon('eye',18)}</button>
+        </div>
+        <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('passwordHint')}</div>
+
+        <div class="field-label">${t('country')}</div>
+        <select class="form-input" id="su-country">
+          ${COUNTRIES.map(c=>`<option value="${c.code}" ${d.country===c.code?'selected':''}>${c.flag} ${state.lang==='he'?c.he:c.en}</option>`).join('')}
+        </select>
+
+        <div class="field-label">${t('fieldYears')}</div>
+        <input class="form-input" id="su-years" type="number" min="0" max="50" value="${d.years||''}">
+
+        <div class="field-label">${t('mentalDurationLabel')}</div>
+        <select class="form-input" id="su-mental-duration">
+          ${[15,30,45,60,90].map(m=>`<option value="${m}" ${String(d.mentalCallDuration)===String(m)?'selected':''}>${m} ${t('minutesUnit')}</option>`).join('')}
+        </select>
+        <div class="field-label">${t('mentalSessionPriceLabel')}</div>
+        <input class="form-input" id="su-mental-price" type="number" min="0" value="${d.mentalSessionPrice||''}">
+
+        <div class="field-label">${t('mentalPackagesTitle')}</div>
+        <div id="su-mental-packages-list">${mentalPackageEditorRowsHtml(d.mentalPackages||[])}</div>
+        <button type="button" class="demo-link" data-add-mental-package="su" style="display:block;margin-top:4px">+ ${t('addMentalPackage')}</button>
+
+        <div class="field-label" style="margin-top:18px">${t('fieldAbout')}</div>
+        <textarea id="su-about" placeholder="${t('aboutCoachPh')}">${d.about||''}</textarea>
+
+        <div class="field-label">${t('certificateHint')}</div>
+        <label class="attach-dropzone" for="cert-input">
+          ${d.certificateFile ? icon('file',24) : icon('paperclip',24)}
+          <span style="font-size:13px">${d.certificateFile ? d.certificateFile.name : t('certificateHint')}</span>
+        </label>
+        <input type="file" id="cert-input" accept="image/*,.pdf" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
+
+        <label class="consent-row">
+          <input type="checkbox" id="su-agree-terms" ${d.agreedTerms?'checked':''}>
+          <span>${t('agreeTermsPrefix')}<a href="/terms.html" target="_blank">${t('agreeTermsLink')}</a>${t('agreeAnd')}<a href="/privacy.html" target="_blank">${t('agreePrivacyLink')}</a></span>
+        </label>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:22px" data-action="finish-signup-mental">${t('finishSignup')}</button>
+    </div>
+  `;
+}
+
 function renderSignupCoach(){
   const d = state.signupDraft;
   const specs = d.specialties || [];
@@ -4234,6 +4309,9 @@ function attachHandlers(){
   app.querySelector('[data-action="goto-signup-coach"]')?.addEventListener('click', ()=>{
     state.signupRole = 'coach'; state.signupDraft = { specialties:[] }; go('signup-coach');
   });
+  app.querySelector('[data-action="goto-signup-mental"]')?.addEventListener('click', ()=>{
+    state.signupRole = 'coach'; state.signupDraft = { coachTypes:['mental'], mentalPackages:[] }; go('signup-mental');
+  });
   app.querySelector('[data-action="goto-signup-agent"]')?.addEventListener('click', ()=>{
     state.signupRole = 'agent'; state.signupDraft = { viewerRole:'agent' }; go('signup-viewer');
   });
@@ -4529,6 +4607,59 @@ function attachHandlers(){
       highlightClipEnabled: !!d.highlightClipEnabled,
       highlightClipPrice: Number(d.highlightClipPrice)||0,
       highlightClipTurnaround: Number(d.highlightClipTurnaround)||Number(d.turnaround)||48,
+      ratingSum: 0, ratingCount: 0,
+      isVerified: false, certificateUrl: null, certificateName: d.certificateFile.name,
+      acceptedTermsAt: Date.now()
+    };
+    const res = await firebaseSignUp(emailLower, d.password, profile);
+    if(!res.ok){ showToast(t(res.errorKey)); return; }
+
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = t('uploadingAttachments');
+    const certUrl = await uploadFileToStorage(d.certificateFile, `certificates/${res.uid}`, (pct)=>{
+      btn.textContent = `${t('uploadingAttachments')} ${pct}%`;
+    });
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+    if(certUrl){
+      try{ await db.collection('users').doc(res.uid).update({ certificateUrl: certUrl }); profile.certificateUrl = certUrl; }
+      catch(err){ console.error('failed to save certificate url', err); }
+    } else {
+      showToast(t('certificateUploadError'));
+    }
+
+    state.user = {uid:res.uid, ...profile};
+    state.role = 'coach';
+    state.coachId = res.uid;
+    state.requests = [];
+    state.postVerifyDestination = 'home';
+    go('verify-email');
+  });
+  app.querySelector('[data-action="finish-signup-mental"]')?.addEventListener('click', async (e)=>{
+    const btn = e.currentTarget;
+    const d = state.signupDraft;
+    if(!d.name || !d.name.trim()){ showToast(t('requiredName')); return; }
+    if(!EMAIL_RE.test((d.email||'').trim())){ showToast(t('invalidEmail')); return; }
+    if(!d.password || d.password.length<6){ showToast(t('invalidPassword')); return; }
+    if(!d.certificateFile){ showToast(t('certificateRequired')); return; }
+    if(!d.agreedTerms){ showToast(t('mustAgreeTerms')); return; }
+    const emailLower = d.email.trim().toLowerCase();
+    const profile = {
+      role:'coach', name:d.name.trim(), email:emailLower,
+      photo:d.photo||null,
+      country: d.country || COUNTRIES[0].code,
+      coachTypes: ['mental'],
+      generalSpecialties: [],
+      years: Number(d.years)||0,
+      specialties: ['kids','teens','adults'],
+      singleGamePrice: 0, packages: [],
+      mentalSessionPrice: Number(d.mentalSessionPrice)||0,
+      mentalCallDuration: Number(d.mentalCallDuration)||30,
+      mentalPackages: cleanMentalPackages(d.mentalPackages),
+      turnaround: 48,
+      about: d.about || '',
+      highlightClipEnabled: false, highlightClipPrice: 0, highlightClipTurnaround: 48,
       ratingSum: 0, ratingCount: 0,
       isVerified: false, certificateUrl: null, certificateName: d.certificateFile.name,
       acceptedTermsAt: Date.now()

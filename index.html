@@ -759,7 +759,7 @@ const STR = {
     mentalDurationLabel:'אורך שיחה', requestCall:'בקשו שיחה', callDurationBadge:'שיחה של',
     myCallRequests:'בקשות שיחה', requestCallTitle:'בקשת שיחת ייעוץ',
     proposeTimesTitle:'הציעו זמנים לשחקן', proposeTimesHint:'הציעו 2-3 אפשרויות של תאריך ושעה',
-    addTimeSlot:'הוסיפו אפשרות זמן', sendProposal:'שלחו הצעה לשחקן',
+    addTimeSlot:'הוסיפו אפשרות זמן', sendProposal:'שלחו הצעה לשחקן', dateLabel:'תאריך', timeLabel:'שעה',
     chooseTimeTitle:'בחרו זמן לשיחה', requestMoreOptions:'הציעו לי עוד אפשרויות', confirmSlot:'אשרו זמן זה',
     callConfirmedTitle:'השיחה נקבעה', callScheduledFor:'מועד השיחה', joinCall:'הצטרפו לשיחה',
     callNotYetOpen:'השיחה תיפתח קרוב למועד שנקבע', waitingForProposal:'ממתינים שהמאמן יציע זמנים',
@@ -768,6 +768,7 @@ const STR = {
     extendCall:'הוסיפו 15 דקות', muteBtn:'השתקה', unmuteBtn:'ביטול השתקה', cameraOffBtn:'כיבוי מצלמה', cameraOnBtn:'הפעלת מצלמה',
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
+    confirmEndCall:'האם אתם בטוחים שברצונכם לסיים את השיחה?',
     mentalPackagesTitle:'חבילות שיחות', addMentalPackage:'הוסיפו חבילת שיחות', sessionCountLabel:'מספר שיחות',
     priceFrom:'החל מ-', videoDuration:'אורך סרטון', totalDuration:'משך כולל', selectedVideos:'סרטונים שנבחרו',
     addVideo:'הוסיפו סרטון', addMoreVideos:'הוסיפו עוד סרטון', priceForYourVideo:'מחיר לניתוח', upTo:'עד', minutesUnit:'דקות',
@@ -928,7 +929,7 @@ const STR = {
     mentalDurationLabel:'Call length', requestCall:'Request a call', callDurationBadge:'Call length',
     myCallRequests:'Call requests', requestCallTitle:'Request a coaching call',
     proposeTimesTitle:'Propose times to the player', proposeTimesHint:'Offer 2-3 date and time options',
-    addTimeSlot:'Add a time option', sendProposal:'Send proposal to player',
+    addTimeSlot:'Add a time option', sendProposal:'Send proposal to player', dateLabel:'Date', timeLabel:'Time',
     chooseTimeTitle:'Choose a call time', requestMoreOptions:'Ask for more options', confirmSlot:'Confirm this time',
     callConfirmedTitle:'Call scheduled', callScheduledFor:'Call time', joinCall:'Join the call',
     callNotYetOpen:'The call will open close to the scheduled time', waitingForProposal:'Waiting for the coach to propose times',
@@ -937,6 +938,7 @@ const STR = {
     extendCall:'Add 15 minutes', muteBtn:'Mute', unmuteBtn:'Unmute', cameraOffBtn:'Turn off camera', cameraOnBtn:'Turn on camera',
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
+    confirmEndCall:'Are you sure you want to end the call?',
     mentalPackagesTitle:'Call packages', addMentalPackage:'Add a call package', sessionCountLabel:'Number of calls',
     priceFrom:'From ', videoDuration:'Video length', totalDuration:'Total length', selectedVideos:'Selected videos',
     addVideo:'Add video', addMoreVideos:'Add another video', priceForYourVideo:'Price for this analysis', upTo:'Up to', minutesUnit:'min',
@@ -1606,18 +1608,53 @@ async function initVideoCall(){
   const localVideo = document.getElementById('local-video');
   const remoteVideo = document.getElementById('remote-video');
 
+  // Attach ALL button handlers immediately, before requesting camera/mic —
+  // so end-call (and the other buttons, once media is ready) always respond even if getUserMedia fails.
+  let micOn = true, camOn = true;
+  document.getElementById('toggle-mic')?.addEventListener('click', (e)=>{
+    if(!__rtcLocalStream) return;
+    micOn = !micOn;
+    __rtcLocalStream.getAudioTracks().forEach(tr=>tr.enabled = micOn);
+    e.currentTarget.classList.toggle('muted', !micOn);
+  });
+  document.getElementById('toggle-cam')?.addEventListener('click', (e)=>{
+    if(!__rtcLocalStream) return;
+    camOn = !camOn;
+    __rtcLocalStream.getVideoTracks().forEach(tr=>tr.enabled = camOn);
+    e.currentTarget.classList.toggle('cam-off', !camOn);
+  });
+  document.getElementById('end-call')?.addEventListener('click', ()=>{
+    if(!confirm(t('confirmEndCall'))) return;
+    endVideoCall();
+    go('call-request-detail');
+  });
+  document.getElementById('extend-call')?.addEventListener('click', async ()=>{
+    const newExt = (r.extendedMinutes||0) + 15;
+    await updateCallRequestDoc(r.id, { extendedMinutes: newExt });
+    r.extendedMinutes = newExt;
+  });
+
   if(!navigator.mediaDevices || !window.RTCPeerConnection){
     if(statusEl) statusEl.textContent = t('webrtcNotSupported');
     return;
   }
 
   try{
-    __rtcLocalStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+    __rtcLocalStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode:'user', width:{ideal:1280}, height:{ideal:720} },
+      audio: true
+    });
   }catch(e){
-    console.error('getUserMedia failed', e);
-    if(statusEl) statusEl.textContent = t('micCameraDenied');
-    __rtcActiveCallId = null;
-    return;
+    console.error('getUserMedia (video+audio) failed', e);
+    try{
+      // fall back to audio-only so the call can still proceed even if the camera can't be used
+      __rtcLocalStream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      if(statusEl) statusEl.textContent = t('micCameraDenied');
+    }catch(e2){
+      console.error('getUserMedia (audio-only) also failed', e2);
+      if(statusEl) statusEl.textContent = t('micCameraDenied');
+      return;
+    }
   }
   if(localVideo) localVideo.srcObject = __rtcLocalStream;
 
@@ -1687,27 +1724,6 @@ async function initVideoCall(){
     if(__rtcPC.connectionState==='connected') statusEl.textContent = '';
     else if(__rtcPC.connectionState==='connecting') statusEl.textContent = t('connectingCall');
   };
-
-  let micOn = true, camOn = true;
-  document.getElementById('toggle-mic')?.addEventListener('click', (e)=>{
-    micOn = !micOn;
-    __rtcLocalStream.getAudioTracks().forEach(tr=>tr.enabled = micOn);
-    e.currentTarget.classList.toggle('muted', !micOn);
-  });
-  document.getElementById('toggle-cam')?.addEventListener('click', (e)=>{
-    camOn = !camOn;
-    __rtcLocalStream.getVideoTracks().forEach(tr=>tr.enabled = camOn);
-    e.currentTarget.classList.toggle('cam-off', !camOn);
-  });
-  document.getElementById('end-call')?.addEventListener('click', ()=>{
-    endVideoCall();
-    go('call-request-detail');
-  });
-  document.getElementById('extend-call')?.addEventListener('click', async ()=>{
-    const newExt = (r.extendedMinutes||0) + 15;
-    await updateCallRequestDoc(r.id, { extendedMinutes: newExt });
-    r.extendedMinutes = newExt;
-  });
 
   const startMs = r.confirmedSlot ? r.confirmedSlot.dateTimeMs : Date.now();
   const timerEl = document.getElementById('call-timer');
@@ -2066,7 +2082,14 @@ function renderProposeTimes(){
     <div id="slot-editor-list">
       ${state.proposedSlotsDraft.map((s,i)=>`
         <div class="package-row" data-slot-index="${i}">
-          <input class="form-input" type="datetime-local" data-slot-field="value" value="${s.value||''}">
+          <div style="flex:1">
+            <div class="photo-hint" style="margin:0 0 4px">${t('dateLabel')}</div>
+            <input class="form-input" type="date" data-slot-field="date" value="${s.date||''}">
+          </div>
+          <div style="flex:1">
+            <div class="photo-hint" style="margin:0 0 4px">${t('timeLabel')}</div>
+            <input class="form-input" type="time" data-slot-field="time" value="${s.time||''}">
+          </div>
           <button type="button" class="pkg-remove-btn" data-remove-slot="${i}">${icon('x',16)}</button>
         </div>
       `).join('')}
@@ -5237,11 +5260,11 @@ function attachHandlers(){
     go('requests');
   });
   app.querySelector('[data-action="open-propose-times"]')?.addEventListener('click', ()=>{
-    state.proposedSlotsDraft = [{value:''},{value:''}];
+    state.proposedSlotsDraft = [{date:'',time:''},{date:'',time:''}];
     go('propose-times');
   });
   app.querySelector('[data-add-slot]')?.addEventListener('click', ()=>{
-    state.proposedSlotsDraft.push({value:''});
+    state.proposedSlotsDraft.push({date:'',time:''});
     render();
   });
   app.querySelectorAll('[data-remove-slot]').forEach(el=>{
@@ -5254,15 +5277,15 @@ function attachHandlers(){
     el.addEventListener('input', (e)=>{
       const row = e.target.closest('[data-slot-index]');
       const idx = parseInt(row.dataset.slotIndex, 10);
-      state.proposedSlotsDraft[idx].value = e.target.value;
+      state.proposedSlotsDraft[idx][e.target.dataset.slotField] = e.target.value;
     });
   });
   app.querySelector('[data-action="send-proposal"]')?.addEventListener('click', async (e)=>{
     const r = state.viewingCallRequest;
     if(!r) return;
     const slots = state.proposedSlotsDraft
-      .filter(s=>s.value)
-      .map(s=>({ id: genPackageId(), dateTimeMs: new Date(s.value).getTime() }))
+      .filter(s=>s.date && s.time)
+      .map(s=>({ id: genPackageId(), dateTimeMs: new Date(`${s.date}T${s.time}`).getTime() }))
       .filter(s=>!isNaN(s.dateTimeMs));
     if(!slots.length){ showToast(t('requiredName')); return; }
     const btn = e.currentTarget;

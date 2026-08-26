@@ -3569,31 +3569,41 @@ function attachHandlers(){
     else if(state.view==='profile' && state.role==='coach') go('coach-dash');
     else go('home');
   });
-  app.querySelector('[data-action="nav-home"]')?.addEventListener('click', ()=>go('home'));
-  app.querySelector('[data-action="nav-requests"]')?.addEventListener('click', async ()=>{
-    if(state.user) await loadMyRequests(state.user.uid);
-    go('requests');
-    markRequestsSeen();
-    render();
+  app.querySelectorAll('[data-action="nav-home"]').forEach(el=>{
+    el.addEventListener('click', ()=>go('home'));
   });
-  app.querySelector('[data-action="nav-my-stats"]')?.addEventListener('click', async ()=>{
-    if(state.user) await loadMyRequests(state.user.uid);
-    go('my-stats');
+  app.querySelectorAll('[data-action="nav-requests"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(state.user) await loadMyRequests(state.user.uid);
+      go('requests');
+      markRequestsSeen();
+      render();
+    });
   });
-  app.querySelector('[data-action="nav-my-clips"]')?.addEventListener('click', async ()=>{
-    if(state.user) await loadMyRequests(state.user.uid);
-    go('my-clips');
+  app.querySelectorAll('[data-action="nav-my-stats"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(state.user) await loadMyRequests(state.user.uid);
+      go('my-stats');
+    });
+  });
+  app.querySelectorAll('[data-action="nav-my-clips"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(state.user) await loadMyRequests(state.user.uid);
+      go('my-clips');
+    });
   });
   app.querySelector('[data-action="show-more-reviews"]')?.addEventListener('click', ()=>{
     state.reviewsExpanded = true;
     render();
   });
-  app.querySelector('[data-action="nav-viewer-home"]')?.addEventListener('click', async ()=>{
-    if(!COACHES.length) await refreshCoachDirectory();
-    if(!state.allPlayers.length) state.allPlayers = await loadAllPlayers();
-    if(!state.allAgents.length) state.allAgents = await loadViewerDirectory('agent');
-    if(!state.allScouts.length) state.allScouts = await loadViewerDirectory('scout');
-    go('viewer-home');
+  app.querySelectorAll('[data-action="nav-viewer-home"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(!COACHES.length) await refreshCoachDirectory();
+      if(!state.allPlayers.length) state.allPlayers = await loadAllPlayers();
+      if(!state.allAgents.length) state.allAgents = await loadViewerDirectory('agent');
+      if(!state.allScouts.length) state.allScouts = await loadViewerDirectory('scout');
+      go('viewer-home');
+    });
   });
   app.querySelector('#unified-search-input')?.addEventListener('input', (e)=>{
     state.filters.unifiedQuery = e.target.value;

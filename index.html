@@ -735,6 +735,7 @@ const STR = {
     hoursUnit:'שעות', daysUnit:'ימים', soon:'בקרוב',
     welcomeTitle:'ברוכים הבאים ל-AnzClip', welcomeSub:'איך תרצו להשתמש בפלטפורמה?',
     registerGKTitle:'הרשמה כשחקן/ית', registerGKSub:'העלו סרטונים וקבלו ניתוח ממאמן מקצועי',
+    registerProTitle:'הרשמה כבעל מקצוע', registerProSub:'מאמן/אנליסט, מאמן מנטלי, סוכן או סקאוט',
     registerCoachTitle:'הרשמה כמאמן/אנליסט', registerCoachSub:'קבלו בקשות ניתוח משחקנים ובנו לעצמכם הכנסה',
     registerMentalTitle:'הרשמה כמאמן מנטלי', registerMentalSub:'קבלו בקשות לשיחות ייעוץ מנטלי מהשחקנים',
     registerAgentTitle:'הרשמה כסוכן', registerAgentSub:'צפו בפרופילים של מאמנים, אנליסטים, סקאוטים ושחקנים',
@@ -905,6 +906,7 @@ const STR = {
     hoursUnit:'hours', daysUnit:'days', soon:'soon',
     welcomeTitle:'Welcome to AnzClip', welcomeSub:'How would you like to use the platform?',
     registerGKTitle:'Sign up as a player', registerGKSub:'Upload videos and get analysis from a professional coach',
+    registerProTitle:'Sign up as a professional', registerProSub:'Coach/analyst, mental coach, agent or scout',
     registerCoachTitle:'Sign up as a coach/analyst', registerCoachSub:'Get analysis requests from players and build your income',
     registerMentalTitle:'Sign up as a mental coach', registerMentalSub:'Get requests for mental coaching calls from players',
     registerAgentTitle:'Sign up as an agent', registerAgentSub:'Browse profiles of coaches, analysts, scouts and players',
@@ -2375,7 +2377,7 @@ function go(view){ state.view = view; render(); window.scrollTo(0,0); }
 function render(){
   applyDocDir();
   const app = document.getElementById('app');
-  const bareViews = ['lang-select','country-select','auth','login','signup-gk','signup-coach','signup-mental','signup-viewer','verify-email','forgot-password'];
+  const bareViews = ['lang-select','country-select','auth','auth-professional','login','signup-gk','signup-coach','signup-mental','signup-viewer','verify-email','forgot-password'];
   if(bareViews.includes(state.view)){
     app.innerHTML = renderView();
     attachHandlers();
@@ -2493,6 +2495,7 @@ function renderView(){
     case 'lang-select': return renderLangSelect();
     case 'country-select': return renderCountrySelect();
     case 'auth': return renderAuth();
+    case 'auth-professional': return renderAuthProfessional();
     case 'login': return renderLogin();
     case 'signup-gk': return renderSignupGK();
     case 'signup-coach': return renderSignupCoach();
@@ -2590,6 +2593,29 @@ function renderAuth(){
           ${icon('ghost',22, true)}
           <div><b>${t('registerGKTitle')}</b><span>${t('registerGKSub')}</span></div>
         </div>
+        <div class="auth-card" data-action="goto-auth-professional">
+          ${icon('briefcase',22, true)}
+          <div><b>${t('registerProTitle')}</b><span>${t('registerProSub')}</span></div>
+        </div>
+        <button class="auth-link" data-action="goto-login">${t('alreadyHaveAccount')}</button>
+      </div>
+      <div style="text-align:center;padding:16px 0 4px;font-size:11.5px;color:var(--muted)">
+        <a href="/terms.html" target="_blank" style="color:var(--muted)">${state.lang==='he'?'תנאי שימוש':'Terms'}</a>
+        &nbsp;·&nbsp;
+        <a href="/privacy.html" target="_blank" style="color:var(--muted)">${state.lang==='he'?'מדיניות פרטיות':'Privacy'}</a>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------------- AUTH: PROFESSIONAL SUB-MENU ---------------- */
+function renderAuthProfessional(){
+  return `
+    <div class="onboard">
+      <div class="onboard-top">
+        <button class="back-btn" data-action="goto-auth-main" style="margin-bottom:18px">${icon('back',18)} ${t('back')}</button>
+        <h2>${t('registerProTitle')}</h2>
+        <p class="sub">${t('registerProSub')}</p>
         <div class="auth-card" data-action="goto-signup-coach">
           ${icon('star',22, true)}
           <div><b>${t('registerCoachTitle')}</b><span>${t('registerCoachSub')}</span></div>
@@ -2606,12 +2632,6 @@ function renderAuth(){
           ${icon('search',22, true)}
           <div><b>${t('registerScoutTitle')}</b><span>${t('registerScoutSub')}</span></div>
         </div>
-        <button class="auth-link" data-action="goto-login">${t('alreadyHaveAccount')}</button>
-      </div>
-      <div style="text-align:center;padding:16px 0 4px;font-size:11.5px;color:var(--muted)">
-        <a href="/terms.html" target="_blank" style="color:var(--muted)">${state.lang==='he'?'תנאי שימוש':'Terms'}</a>
-        &nbsp;·&nbsp;
-        <a href="/privacy.html" target="_blank" style="color:var(--muted)">${state.lang==='he'?'מדיניות פרטיות':'Privacy'}</a>
       </div>
     </div>
   `;
@@ -2753,7 +2773,7 @@ function renderSignupMental(){
   return `
     <div class="onboard" style="padding-top:30px">
       <div class="onboard-top">
-        <button class="back-btn" data-action="back-to-auth" style="margin-bottom:18px">${icon('back',18)} ${t('back')}</button>
+        <button class="back-btn" data-action="goto-auth-professional" style="margin-bottom:18px">${icon('back',18)} ${t('back')}</button>
         <h2>${t('registerMentalTitle')}</h2>
         <p class="sub">${t('registerMentalSub')}</p>
 
@@ -2821,7 +2841,7 @@ function renderSignupCoach(){
   return `
     <div class="onboard" style="padding-top:30px">
       <div class="onboard-top">
-        <button class="back-btn" data-action="back-to-auth" style="margin-bottom:18px">${icon('back',18)} ${t('back')}</button>
+        <button class="back-btn" data-action="goto-auth-professional" style="margin-bottom:18px">${icon('back',18)} ${t('back')}</button>
         <h2>${t('registerCoachTitle')}</h2>
         <p class="sub">${t('registerCoachSub')}</p>
 
@@ -2945,7 +2965,7 @@ function renderSignupViewer(){
   return `
     <div class="onboard" style="padding-top:30px">
       <div class="onboard-top">
-        <button class="back-btn" data-action="back-to-auth" style="margin-bottom:18px">${icon('back',18)} ${t('back')}</button>
+        <button class="back-btn" data-action="goto-auth-professional" style="margin-bottom:18px">${icon('back',18)} ${t('back')}</button>
         <h2>${title}</h2>
         <p class="sub">${sub}</p>
 
@@ -4340,6 +4360,12 @@ function attachHandlers(){
   });
   app.querySelector('[data-action="goto-signup-scout"]')?.addEventListener('click', ()=>{
     state.signupRole = 'scout'; state.signupDraft = { viewerRole:'scout' }; go('signup-viewer');
+  });
+  app.querySelector('[data-action="goto-auth-professional"]')?.addEventListener('click', ()=>{
+    go('auth-professional');
+  });
+  app.querySelector('[data-action="goto-auth-main"]')?.addEventListener('click', ()=>{
+    go('auth');
   });
   app.querySelectorAll('[data-action="back-to-auth"]').forEach(el=>{
     el.addEventListener('click', ()=>go('auth'));

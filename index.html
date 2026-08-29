@@ -871,6 +871,12 @@ const STR = {
     highlightClipPriceLabel:'מחיר הקליפ (₪)', totalPriceLabel:'סה״כ לתשלום', requestedHighlightClip:'השוער ביקש גם קליפ ביצועים ערוך',
     coachAmountLabel:'מחיר המאמן/אנליסט', serviceFeeLabel:'עמלת שירות (15%)', youPaidLabel:'שולם על ידכם',
     searchCoachLabel:'חיפוש מאמן/אנליסט/שחקן', searchCoachPh:'הקלידו שם מאמן...',
+    orderTypeTitle:'מה אתם מזמינים?', orderAnalysis:'ניתוח משחק', orderClip:'קליפ ביצועים', orderBoth:'ניתוח + קליפ',
+    clipOnlyNote:'הזמנה זו כוללת קליפ ביצועים בלבד — ללא ניתוח כתוב.',
+    cancelRequestBtn:'בטלו את הבקשה', confirmCancelRequest:'לבטל את הבקשה? השחקן יקבל על כך הודעה.', requestCancelled:'הבקשה בוטלה',
+    cancelReasonPrompt:'מה הסיבה לביטול? ההודעה תישלח לשחקן:', cancelReasonRequired:'יש לכתוב סיבה לביטול', cancelReasonLabel:'סיבת הביטול',
+    searchTitle:'חיפוש', searchAllPh:'הקלידו שם של שחקן או בעל מקצוע...', searchStartHint:'הקלידו שם כדי לחפש שחקנים, מאמנים, אנליסטים, סוכנים וסקאוטים.', searchNoResults:'לא נמצאו תוצאות',
+    shareProfileLinkLabel:'לצפייה בפרופיל המלא:',
     advancedSearchTitle:'חיפוש מתקדם — שחקנים', positionFilterLabel:'עמדת שחקן',
     statFilterTitle:'סינון לפי סטטיסטיקה', addStatFilter:'הוסיפו סטטיסטיקה', minValueLabel:'ערך מינימלי',
     runAdvancedSearch:'חפשו שחקנים', advancedSearchResults:'תוצאות',
@@ -1062,6 +1068,12 @@ const STR = {
     highlightClipPriceLabel:'Clip price (₪)', totalPriceLabel:'Total price', requestedHighlightClip:'Goalkeeper also requested an edited highlights clip',
     coachAmountLabel:'Coach/analyst price', serviceFeeLabel:'Service fee (15%)', youPaidLabel:'You paid',
     searchCoachLabel:'Search coach/analyst/player', searchCoachPh:'Type a coach name...',
+    orderTypeTitle:'What are you ordering?', orderAnalysis:'Game analysis', orderClip:'Highlight clip', orderBoth:'Analysis + clip',
+    clipOnlyNote:'This order is for a highlight clip only — no written analysis.',
+    cancelRequestBtn:'Cancel this request', confirmCancelRequest:'Cancel this request? The player will be notified.', requestCancelled:'Request cancelled',
+    cancelReasonPrompt:'Why are you cancelling? This message is sent to the player:', cancelReasonRequired:'Please write a reason', cancelReasonLabel:'Reason for cancellation',
+    searchTitle:'Search', searchAllPh:'Type a player or professional name...', searchStartHint:'Type a name to search players, coaches, analysts, agents and scouts.', searchNoResults:'No results found',
+    shareProfileLinkLabel:'See the full profile:',
     advancedSearchTitle:'Advanced search — players', positionFilterLabel:'Player position',
     statFilterTitle:'Filter by statistic', addStatFilter:'Add statistic', minValueLabel:'Minimum value',
     runAdvancedSearch:'Search players', advancedSearchResults:'Results',
@@ -2081,17 +2093,47 @@ function renderViewerPending(){
     </div>
   `;
 }
+function reqOrderType(r){ return r.orderType || (r.wantsHighlightClip ? 'both' : 'analysis'); }
+function coachProfileUrl(uid){ return `https://anzclip.com/?coach=${uid}`; }
+function unifiedSearchHits(q){
+  if(!q) return [];
+  const coachHits = (COACHES||[]).filter(c=>c.name.toLowerCase().includes(q)).map(c=>({type:'coach', uid:c.id, name:c.name, photo:c.photo, sub:(c.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')}));
+  const playerHits = (state.allPlayers||[]).filter(p=>p.name.toLowerCase().includes(q)).map(p=>({type:'player', uid:p.uid, name:p.name, photo:p.photo, sub:p.playerRole==='goalkeeper'?t('playerRoleGK'):t('playerRoleField')}));
+  const agentHits = (state.allAgents||[]).filter(p=>p.name.toLowerCase().includes(q)).map(p=>({type:'agent', uid:p.uid, name:p.name, photo:p.photo, sub:t('registerAgentTitle')}));
+  const scoutHits = (state.allScouts||[]).filter(p=>p.name.toLowerCase().includes(q)).map(p=>({type:'scout', uid:p.uid, name:p.name, photo:p.photo, sub:t('registerScoutTitle')+(p.club?' · '+p.club:'')}));
+  return [...coachHits, ...playerHits, ...agentHits, ...scoutHits];
+}
+function renderSearch(){
+  const q = (state.filters.unifiedQuery||'').trim().toLowerCase();
+  const results = unifiedSearchHits(q);
+  return `
+    <div class="field-label" style="margin-top:0">${t('searchCoachLabel')}</div>
+    <input class="form-input" id="unified-search-input" type="text" placeholder="${t('searchAllPh')}" value="${state.filters.unifiedQuery||''}">
+    ${!q ? `
+      <div class="empty-state" style="padding:40px 20px">${icon('search',30)}<b>${t('searchTitle')}</b><span>${t('searchStartHint')}</span></div>
+    ` : results.length===0 ? `
+      <div class="empty-state" style="padding:34px 20px">${icon('search',26)}<b>${t('searchNoResults')}</b></div>
+    ` : `
+      <div style="margin-top:14px">
+        ${results.map(r=>`
+          <div class="req-card" data-search-result="${r.type}:${r.uid}" style="cursor:pointer">
+            <div class="req-coach">
+              ${personAvatarHtml(r.name, r.photo, 40)}
+              <div style="font-size:14px">
+                <div style="font-weight:700">${r.name}</div>
+                <div class="req-meta">${r.sub}</div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `}
+  `;
+}
 function renderViewerHome(){
   const u = state.user;
   const q = (state.filters.unifiedQuery||'').trim().toLowerCase();
-  let results = [];
-  if(q){
-    const coachHits = (COACHES||[]).filter(c=>c.name.toLowerCase().includes(q)).map(c=>({type:'coach', uid:c.id, name:c.name, photo:c.photo, sub:(c.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')}));
-    const playerHits = (state.allPlayers||[]).filter(p=>p.name.toLowerCase().includes(q)).map(p=>({type:'player', uid:p.uid, name:p.name, photo:p.photo, sub:p.playerRole==='goalkeeper'?t('playerRoleGK'):t('playerRoleField')}));
-    const agentHits = (state.allAgents||[]).filter(p=>p.name.toLowerCase().includes(q)).map(p=>({type:'agent', uid:p.uid, name:p.name, photo:p.photo, sub:t('registerAgentTitle')}));
-    const scoutHits = (state.allScouts||[]).filter(p=>p.name.toLowerCase().includes(q)).map(p=>({type:'scout', uid:p.uid, name:p.name, photo:p.photo, sub:t('registerScoutTitle')+(p.club?' · '+p.club:'')}));
-    results = [...coachHits, ...playerHits, ...agentHits, ...scoutHits];
-  }
+  const results = unifiedSearchHits(q);
   const roleSub = u.role==='scout' ? t('registerScoutTitle')
     : u.role==='agent' ? t('registerAgentTitle')
     : u.role==='coach' ? (u.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')
@@ -2501,12 +2543,12 @@ function roundRect(ctx, x, y, w, h, r){
   ctx.arcTo(x, y, x+w, y, r);
   ctx.closePath();
 }
-async function drawShareCard({ name, subtitle, photo, initials, avatarColor, ratingLine, lines, charts }){
+async function drawShareCard({ name, subtitle, photo, initials, avatarColor, ratingLine, lines, charts, linkLine }){
   const W = 1080;
   const headerH = ratingLine ? 730 : 670;
   const rowH = 92;
   const chartBlockH = 300; // label + chart + spacing
-  const footerH = 110;
+  const footerH = linkLine ? 175 : 110;
   const linesArr = lines||[];
   const chartsArr = charts||[];
   const lineRows = Math.ceil(linesArr.length/2);
@@ -2585,7 +2627,7 @@ async function drawShareCard({ name, subtitle, photo, initials, avatarColor, rat
     roundRect(ctx, rx, ry, rowW, rowH-16, 14); ctx.fill();
     ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, rx, ry, rowW, rowH-16, 14); ctx.stroke();
     ctx.fillStyle = '#B9C2AC'; ctx.font = '500 22px Heebo'; ctx.textAlign='left';
-    ctx.fillText(line.label.length>18 ? line.label.slice(0,17)+'…' : line.label, rx+22, ry+34);
+    ctx.fillText(line.label.length>26 ? line.label.slice(0,25)+'…' : line.label, rx+22, ry+34);
     ctx.fillStyle = '#F4F7EE'; ctx.font = '700 30px "IBM Plex Mono"'; ctx.textAlign='left';
     ctx.fillText(line.value, rx+22, ry+66);
   });
@@ -2612,6 +2654,13 @@ async function drawShareCard({ name, subtitle, photo, initials, avatarColor, rat
     }
   });
 
+  if(linkLine){
+    ctx.fillStyle = '#B9C2AC'; ctx.font = '500 24px Heebo'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillText(linkLine.label, W/2, H-118);
+    ctx.fillStyle = '#C6FF4D'; ctx.font = '600 26px "IBM Plex Mono"';
+    const url = linkLine.url.length>52 ? linkLine.url.slice(0,51)+'…' : linkLine.url;
+    ctx.fillText(url, W/2, H-80);
+  }
   ctx.fillStyle = '#7E8A73'; ctx.font = '500 26px Heebo'; ctx.textAlign='center';
   ctx.fillText('anzclip.com', W/2, H-40);
 
@@ -3000,7 +3049,7 @@ function render(){
 function renderTopBar(){
   const titles = {
     home:null, upload:t('titleUpload'), coaches:t('titleCoaches'), confirm:t('titleConfirm'), requests:t('titleRequests'),
-    'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'admin':t('adminTitle'), 'my-stats':t('statsPageTitle'), 'my-clips':t('myClipsTitle'), 'player-profile':t('playerProfileTitle'), 'directory-players':t('directoryPlayers'), 'viewer-pending':t('directoryTitle'), 'contact-profile':t('directoryTitle'), 'viewer-home':null, 'request-call':t('requestCallTitle'), 'call-request-detail':t('myCallRequests'), 'propose-times':t('proposeTimesTitle'), 'video-call':null, 'income':t('incomeTitle')
+    'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'admin':t('adminTitle'), 'my-stats':t('statsPageTitle'), 'my-clips':t('myClipsTitle'), 'player-profile':t('playerProfileTitle'), 'directory-players':t('directoryPlayers'), 'viewer-pending':t('directoryTitle'), 'contact-profile':t('directoryTitle'), 'viewer-home':null, 'request-call':t('requestCallTitle'), 'call-request-detail':t('myCallRequests'), 'propose-times':t('proposeTimesTitle'), 'video-call':null, 'income':t('incomeTitle'), 'search':t('searchTitle')
   };
   const isRoot = state.view==='home' || state.view==='coach-dash' || state.view==='admin' || state.view==='viewer-pending' || state.view==='viewer-home';
   return `
@@ -3036,7 +3085,7 @@ function navItemsForRole(){
     const newCallCount = (state.callRequests||[]).filter(c=>c.coachSeen===false).length;
     return [
       { action:'nav-coach-dash', iconName:'list', label:t('navIncoming'), active:state.view==='coach-dash', badge:newCount+newCallCount },
-      { action:'nav-viewer-home', iconName:'search', label:t('directoryTitle'), active:state.view==='viewer-home' },
+      { action:'nav-search', iconName:'search', label:t('searchTitle'), active:state.view==='search' },
     ];
   }
   const unseenCount = state.requests.filter(r=>r.gkSeen===false).length;
@@ -3044,6 +3093,7 @@ function navItemsForRole(){
   return [
     { action:'nav-home', iconName:'home', label:t('navHome'), active:state.view==='home' },
     { action:'nav-requests', iconName:'list', label:t('navRequests'), active:state.view==='requests', badge:unseenCount+unseenCallCount },
+    { action:'nav-search', iconName:'search', label:t('searchTitle'), active:state.view==='search' },
     { action:'nav-my-stats', iconName:'chart', label:t('myStatsNav'), active:state.view==='my-stats' },
     { action:'nav-my-clips', iconName:'clip', label:t('myClipsNav'), active:state.view==='my-clips' },
   ];
@@ -3111,6 +3161,7 @@ function renderView(){
     case 'requests': return renderRequests();
     case 'coach-dash': return renderCoachDash();
     case 'income': return renderIncome();
+    case 'search': return renderSearch();
     case 'coach-compose': return renderCoachCompose();
     case 'profile': return renderProfile();
     case 'coach-profile': return renderCoachProfile();
@@ -4050,8 +4101,11 @@ function renderCoachProfile(){
     const pkg = (c.packages||[]).find(p=>p.id===pid);
     if(pkg){ choiceSummary = `${t('packageNamePreview')} ${pkg.gameCount} ${t('gamesUnit')} — ₪${pkg.price}`; coachAmount = pkg.price; }
   }
-  const wantsClip = !!state.draft.wantsHighlightClip && c.highlightClipEnabled;
+  const orderType = c.highlightClipEnabled ? (state.draft.orderType || 'analysis') : 'analysis';
+  const wantsClip = orderType!=='analysis' && c.highlightClipEnabled;
+  const clipOnly = orderType==='clip';
   const clipPrice = wantsClip ? c.highlightClipPrice : 0;
+  if(clipOnly){ coachAmount = 0; isExisting = false; choiceSummary = t('orderClip'); }
   const fee = computeFee(coachAmount + clipPrice);
   // a coach whose ONLY service is mental coaching takes calls, not video uploads
   const cTypes = c.coachTypes || [];
@@ -4101,27 +4155,30 @@ function renderCoachProfile(){
     ` : ''}
 
     ${(!c.isFullyBooked && state.role!=='viewer' && !isMentalOnly) ? `
-      ${activePackages.length ? `
-        <div class="field-label" style="margin-top:0">${t('myActivePackages')}</div>
-        <div class="chip-row">
-          ${activePackages.map(p=>`<div class="chip ${choice==='existing:'+p.id?'active':''}" data-payment-choice="existing:${p.id}">${p.gamesTotal-p.gamesUsed} ${t('gamesRemaining')}</div>`).join('')}
-        </div>
-      ` : ''}
-      <div class="field-label" style="margin-top:14px">${t('singleGameOption')} / ${t('buyPackageOption')}</div>
-      <div class="chip-row">
-        <div class="chip ${choice==='single'?'active':''}" data-payment-choice="single">${t('singleGameOption')} (₪${c.singleGamePrice})</div>
-        ${(c.packages||[]).map(p=>`<div class="chip ${choice==='new:'+p.id?'active':''}" data-payment-choice="new:${p.id}">${p.gameCount} ${t('gamesUnit')} (₪${p.price})</div>`).join('')}
-      </div>
       ${c.highlightClipEnabled ? `
-        <div class="field-label" style="margin-top:14px">${t('highlightClipTitle')}</div>
+        <div class="field-label" style="margin-top:14px">${t('orderTypeTitle')}</div>
         <div class="chip-row">
-          <div class="chip ${wantsClip?'active':''}" data-toggle-clip="1">${t('highlightClipTitle')} (+₪${c.highlightClipPrice})</div>
+          <div class="chip ${orderType==='analysis'?'active':''}" data-order-type="analysis">${t('orderAnalysis')}</div>
+          <div class="chip ${orderType==='clip'?'active':''}" data-order-type="clip">${t('orderClip')} (₪${c.highlightClipPrice})</div>
+          <div class="chip ${orderType==='both'?'active':''}" data-order-type="both">${t('orderBoth')}</div>
         </div>
-        ${!wantsClip ? `<div class="req-meta" style="margin-top:6px">${t('highlightClipTurnaroundLabel')}: ${fmtHours(c.highlightClipTurnaround)}</div>` : ''}
       ` : ''}
+      ${!clipOnly ? `
+        ${activePackages.length ? `
+          <div class="field-label" style="margin-top:14px">${t('myActivePackages')}</div>
+          <div class="chip-row">
+            ${activePackages.map(p=>`<div class="chip ${choice==='existing:'+p.id?'active':''}" data-payment-choice="existing:${p.id}">${p.gamesTotal-p.gamesUsed} ${t('gamesRemaining')}</div>`).join('')}
+          </div>
+        ` : ''}
+        <div class="field-label" style="margin-top:14px">${t('singleGameOption')} / ${t('buyPackageOption')}</div>
+        <div class="chip-row">
+          <div class="chip ${choice==='single'?'active':''}" data-payment-choice="single">${t('singleGameOption')} (₪${c.singleGamePrice})</div>
+          ${(c.packages||[]).map(p=>`<div class="chip ${choice==='new:'+p.id?'active':''}" data-payment-choice="new:${p.id}">${p.gameCount} ${t('gamesUnit')} (₪${p.price})</div>`).join('')}
+        </div>
+      ` : `<div class="req-meta" style="margin-top:10px">${t('clipOnlyNote')}</div>`}
       <div class="summary-card" style="margin-top:14px">
-        <div class="summary-row"><span>${t('priceForYourVideo')}</span><span class="mono">${choiceSummary}</span></div>
-        ${wantsClip ? `<div class="summary-row"><span>${t('highlightClipTitle')}</span><span class="mono">+₪${clipPrice}</span></div>` : ''}
+        ${!clipOnly ? `<div class="summary-row"><span>${t('priceForYourVideo')}</span><span class="mono">${choiceSummary}</span></div>` : ''}
+        ${wantsClip ? `<div class="summary-row"><span>${t('highlightClipTitle')}</span><span class="mono">${clipOnly?'':'+'}₪${clipPrice}</span></div>` : ''}
         ${!isExisting || wantsClip ? `
           <div class="summary-row"><span>${t('serviceFeeLabel')}</span><span class="mono">+₪${fee.fee}</span></div>
           <div class="summary-row"><span><b>${t('totalPriceLabel')}</b></span><span class="mono"><b>₪${fee.total}</b></span></div>
@@ -4226,7 +4283,9 @@ function renderConfirm(){
   const d = state.draft;
   if(!c) return renderCoaches();
   const dur = draftTotalDurationSec();
-  const wantsClip = !!d.wantsHighlightClip;
+  const orderType = c.highlightClipEnabled ? (d.orderType || 'analysis') : 'analysis';
+  const wantsClip = orderType!=='analysis' && c.highlightClipEnabled;
+  const clipOnly = orderType==='clip';
   const clipPrice = c.highlightClipEnabled ? c.highlightClipPrice : 0;
   const fileLabel = d.isDemo ? d.fileName : (d.videos && d.videos.length ? `${d.videos.length} ${t('selectedVideos')}` : t('sumDash'));
   const activePackages = state.activePackages || [];
@@ -4242,6 +4301,7 @@ function renderConfirm(){
     const pkg = (c.packages||[]).find(p=>p.id===pid);
     if(pkg){ baseLabel = `${t('packageNamePreview')} ${pkg.gameCount} ${t('gamesUnit')}`; basePrice = pkg.price; }
   }
+  if(clipOnly){ basePrice = 0; isExisting = false; }
   const coachAmount = basePrice + (wantsClip ? clipPrice : 0);
   const fee = computeFee(coachAmount);
 
@@ -4261,18 +4321,21 @@ function renderConfirm(){
     </div>
 
     <div class="summary-card" style="margin-top:14px">
-      <div class="summary-row"><span>${t('priceForYourVideo')}</span><span class="mono">${baseLabel}${!isExisting?` — ₪${basePrice}`:''}</span></div>
-      ${wantsClip ? `<div class="summary-row"><span>${t('highlightClipTitle')}</span><span class="mono">+₪${clipPrice}</span></div>` : ''}
+      ${!clipOnly ? `<div class="summary-row"><span>${t('priceForYourVideo')}</span><span class="mono">${baseLabel}${!isExisting?` — ₪${basePrice}`:''}</span></div>` : ''}
+      ${wantsClip ? `<div class="summary-row"><span>${t('highlightClipTitle')}</span><span class="mono">${clipOnly?'':'+'}₪${clipPrice}</span></div>` : ''}
       ${!isExisting ? `<div class="summary-row"><span>${t('serviceFeeLabel')}</span><span class="mono">+₪${fee.fee}</span></div>` : ''}
       <div class="summary-row"><span><b>${t('totalPriceLabel')}</b></span><span class="mono"><b>₪${isExisting?0:fee.total}</b></span></div>
       <div class="summary-row"><span>${t('sumDelivery')}</span><span>${t('deliveryUpTo')} ${fmtHours(c.turnaround)}</span></div>
       ${wantsClip ? `<div class="summary-row"><span>${t('highlightClipTurnaroundLabel')}</span><span>${t('clipDeliveryUpTo')} ${fmtHours(c.highlightClipTurnaround)}</span></div>` : ''}
     </div>
     ${c.highlightClipEnabled ? `
-      <div class="chip-row" style="margin-top:14px">
-        <div class="chip ${wantsClip?'active':''}" data-toggle-clip="1">${t('highlightClipTitle')} (+₪${c.highlightClipPrice})</div>
+      <div class="field-label" style="margin-top:14px">${t('orderTypeTitle')}</div>
+      <div class="chip-row">
+        <div class="chip ${orderType==='analysis'?'active':''}" data-order-type="analysis">${t('orderAnalysis')}</div>
+        <div class="chip ${orderType==='clip'?'active':''}" data-order-type="clip">${t('orderClip')} (₪${c.highlightClipPrice})</div>
+        <div class="chip ${orderType==='both'?'active':''}" data-order-type="both">${t('orderBoth')}</div>
       </div>
-      ${!wantsClip ? `<div class="req-meta" style="margin-top:6px">${t('highlightClipTurnaroundLabel')}: ${fmtHours(c.highlightClipTurnaround)}</div>` : ''}
+      ${clipOnly ? `<div class="req-meta" style="margin-top:6px">${t('clipOnlyNote')}</div>` : ''}
     ` : ''}
     <div class="commit-box">
       ${icon('clip',18)}
@@ -4332,16 +4395,19 @@ function renderRequests(){
           <div class="req-meta">${t('statusRequested')}</div>
         ` : r.status==='declined' ? `
           <div class="req-meta" style="color:var(--coral-dim)">${t('requestDeclinedMsg')}</div>
+          ${r.cancelReason ? `<div class="req-meta" style="margin-top:6px">${t('cancelReasonLabel')}: "${r.cancelReason}"</div>` : ''}
         ` : r.status!=='done' ? `
           <div class="countdown" data-countdown="${r.deadline}">${timeLeftStr(r.deadline)}</div>
           <button class="demo-link" data-demo-complete="${r.id}">${t('demoComplete')}</button>
         ` : `
-          <div class="analysis-box">
-            <div class="analysis-score">${icon('star',20)}<b>${r.score}/10</b><span style="font-size:12px;color:var(--muted)">${t('overallScore')}</span></div>
-            <div class="analysis-item"><b>${t('coachAnalysisTitle')}</b><span>${r.analysis}</span></div>
-            ${attachmentsViewHtml(r.attachments)}
-          </div>
-          ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
+          ${reqOrderType(r)!=='clip' ? `
+            <div class="analysis-box">
+              <div class="analysis-score">${icon('star',20)}<b>${r.score}/10</b><span style="font-size:12px;color:var(--muted)">${t('overallScore')}</span></div>
+              <div class="analysis-item"><b>${t('coachAnalysisTitle')}</b><span>${r.analysis}</span></div>
+              ${attachmentsViewHtml(r.attachments)}
+            </div>
+            ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
+          ` : ''}
           ${r.highlightClipUrl ? `
             <div class="field-label" style="margin-top:14px">${t('highlightClipTitle')}</div>
             <video controls preload="metadata" style="width:100%;border-radius:12px;background:#000" src="${r.highlightClipUrl}"></video>
@@ -4597,6 +4663,7 @@ function renderCoachDash(){
             <button class="select-btn" style="width:100%;margin-top:8px" data-decline-request="${r.id}">${t('declineRequestBtn')}</button>
           ` : r.status==='declined' ? `
             <div class="req-meta" style="margin:12px 0">${t('statusDeclined')}</div>
+            ${r.cancelReason ? `<div class="req-meta" style="margin-bottom:12px">${t('cancelReasonLabel')}: "${r.cancelReason}"</div>` : ''}
           ` : `
             <div style="margin:12px 0">${videosViewHtml(r)}</div>
             ${r.wantsHighlightClip ? `<div class="req-meta" style="margin-bottom:8px">${t('requestedHighlightClip')}</div>` : ''}
@@ -4604,6 +4671,7 @@ function renderCoachDash(){
             ${r.status!=='done' ? `
               <div class="countdown" data-countdown="${r.deadline}">${timeLeftStr(r.deadline)}</div>
               <button class="btn btn-primary btn-block" style="margin-top:10px" data-open-compose="${r.id}">${t('writeAnalysis')}</button>
+              <button class="select-btn" style="width:100%;margin-top:8px" data-cancel-request="${r.id}">${t('cancelRequestBtn')}</button>
             ` : `
               <div class="analysis-box">
               <div class="analysis-score">${icon('star',20)}<b>${r.score}/10</b><span style="font-size:12px;color:var(--muted)">${t('theAnalysisSent')}</span></div>
@@ -4689,25 +4757,29 @@ function renderCoachCompose(){
     </div>
     <div style="margin-bottom:18px">${videosViewHtml(r)}</div>
 
-    <div class="field-label" style="margin-top:0">${t('overallScoreField')}</div>
-    <div class="score-input-row">
-      <b id="score-display">8.0</b>
-      <input type="range" id="score-range" min="1" max="10" step="0.1" value="8.0">
-    </div>
+    ${reqOrderType(r)==='clip' ? `
+      <div class="commit-box" style="margin-bottom:4px">${icon('clip',18)}<span>${t('clipOnlyNote')}</span></div>
+    ` : `
+      <div class="field-label" style="margin-top:0">${t('overallScoreField')}</div>
+      <div class="score-input-row">
+        <b id="score-display">8.0</b>
+        <input type="range" id="score-range" min="1" max="10" step="0.1" value="8.0">
+      </div>
 
-    <div class="field-label">${t('statsTitle')} <span style="font-weight:400;color:var(--muted);font-size:12px">(${t('statsOptional')})</span></div>
-    <div id="stats-inputs">${statsInputHtml(r.gkPlayerRole||'field')}</div>
+      <div class="field-label">${t('statsTitle')} <span style="font-weight:400;color:var(--muted);font-size:12px">(${t('statsOptional')})</span></div>
+      <div id="stats-inputs">${statsInputHtml(r.gkPlayerRole||'field')}</div>
 
-    <div class="field-label">${t('coachAnalysisTitle')}</div>
-    <textarea id="analysis-text" class="textarea-lg" placeholder="${t('fbPlaceholder')}"></textarea>
+      <div class="field-label">${t('coachAnalysisTitle')}</div>
+      <textarea id="analysis-text" class="textarea-lg" placeholder="${t('fbPlaceholder')}"></textarea>
 
-    <div class="field-label">${t('addAttachments')}</div>
-    <label class="attach-dropzone" for="attach-input">
-      ${icon('paperclip',24)}
-      <span style="font-size:13px">${t('attachmentsHint')}</span>
-    </label>
-    <input type="file" id="attach-input" multiple style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
-    <div class="attach-list" id="attach-list"></div>
+      <div class="field-label">${t('addAttachments')}</div>
+      <label class="attach-dropzone" for="attach-input">
+        ${icon('paperclip',24)}
+        <span style="font-size:13px">${t('attachmentsHint')}</span>
+      </label>
+      <input type="file" id="attach-input" multiple style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
+      <div class="attach-list" id="attach-list"></div>
+    `}
 
     ${r.wantsHighlightClip ? `
       <div class="field-label">${t('highlightClipUploadTitle')}</div>
@@ -4976,6 +5048,15 @@ function attachHandlers(){
     state.reviewsExpanded = true;
     render();
   });
+  app.querySelectorAll('[data-action="nav-search"]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(!COACHES.length) await refreshCoachDirectory();
+      if(!state.allPlayers.length) state.allPlayers = await loadAllPlayers();
+      if(!state.allAgents.length) state.allAgents = await loadViewerDirectory('agent');
+      if(!state.allScouts.length) state.allScouts = await loadViewerDirectory('scout');
+      go('search');
+    });
+  });
   app.querySelectorAll('[data-action="nav-viewer-home"]').forEach(el=>{
     el.addEventListener('click', async ()=>{
       if(!COACHES.length) await refreshCoachDirectory();
@@ -5048,6 +5129,7 @@ function attachHandlers(){
         state.selectedCoach = coach;
         state.isSelfViewingProfile = false;
         state.draft.wantsHighlightClip = false;
+        state.draft.orderType = 'analysis';
         state.draft.paymentChoice = null;
         state.reviewsExpanded = false;
         state.coachReviews = await loadCoachReviews(coach.id);
@@ -5652,14 +5734,32 @@ function attachHandlers(){
     const original = btn.textContent;
     btn.disabled = true; btn.textContent = '...';
     const avgRating = c.rating!=null ? c.rating.toFixed(1) : null;
-    await shareCardAsImage(t('shareProfileTitle'), t('shareProfileTitle'), {
+    const cTypes = c.coachTypes || [];
+    const mentalOnly = cTypes.length>0 && cTypes.every(ct=>ct==='mental');
+    const lines = [];
+    if(!mentalOnly){
+      lines.push({label:t('singleGameOption'), value:`₪${c.singleGamePrice||0}`});
+      (c.packages||[]).forEach(pk=>lines.push({label:`${pk.gameCount} ${t('gamesUnit')}`, value:`₪${pk.price}`}));
+      if(c.highlightClipEnabled) lines.push({label:t('highlightClipTitle'), value:`+₪${c.highlightClipPrice}`});
+      lines.push({label:t('deliveryIn'), value:fmtHours(c.turnaround)});
+    }
+    if(cTypes.includes('mental')){
+      lines.push({label:t('mentalDurationLabel'), value:`${c.mentalCallDuration||30} ${t('minutesUnit')}`});
+      lines.push({label:t('requestCall'), value:`₪${c.mentalSessionPrice||0}`});
+      (c.mentalPackages||[]).forEach(pk=>lines.push({label:`${t('pkgOfCallsPre')} ${pk.sessionCount} ${t('pkgOfCallsPost')}`, value:`₪${pk.price}`}));
+    }
+    lines.push({label:t('fieldYears'), value:`${c.years||0}`});
+    const profileUrl = coachProfileUrl(c.id);
+    const shareText = `${c.name} — ${(cTypes.map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · '))} | AnzClip\n${profileUrl}`;
+    await shareCardAsImage(t('shareProfileTitle'), shareText, {
       name: c.name,
-      subtitle: (c.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · '),
+      subtitle: cTypes.map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · '),
       photo: c.photo,
       initials: c.name.split(' ').map(n=>n[0]).join(''),
       avatarColor: '#0B6E4F',
       ratingLine: avgRating ? `★ ${avgRating}  ·  ${c.ratingCount} ${t('reviewsTitle')}` : null,
-      lines: c.mentalSessionPrice ? [{label:t('mentalDurationLabel'), value:`${c.mentalCallDuration} ${t('minutesUnit')}`},{label:t('mentalSessionPriceLabel'), value:`₪${c.mentalSessionPrice}`}] : []
+      lines,
+      linkLine: { label: t('shareProfileLinkLabel'), url: profileUrl }
     });
     btn.disabled = false; btn.textContent = original;
   });
@@ -5931,25 +6031,39 @@ function attachHandlers(){
       render();
     });
   });
+  async function cancelRequestWithReason(req, afterAccept){
+    if(afterAccept && !confirm(t('confirmCancelRequest'))) return;
+    const reason = (prompt(t('cancelReasonPrompt')) || '').trim();
+    if(!reason){ showToast(t('cancelReasonRequired')); return; }
+    const ok = await updateRequestDoc(req.id, {status:'declined', cancelReason:reason, cancelledAfterAccept:!!afterAccept, gkSeen:false});
+    if(!ok){ showToast(t('saveError')); return; }
+    req.status = 'declined';
+    req.cancelReason = reason;
+    req.cancelledAfterAccept = !!afterAccept;
+    req.gkSeen = false;
+    sendEmailNotification(
+      req.gkEmail,
+      `${req.coach.name} ביטל/ה את הבקשה שלכם`,
+      `<div dir="rtl" style="font-family:sans-serif">
+        <h2>הבקשה שלכם בוטלה</h2>
+        <p><b>${req.coach.name}</b> לא יכול/ה לטפל בבקשה שלכם.</p>
+        <p><b>סיבת הביטול:</b> ${reason}</p>
+        <p>מומלץ לנסות לבחור מאמן/אנליסט אחר באפליקציה.</p>
+      </div>`
+    );
+    showToast(afterAccept ? t('requestCancelled') : t('requestDeclined'));
+    render();
+  }
   app.querySelectorAll('[data-decline-request]').forEach(el=>{
     el.addEventListener('click', async ()=>{
       const req = state.requests.find(r=>r.id===el.dataset.declineRequest);
-      if(!req) return;
-      const ok = await updateRequestDoc(req.id, {status:'declined', gkSeen:false});
-      if(!ok){ showToast(t('saveError')); return; }
-      req.status = 'declined';
-      req.gkSeen = false;
-      sendEmailNotification(
-        req.gkEmail,
-        `${req.coach.name} לא יכול/ה לקבל את הבקשה שלכם`,
-        `<div dir="rtl" style="font-family:sans-serif">
-          <h2>הבקשה שלכם נדחתה</h2>
-          <p><b>${req.coach.name}</b> לא יכול/ה לקבל את הבקשה שלכם כרגע.</p>
-          <p>מומלץ לנסות לבחור מאמן/אנליסט אחר באפליקציה.</p>
-        </div>`
-      );
-      showToast(t('requestDeclined'));
-      render();
+      if(req) await cancelRequestWithReason(req, false);
+    });
+  });
+  app.querySelectorAll('[data-cancel-request]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const req = state.requests.find(r=>r.id===el.dataset.cancelRequest);
+      if(req) await cancelRequestWithReason(req, true);
     });
   });
 
@@ -5991,9 +6105,11 @@ function attachHandlers(){
     const btn = e.currentTarget;
     const r = state.requests.find(x=>x.id===state.composeId);
     if(!r) return;
+    const clipOnlyOrder = reqOrderType(r)==='clip';
     const analysisText = app.querySelector('#analysis-text')?.value?.trim() || '';
-    if(!analysisText){ showToast(t('requiredAnalysis')); return; }
-    const scoreVal = parseFloat(app.querySelector('#score-range')?.value || '8.0').toFixed(1);
+    if(!clipOnlyOrder && !analysisText){ showToast(t('requiredAnalysis')); return; }
+    if(clipOnlyOrder && !state.composeClipFile){ showToast(t('highlightClipUploadHint')); return; }
+    const scoreVal = clipOnlyOrder ? null : parseFloat(app.querySelector('#score-range')?.value || '8.0').toFixed(1);
 
     const stats = {};
     app.querySelectorAll('#stats-inputs [data-stat-key]').forEach(inp=>{
@@ -6400,6 +6516,8 @@ function attachHandlers(){
       const coach = COACHES.find(c=>c.id===el.dataset.selectCoach) || state.viewingCoach;
       state.selectedCoach = coach;
       if(!state.draft.wantsHighlightClip) state.draft.wantsHighlightClip = false;
+        state.draft.orderType = 'analysis';
+      state.draft.orderType = state.draft.orderType || 'analysis';
       if(!state.activePackages || !state.activePackages.length){
         state.activePackages = state.user ? await loadActivePackages(state.user.uid, coach.id) : [];
       }
@@ -6423,6 +6541,7 @@ function attachHandlers(){
       state.selectedCoach = coach;
       state.isSelfViewingProfile = false;
       state.draft.wantsHighlightClip = false;
+        state.draft.orderType = 'analysis';
       state.draft.paymentChoice = null;
       state.reviewsExpanded = false;
       state.coachReviews = await loadCoachReviews(coach.id);
@@ -6450,6 +6569,13 @@ function attachHandlers(){
       go('player-profile');
     });
   });
+  app.querySelectorAll('[data-order-type]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      state.draft.orderType = el.dataset.orderType;
+      state.draft.wantsHighlightClip = state.draft.orderType!=='analysis';
+      render();
+    });
+  });
   app.querySelector('[data-toggle-clip]')?.addEventListener('click', ()=>{
     state.draft.wantsHighlightClip = !state.draft.wantsHighlightClip;
     render();
@@ -6467,11 +6593,15 @@ function attachHandlers(){
     const c = state.selectedCoach, d = state.draft;
     const dur = draftTotalDurationSec();
     const choice = d.paymentChoice || 'single';
-    const wantsClip = !!d.wantsHighlightClip && c.highlightClipEnabled;
+    const orderType = c.highlightClipEnabled ? (d.orderType || 'analysis') : 'analysis';
+    const wantsClip = orderType!=='analysis' && c.highlightClipEnabled;
+    const clipOnly = orderType==='clip';
     const clipPrice = wantsClip ? c.highlightClipPrice : 0;
 
     let basePrice = c.singleGamePrice, paymentType = 'single', packageTemplateId = null, existingPurchaseId = null;
-    if(choice.startsWith('existing:')){
+    if(clipOnly){
+      basePrice = 0; paymentType = 'clipOnly';
+    } else if(choice.startsWith('existing:')){
       existingPurchaseId = choice.slice(9);
       basePrice = 0; paymentType = 'existingPackage';
     } else if(choice.startsWith('new:')){
@@ -6536,7 +6666,7 @@ function attachHandlers(){
       isDemo: !!d.isDemo,
       videos: uploadedVideos,
       totalDurationSec: dur,
-      paymentType, packagePurchaseId, basePrice, wantsHighlightClip: wantsClip, highlightClipPrice: clipPrice, highlightClipTurnaround: wantsClip ? c.highlightClipTurnaround : null,
+      paymentType, packagePurchaseId, basePrice, orderType, wantsHighlightClip: wantsClip, highlightClipPrice: clipPrice, highlightClipTurnaround: wantsClip ? c.highlightClipTurnaround : null,
       price: coachAmount, platformFee: fee.fee, totalCharged: fee.total,
       createdAt: Date.now(), deadline: null, status:'requested'
     };
@@ -6693,6 +6823,24 @@ setInterval(()=>{
     // even if a language was chosen in a previous visit.
     state.view = 'lang-select';
   }
+  // a shared profile link (anzclip.com/?coach=UID) opens straight on that profile
+  try{
+    const sharedCoachId = new URLSearchParams(location.search).get('coach');
+    if(sharedCoachId && state.user && state.view!=='verify-email'){
+      if(!COACHES.length) await refreshCoachDirectory();
+      const shared = COACHES.find(x=>x.id===sharedCoachId);
+      if(shared){
+        state.viewingCoach = shared;
+        state.selectedCoach = shared;
+        state.isSelfViewingProfile = state.user.uid===sharedCoachId;
+        state.reviewsExpanded = false;
+        state.coachReviews = await loadCoachReviews(shared.id);
+        state.coachClips = await loadCoachClips(shared.id);
+        state.view = 'coach-profile';
+      }
+      history.replaceState(null, '', location.pathname);
+    }
+  }catch(e){ console.error('shared profile link failed', e); }
   render();
 })();
 </script>

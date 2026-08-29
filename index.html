@@ -2506,8 +2506,19 @@ async function shareVideoClip(title, text, videoUrl){
       console.error('video file share failed, falling back to link', e);
     }
   }
-  // Tier 2: fall back to sharing the hosted link (still opens/plays for the recipient) — branded to anzclip.com
-  await shareContent(title, text, toBrandedUrl(videoUrl));
+  const brandedUrl = toBrandedUrl(videoUrl);
+  // Tier 2: native URL-share (broader browser support than file-share)
+  if(navigator.share){
+    try{
+      await navigator.share({ title, text, url: brandedUrl });
+      return;
+    }catch(e){
+      if(e && e.name==='AbortError') return;
+      console.error('url share failed, falling back to platform menu', e);
+    }
+  }
+  // Tier 3: in-app platform picker (WhatsApp/Facebook/etc) — mainly for desktop
+  showSharePlatformMenu(title, text, brandedUrl, null, 'video');
 }
 async function shareCardAsImage(title, text, cardConfig){
   let blob = null;
@@ -2556,11 +2567,12 @@ async function shareCardAsImage(title, text, cardConfig){
   setTimeout(()=>URL.revokeObjectURL(localUrl), 8000);
   showToast(t('imageSavedNote'));
 }
-function showSharePlatformMenu(title, text, url, blob){
+function showSharePlatformMenu(title, text, url, blob, mediaType){
+  mediaType = mediaType || 'image';
   const existing = document.getElementById('share-platform-overlay');
   if(existing) existing.remove();
 
-  const canCopyImage = !!(navigator.clipboard && window.ClipboardItem && blob);
+  const canCopyImage = mediaType==='image' && !!(navigator.clipboard && window.ClipboardItem && blob);
 
   const platforms = [
     { key:'whatsapp', label:'WhatsApp', color:'#25D366', href:`https://wa.me/?text=${encodeURIComponent(text+'\n'+url)}` },
@@ -2576,11 +2588,13 @@ function showSharePlatformMenu(title, text, url, blob){
   overlay.innerHTML = `
     <div class="share-menu-sheet">
       <div class="share-menu-title">${t('shareViaTitle')}</div>
-      <img src="${url}" class="share-menu-preview">
+      ${mediaType==='video'
+        ? `<video src="${url}" controls preload="metadata" class="share-menu-preview"></video>`
+        : `<img src="${url}" class="share-menu-preview">`}
       ${canCopyImage ? `
         <button type="button" class="btn btn-primary btn-block" id="copy-image-btn" style="margin-bottom:8px">${icon('clip',16)} ${t('copyImageBtn')}</button>
         <div class="req-meta" style="text-align:center;margin-bottom:16px">${t('copyImageHint')}</div>
-      ` : ''}
+      ` : `<div style="margin-bottom:10px"></div>`}
       <div class="share-menu-grid">
         ${platforms.map(p=>`
           <a href="${p.href}" target="_blank" rel="noopener" class="share-menu-item" style="--pcolor:${p.color}">

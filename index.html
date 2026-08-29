@@ -3970,6 +3970,9 @@ function renderCoachProfile(){
   const wantsClip = !!state.draft.wantsHighlightClip && c.highlightClipEnabled;
   const clipPrice = wantsClip ? c.highlightClipPrice : 0;
   const fee = computeFee(coachAmount + clipPrice);
+  // a coach whose ONLY service is mental coaching takes calls, not video uploads
+  const cTypes = c.coachTypes || [];
+  const isMentalOnly = cTypes.length>0 && cTypes.every(ct=>ct==='mental');
   return `
     <div class="coach-top" style="margin-bottom:14px">
       ${avatarHtml(c, 56)}
@@ -4009,10 +4012,10 @@ function renderCoachProfile(){
           <div class="summary-row"><span>${p.sessionCount} ${t('mentalPackagesTitle')}</span><span class="mono">₪${p.price}</span></div>
         `).join('')}
       </div>
-      ${(state.role!=='viewer' && !state.isSelfViewingProfile) ? `<button class="btn btn-primary btn-block" style="margin-top:14px" data-action="open-request-call">${t('requestCall')}</button>` : ''}
+      ${(state.role!=='viewer' && !state.isSelfViewingProfile && !isMentalOnly) ? `<button class="btn btn-primary btn-block" style="margin-top:14px" data-action="open-request-call">${t('requestCall')}</button>` : ''}
     ` : ''}
 
-    ${(!c.isFullyBooked && state.role!=='viewer') ? `
+    ${(!c.isFullyBooked && state.role!=='viewer' && !isMentalOnly) ? `
       ${activePackages.length ? `
         <div class="field-label" style="margin-top:0">${t('myActivePackages')}</div>
         <div class="chip-row">
@@ -4078,9 +4081,11 @@ function renderCoachProfile(){
       <div class="req-meta" style="text-align:center;margin-top:22px">${t('viewerReadOnlyNote')}</div>
     ` : `
       <div class="sticky-cta">
-        ${c.isFullyBooked
-          ? `<button class="btn btn-primary btn-block" disabled style="opacity:.5;cursor:not-allowed">${t('notAvailableBtn')}</button>`
-          : `<button class="btn btn-primary btn-block" data-select-coach="${c.id}">${t('continueToCoaches')}</button>`}
+        ${isMentalOnly
+          ? `<button class="btn btn-primary btn-block" data-action="open-request-call">${t('requestCall')}</button>`
+          : c.isFullyBooked
+            ? `<button class="btn btn-primary btn-block" disabled style="opacity:.5;cursor:not-allowed">${t('notAvailableBtn')}</button>`
+            : `<button class="btn btn-primary btn-block" data-select-coach="${c.id}">${t('continueToCoaches')}</button>`}
       </div>
     `}
   `;
@@ -5949,9 +5954,11 @@ function attachHandlers(){
   });
 
   // mental-coach call requests
-  app.querySelector('[data-action="open-request-call"]')?.addEventListener('click', ()=>{
-    state.callDraft = { paymentChoice:'single' };
-    go('request-call');
+  app.querySelectorAll('[data-action="open-request-call"]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      state.callDraft = { paymentChoice:'single' };
+      go('request-call');
+    });
   });
   app.querySelectorAll('[data-call-payment-choice]').forEach(el=>{
     el.addEventListener('click', ()=>{

@@ -183,6 +183,22 @@
   .call-btn-extend{ background:var(--gold); color:#1a0f0a; }
   .call-btn-end{ background:#ff3b30; }
   .call-btn.recording{ background:#ff3b30; color:#fff; }
+  /* desktop: the call lives in a floating window, not the whole screen */
+  @media (min-width: 900px){
+    .video-call-wrap{
+      inset:auto; top:50%; left:50%; transform:translate(-50%, -50%);
+      width:min(920px, 78vw); height:min(600px, 76vh);
+      border-radius:18px; overflow:hidden;
+      border:1px solid rgba(243,241,231,.14);
+      box-shadow:0 30px 90px rgba(0,0,0,.65);
+    }
+    .video-call-wrap::before{
+      content:''; position:fixed; inset:0; background:rgba(0,0,0,.72); z-index:-1;
+    }
+    #local-video{ width:96px; height:128px; bottom:96px; }
+    .call-controls{ bottom:20px; gap:12px; }
+    .call-btn{ width:46px; height:46px; }
+  }
   .recording-indicator{
     position:absolute; top:60px; inset-inline-start:16px;
     background:rgba(255,59,48,.9); color:#fff; font-family:'Heebo'; font-weight:700; font-size:12px;
@@ -424,9 +440,10 @@
       display:flex; align-items:center; gap:10px; padding:10px; border-radius:12px; margin-top:12px;
       background:var(--surface-2); border:none; cursor:pointer; text-align:start; width:100%;
     }
-    .sidebar-user-info{ display:flex; flex-direction:column; overflow:hidden; }
-    .sidebar-user-info b{ font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sidebar-user-info span{ font-size:11px; color:var(--muted); }
+    .sidebar-user > .avatar, .sidebar-user > .avatar-img{ flex:0 0 auto; }
+    .sidebar-user-info{ display:flex; flex-direction:column; gap:2px; overflow:hidden; min-width:0; flex:1 1 auto; }
+    .sidebar-user-info b{ font-size:13px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+    .sidebar-user-info span{ font-size:11px; line-height:1.3; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
     .sidebar-logout{
       display:flex; align-items:center; gap:8px; background:none; border:none; color:var(--muted);
       font-family:'Heebo'; font-size:12.5px; cursor:pointer; padding:10px 12px; margin-top:2px;
@@ -821,6 +838,7 @@ const STR = {
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
     confirmEndCall:'האם אתם בטוחים שברצונכם לסיים את השיחה?',
+    callEndedByOther:'הצד השני סיים את השיחה', callConnectionLost:'החיבור לצד השני נותק',
     recordCall:'הקליטו שיחה', recordingLive:'מוקלט', recordingSaved:'ההקלטה נשמרה במחשב שלכם',
     recordingNotSupported:'הדפדפן הזה לא תומך בהקלטת שיחות', noRecordingYet:'אין הקלטה עדיין',
     mentalPackagesTitle:'חבילות שיחות', addMentalPackage:'הוסיפו חבילת שיחות', sessionCountLabel:'מספר שיחות',
@@ -1006,6 +1024,7 @@ const STR = {
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
     confirmEndCall:'Are you sure you want to end the call?',
+    callEndedByOther:'The other side ended the call', callConnectionLost:'Connection to the other side was lost',
     recordCall:'Record call', recordingLive:'Recording', recordingSaved:'Recording saved to your device',
     recordingNotSupported:'This browser does not support call recording', noRecordingYet:'No recording yet',
     mentalPackagesTitle:'Call packages', addMentalPackage:'Add a call package', sessionCountLabel:'Number of calls',
@@ -1824,7 +1843,7 @@ async function initVideoCall(){
     const recIndicator = document.getElementById('recording-indicator');
     if(recIndicator) recIndicator.style.display = data.isRecording ? 'flex' : 'none';
     if(data.status==='cancelled' || data.status==='completed'){
-      endVideoCall();
+      handleRemoteHangup(t('callEndedByOther'));
     }
   });
 
@@ -1836,10 +1855,27 @@ async function initVideoCall(){
     });
   });
 
+  let __peerWasConnected = false;
   __rtcPC.onconnectionstatechange = ()=>{
-    if(!statusEl) return;
-    if(__rtcPC.connectionState==='connected') statusEl.textContent = '';
-    else if(__rtcPC.connectionState==='connecting') statusEl.textContent = t('connectingCall');
+    if(!__rtcPC) return;
+    const st = __rtcPC.connectionState;
+    if(statusEl){
+      if(st==='connected') statusEl.textContent = '';
+      else if(st==='connecting') statusEl.textContent = t('connectingCall');
+    }
+    if(st==='connected'){ __peerWasConnected = true; return; }
+    // the peer went away without writing to the call doc (tab closed, crash, network drop)
+    if(!__peerWasConnected) return;
+    if(st==='failed' || st==='closed'){
+      handleRemoteHangup(t('callConnectionLost'));
+    } else if(st==='disconnected'){
+      const idAtDrop = __rtcActiveCallId;
+      setTimeout(()=>{
+        if(__rtcActiveCallId===idAtDrop && __rtcPC && __rtcPC.connectionState!=='connected'){
+          handleRemoteHangup(t('callConnectionLost'));
+        }
+      }, 8000);
+    }
   };
 
   const startMs = r.confirmedSlot ? r.confirmedSlot.dateTimeMs : Date.now();
@@ -1933,11 +1969,20 @@ function teardownVideoCall(){
   if(__rtcLocalStream){ __rtcLocalStream.getTracks().forEach(tr=>tr.stop()); __rtcLocalStream = null; }
   __rtcActiveCallId = null;
 }
+function handleRemoteHangup(msg){
+  if(!__rtcActiveCallId) return; // already torn down
+  if(__rtcIsRecording){ stopCallRecording(); downloadCallRecording(); }
+  teardownVideoCall();
+  if(msg) showToast(msg);
+  if(state.view==='video-call') go('call-request-detail');
+}
 function endVideoCall(){
   const r = state.viewingCallRequest;
   if(__rtcIsRecording){ stopCallRecording(); downloadCallRecording(); }
   teardownVideoCall();
-  if(r && r.status==='confirmed'){
+  // tell the other side the call is over, so their screen closes too
+  if(r && r.status!=='completed' && r.status!=='cancelled'){
+    r.status = 'completed';
     updateCallRequestDoc(r.id, { status:'completed', isRecording:false }).catch(()=>{});
   }
 }

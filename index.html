@@ -780,6 +780,7 @@ const STR = {
     statusConfirmed:'מאושר', statusCompleted:'הושלם', statusCancelled:'בוטל', mentalCallsSummary:'סיכום שיחות',
     expectedIncomeTitle:'הכנסה צפויה', incomeEarned:'הכנסה מאושרת (שיחות שהושלמו)', incomeUpcoming:'הכנסה צפויה (שיחות מאושרות)',
     viewMyPublicProfile:'צפו בפרופיל הציבורי שלי', shareMyProfile:'שתפו את הפרופיל שלי', shareProfileTitle:'הפרופיל שלי ב-AnzClip',
+    imageSavedNote:'התמונה נשמרה — שתפו אותה מגלריית התמונות',
     extendCall:'הוסיפו 15 דקות', muteBtn:'השתקה', unmuteBtn:'ביטול השתקה', cameraOffBtn:'כיבוי מצלמה', cameraOnBtn:'הפעלת מצלמה',
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
@@ -955,6 +956,7 @@ const STR = {
     statusConfirmed:'Confirmed', statusCompleted:'Completed', statusCancelled:'Cancelled', mentalCallsSummary:'Calls summary',
     expectedIncomeTitle:'Expected income', incomeEarned:'Earned (completed calls)', incomeUpcoming:'Upcoming (confirmed calls)',
     viewMyPublicProfile:'View my public profile', shareMyProfile:'Share my profile', shareProfileTitle:'My profile on AnzClip',
+    imageSavedNote:'Image saved — share it from your photo gallery',
     extendCall:'Add 15 minutes', muteBtn:'Mute', unmuteBtn:'Unmute', cameraOffBtn:'Turn off camera', cameraOnBtn:'Turn on camera',
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
@@ -2312,6 +2314,128 @@ function buildStatsShareText(statsArray, defs, playerName){
   const summary = computeStatSummary(statsArray, defs);
   const lines = summary.map(s=>`${s.label}: ${s.display}${s.sub?` (${s.sub})`:''}`);
   return `📊 ${t('shareStatsTitle')}${playerName?` — ${playerName}`:''}\n\n${lines.join('\n')}`;
+}
+async function loadImageEl(src){
+  return new Promise((resolve)=>{
+    if(!src){ resolve(null); return; }
+    const img = new Image();
+    img.onload = ()=>resolve(img);
+    img.onerror = ()=>resolve(null);
+    img.src = src;
+  });
+}
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+async function drawShareCard({ name, subtitle, photo, initials, avatarColor, ratingLine, lines }){
+  const W = 1080, H = 1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  try{
+    await Promise.all([
+      document.fonts.load('800 64px Rubik'),
+      document.fonts.load('700 40px Rubik'),
+      document.fonts.load('500 34px Heebo'),
+      document.fonts.load('600 30px "IBM Plex Mono"')
+    ]);
+  }catch(e){}
+
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#0B0D09'); grad.addColorStop(1,'#181B14');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = 'rgba(198,255,77,.08)';
+  ctx.beginPath(); ctx.ellipse(W/2, -80, 620, 260, 0, 0, Math.PI*2); ctx.fill();
+
+  // brand
+  ctx.fillStyle = '#C6FF4D';
+  roundRect(ctx, 70, 64, 56, 56, 12); ctx.fill();
+  ctx.fillStyle = '#F4F7EE'; ctx.font = '900 30px Rubik'; ctx.textBaseline='middle'; ctx.textAlign='center';
+  ctx.fillText('A', 98, 96);
+  ctx.textAlign = 'left';
+  ctx.font = '800 34px Rubik'; ctx.fillStyle = '#F4F7EE';
+  ctx.fillText('AnzClip', 146, 96);
+
+  // avatar
+  const avR = 130, avCX = W/2, avCY = 320;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(avCX, avCY, avR, 0, Math.PI*2); ctx.closePath(); ctx.clip();
+  const img = await loadImageEl(photo);
+  if(img){
+    ctx.drawImage(img, avCX-avR, avCY-avR, avR*2, avR*2);
+  } else {
+    ctx.fillStyle = avatarColor || '#0B6E4F';
+    ctx.fillRect(avCX-avR, avCY-avR, avR*2, avR*2);
+    ctx.fillStyle = '#F4F7EE'; ctx.font = '800 100px Rubik'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(initials||'', avCX, avCY+8);
+  }
+  ctx.restore();
+  ctx.strokeStyle = '#C6FF4D'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.arc(avCX, avCY, avR, 0, Math.PI*2); ctx.stroke();
+
+  // name + subtitle
+  ctx.fillStyle = '#F4F7EE'; ctx.font = '800 64px Rubik'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.fillText(name||'', W/2, 530);
+  ctx.fillStyle = '#B9C2AC'; ctx.font = '500 34px Heebo';
+  ctx.fillText(subtitle||'', W/2, 580);
+
+  if(ratingLine){
+    ctx.fillStyle = '#C6FF4D'; ctx.font = '700 40px "IBM Plex Mono"';
+    ctx.fillText(ratingLine, W/2, 645);
+  }
+
+  // stat rows
+  let y = ratingLine ? 730 : 670;
+  const rowH = 92, rowW = 840, rowX = (W-rowW)/2;
+  (lines||[]).slice(0,5).forEach(line=>{
+    ctx.fillStyle = 'rgba(255,255,255,.05)';
+    roundRect(ctx, rowX, y, rowW, rowH-16, 16); ctx.fill();
+    ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, rowX, y, rowW, rowH-16, 16); ctx.stroke();
+    ctx.fillStyle = '#B9C2AC'; ctx.font = '500 30px Heebo'; ctx.textAlign='left';
+    ctx.fillText(line.label, rowX+32, y+50);
+    ctx.fillStyle = '#F4F7EE'; ctx.font = '700 34px "IBM Plex Mono"'; ctx.textAlign='right';
+    ctx.fillText(line.value, rowX+rowW-32, y+52);
+    y += rowH;
+  });
+
+  ctx.fillStyle = '#7E8A73'; ctx.font = '500 26px Heebo'; ctx.textAlign='center';
+  ctx.fillText('anzclip.com', W/2, H-60);
+
+  return new Promise(resolve=>canvas.toBlob(blob=>resolve(blob), 'image/png', 0.95));
+}
+async function shareCardAsImage(title, text, cardConfig){
+  let blob = null;
+  try{ blob = await drawShareCard(cardConfig); }catch(e){ console.error('failed to draw share card', e); }
+  if(blob && navigator.canShare){
+    try{
+      const file = new File([blob], 'anzclip-profile.png', {type:'image/png'});
+      if(navigator.canShare({ files:[file] })){
+        await navigator.share({ title, text, files:[file] });
+        return;
+      }
+    }catch(e){
+      if(e && e.name==='AbortError') return;
+      console.error('image share failed, falling back', e);
+    }
+  }
+  if(blob){
+    // fallback: download the image directly
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'anzclip-profile.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 8000);
+    showToast(t('imageSavedNote'));
+    return;
+  }
+  await shareContent(title, text);
 }
 function computeStatSummary(statsArray, defs){
   return defs.map(s=>{
@@ -5051,39 +5175,59 @@ function attachHandlers(){
     state.coachClips = await loadCoachClips(state.user.uid);
     go('coach-profile');
   });
-  app.querySelector('[data-action="share-my-coach-profile"]')?.addEventListener('click', ()=>{
+  app.querySelector('[data-action="share-my-coach-profile"]')?.addEventListener('click', async (e)=>{
     const c = state.viewingCoach;
     if(!c) return;
+    const btn = e.currentTarget;
+    const original = btn.textContent;
+    btn.disabled = true; btn.textContent = '...';
     const avgRating = c.rating!=null ? c.rating.toFixed(1) : null;
-    const lines = [
-      `👤 ${c.name}`,
-      (c.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · '),
-      avgRating ? `⭐ ${avgRating} (${c.ratingCount} ${t('reviewsTitle')})` : null,
-    ].filter(Boolean);
-    shareContent(t('shareProfileTitle'), `${t('shareProfileTitle')}\n\n${lines.join('\n')}`);
+    await shareCardAsImage(t('shareProfileTitle'), t('shareProfileTitle'), {
+      name: c.name,
+      subtitle: (c.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · '),
+      photo: c.photo,
+      initials: c.name.split(' ').map(n=>n[0]).join(''),
+      avatarColor: '#0B6E4F',
+      ratingLine: avgRating ? `★ ${avgRating}  ·  ${c.ratingCount} ${t('reviewsTitle')}` : null,
+      lines: c.mentalSessionPrice ? [{label:t('mentalDurationLabel'), value:`${c.mentalCallDuration} ${t('minutesUnit')}`},{label:t('mentalSessionPriceLabel'), value:`₪${c.mentalSessionPrice}`}] : []
+    });
+    btn.disabled = false; btn.textContent = original;
   });
-  app.querySelector('[data-action="share-my-contact-profile"]')?.addEventListener('click', ()=>{
+  app.querySelector('[data-action="share-my-contact-profile"]')?.addEventListener('click', async (e)=>{
     const u = state.user;
-    const lines = [
-      `👤 ${u.name}`,
-      u.role==='scout' ? t('registerScoutTitle') : t('registerAgentTitle'),
-      u.years ? `${u.years} ${t('yearsExp')}` : null,
-      u.club ? `${t('representingClubLabel')}: ${u.club}` : null,
-    ].filter(Boolean);
-    shareContent(t('shareProfileTitle'), `${t('shareProfileTitle')}\n\n${lines.join('\n')}`);
+    const btn = e.currentTarget;
+    const original = btn.textContent;
+    btn.disabled = true; btn.textContent = '...';
+    await shareCardAsImage(t('shareProfileTitle'), t('shareProfileTitle'), {
+      name: u.name,
+      subtitle: u.role==='scout' ? t('registerScoutTitle') : t('registerAgentTitle'),
+      photo: u.photo,
+      initials: u.name.split(' ').map(n=>n[0]).join(''),
+      avatarColor: '#9C7A1E',
+      lines: [
+        u.years ? {label:t('fieldYears'), value:String(u.years)} : null,
+        u.club ? {label:t('representingClubLabel'), value:u.club} : null,
+      ].filter(Boolean)
+    });
+    btn.disabled = false; btn.textContent = original;
   });
-  app.querySelector('[data-action="share-my-player-profile"]')?.addEventListener('click', ()=>{
+  app.querySelector('[data-action="share-my-player-profile"]')?.addEventListener('click', async (e)=>{
     const u = state.user;
     const role = u.playerRole || 'field';
     const defs = STAT_DEFS[role] || STAT_DEFS.field;
     const statsArr = state.requests.map(r=>r.stats).filter(Boolean);
-    const summary = computeStatSummary(statsArr, defs).slice(0,3);
-    const lines = [
-      `👤 ${u.name}`,
-      role==='goalkeeper' ? t('playerRoleGK') : t('playerRoleField'),
-      ...summary.map(s=>`${s.label}: ${s.display}`),
-    ].filter(Boolean);
-    shareContent(t('shareProfileTitle'), `${t('shareProfileTitle')}\n\n${lines.join('\n')}`);
+    const summary = computeStatSummary(statsArr, defs).slice(0,5);
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    await shareCardAsImage(t('shareProfileTitle'), t('shareProfileTitle'), {
+      name: u.name,
+      subtitle: role==='goalkeeper' ? t('playerRoleGK') : t('playerRoleField'),
+      photo: u.photo,
+      initials: u.name.split(' ').map(n=>n[0]).join(''),
+      avatarColor: '#0B6E4F',
+      lines: summary.map(s=>({label:s.label, value:s.display}))
+    });
+    btn.disabled = false;
   });
   app.querySelector('[data-action="toggle-fully-booked"]')?.addEventListener('click', async ()=>{
     const newVal = !state.user.isFullyBooked;
@@ -5478,20 +5622,40 @@ function attachHandlers(){
   app.querySelector('[data-action="scroll-how-it-works"]')?.addEventListener('click', ()=>{
     document.getElementById('how-it-works')?.scrollIntoView({behavior:'smooth', block:'start'});
   });
-  app.querySelector('[data-action="share-stats"]')?.addEventListener('click', ()=>{
+  app.querySelector('[data-action="share-stats"]')?.addEventListener('click', async (e)=>{
     const role = (state.user && state.user.playerRole) || 'field';
     const defs = STAT_DEFS[role] || STAT_DEFS.field;
     const statsArr = state.requests.map(r=>r.stats).filter(Boolean);
-    const text = buildStatsShareText(statsArr, defs, state.user.name);
-    shareContent(t('shareStatsTitle'), text);
+    const summary = computeStatSummary(statsArr, defs).slice(0,5);
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    await shareCardAsImage(t('shareStatsTitle'), t('shareStatsTitle'), {
+      name: state.user.name,
+      subtitle: role==='goalkeeper' ? t('playerRoleGK') : t('playerRoleField'),
+      photo: state.user.photo,
+      initials: state.user.name.split(' ').map(n=>n[0]).join(''),
+      avatarColor: '#0B6E4F',
+      lines: summary.map(s=>({label:s.label, value:s.display}))
+    });
+    btn.disabled = false;
   });
-  app.querySelector('[data-action="share-player-stats"]')?.addEventListener('click', ()=>{
+  app.querySelector('[data-action="share-player-stats"]')?.addEventListener('click', async (e)=>{
     const p = state.viewingPlayer;
     if(!p) return;
     const defs = STAT_DEFS[p.playerRole||'field'] || STAT_DEFS.field;
     const statsArr = (state.playerPublicGames||[]).map(g=>g.stats);
-    const text = buildStatsShareText(statsArr, defs, p.name);
-    shareContent(t('shareStatsTitle'), text);
+    const summary = computeStatSummary(statsArr, defs).slice(0,5);
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    await shareCardAsImage(t('shareStatsTitle'), t('shareStatsTitle'), {
+      name: p.name,
+      subtitle: p.playerRole==='goalkeeper' ? t('playerRoleGK') : t('playerRoleField'),
+      photo: p.photo,
+      initials: p.name.split(' ').map(n=>n[0]).join(''),
+      avatarColor: '#0B6E4F',
+      lines: summary.map(s=>({label:s.label, value:s.display}))
+    });
+    btn.disabled = false;
   });
   app.querySelectorAll('[data-action="share-clip"]').forEach(el=>{
     el.addEventListener('click', ()=>{

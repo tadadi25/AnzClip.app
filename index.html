@@ -803,6 +803,8 @@ const STR = {
     viewMyPublicProfile:'צפו בפרופיל הציבורי שלי', shareMyProfile:'שתפו את הפרופיל שלי', shareProfileTitle:'הפרופיל שלי ב-AnzClip',
     imageSavedNote:'התמונה נשמרה — שתפו אותה מגלריית התמונות', gamesAnalyzedLabel:'משחקים שנותחו',
     shareViaTitle:'שיתוף דרך', closeMenu:'סגירה',
+    copyImageBtn:'העתיקו תמונה', copyImageHint:'פתחו את וואטסאפ/פייסבוק והדביקו (Ctrl+V) — זה יישלח כתמונה אמיתית, לא כקישור',
+    imageCopied:'התמונה הועתקה ללוח', copyImageFailed:'ההעתקה נכשלה, נסו להוריד את התמונה במקום',
     extendCall:'הוסיפו 15 דקות', muteBtn:'השתקה', unmuteBtn:'ביטול השתקה', cameraOffBtn:'כיבוי מצלמה', cameraOnBtn:'הפעלת מצלמה',
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
@@ -980,6 +982,8 @@ const STR = {
     viewMyPublicProfile:'View my public profile', shareMyProfile:'Share my profile', shareProfileTitle:'My profile on AnzClip',
     imageSavedNote:'Image saved — share it from your photo gallery', gamesAnalyzedLabel:'Games analyzed',
     shareViaTitle:'Share via', closeMenu:'Close',
+    copyImageBtn:'Copy image', copyImageHint:'Open WhatsApp/Facebook and paste (Ctrl+V) — it will send as a real image, not a link',
+    imageCopied:'Image copied to clipboard', copyImageFailed:'Copy failed, try downloading the image instead',
     extendCall:'Add 15 minutes', muteBtn:'Mute', unmuteBtn:'Unmute', cameraOffBtn:'Turn off camera', cameraOnBtn:'Turn on camera',
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
@@ -2495,7 +2499,7 @@ async function shareCardAsImage(title, text, cardConfig){
   }
 
   if(imageUrl){
-    showSharePlatformMenu(title, text, imageUrl);
+    showSharePlatformMenu(title, text, imageUrl, blob);
     return;
   }
 
@@ -2507,9 +2511,11 @@ async function shareCardAsImage(title, text, cardConfig){
   setTimeout(()=>URL.revokeObjectURL(localUrl), 8000);
   showToast(t('imageSavedNote'));
 }
-function showSharePlatformMenu(title, text, url){
+function showSharePlatformMenu(title, text, url, blob){
   const existing = document.getElementById('share-platform-overlay');
   if(existing) existing.remove();
+
+  const canCopyImage = !!(navigator.clipboard && window.ClipboardItem && blob);
 
   const platforms = [
     { key:'whatsapp', label:'WhatsApp', color:'#25D366', href:`https://wa.me/?text=${encodeURIComponent(text+'\n'+url)}` },
@@ -2526,6 +2532,10 @@ function showSharePlatformMenu(title, text, url){
     <div class="share-menu-sheet">
       <div class="share-menu-title">${t('shareViaTitle')}</div>
       <img src="${url}" class="share-menu-preview">
+      ${canCopyImage ? `
+        <button type="button" class="btn btn-primary btn-block" id="copy-image-btn" style="margin-bottom:8px">${icon('clip',16)} ${t('copyImageBtn')}</button>
+        <div class="req-meta" style="text-align:center;margin-bottom:16px">${t('copyImageHint')}</div>
+      ` : ''}
       <div class="share-menu-grid">
         ${platforms.map(p=>`
           <a href="${p.href}" target="_blank" rel="noopener" class="share-menu-item" style="--pcolor:${p.color}">
@@ -2540,6 +2550,15 @@ function showSharePlatformMenu(title, text, url){
   const close = ()=> overlay.remove();
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) close(); });
   document.getElementById('share-menu-close-btn')?.addEventListener('click', close);
+  document.getElementById('copy-image-btn')?.addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
+      showToast(t('imageCopied'));
+    }catch(e){
+      console.error('copy image to clipboard failed', e);
+      showToast(t('copyImageFailed'));
+    }
+  });
 }
 function computeStatSummary(statsArray, defs){
   return defs.map(s=>{

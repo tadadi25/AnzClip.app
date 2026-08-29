@@ -294,7 +294,7 @@
     width:100%; background:var(--surface); border:1px solid rgba(243,241,231,.12); border-radius:14px;
     color:var(--chalk); font-family:'Heebo'; font-size:14px; padding:12px 14px; resize:none; min-height:76px;
   }
-  textarea.textarea-lg{min-height:230px; line-height:1.6;}
+  textarea.textarea-lg{min-height:340px; line-height:1.7; max-height:none;}
   textarea:focus, input:focus{outline:2px solid var(--coral-dim); outline-offset:1px;}
 
   .sticky-cta{
@@ -875,6 +875,7 @@ const STR = {
     clipOnlyNote:'הזמנה זו כוללת קליפ ביצועים בלבד — ללא ניתוח כתוב.',
     cancelRequestBtn:'בטלו את הבקשה', confirmCancelRequest:'לבטל את הבקשה? השחקן יקבל על כך הודעה.', requestCancelled:'הבקשה בוטלה',
     cancelReasonPrompt:'מה הסיבה לביטול? ההודעה תישלח לשחקן:', cancelReasonRequired:'יש לכתוב סיבה לביטול', cancelReasonLabel:'סיבת הביטול',
+    myReportsTitle:'הדוחות שלי', openReportBtn:'פתחו את הדוח המלא', reportFrom:'דוח מאת ', noReportsYet:'עדיין אין דוחות', analysisNoLimitHint:'אין הגבלת אורך — כתבו כמה שצריך.', reportTitle:'דוח ניתוח ביצועים',
     searchTitle:'חיפוש', searchAllPh:'הקלידו שם של שחקן או בעל מקצוע...', searchStartHint:'הקלידו שם כדי לחפש שחקנים, מאמנים, אנליסטים, סוכנים וסקאוטים.', searchNoResults:'לא נמצאו תוצאות',
     shareProfileLinkLabel:'לצפייה בפרופיל המלא:',
     advancedSearchTitle:'חיפוש מתקדם — שחקנים', positionFilterLabel:'עמדת שחקן',
@@ -1072,6 +1073,7 @@ const STR = {
     clipOnlyNote:'This order is for a highlight clip only — no written analysis.',
     cancelRequestBtn:'Cancel this request', confirmCancelRequest:'Cancel this request? The player will be notified.', requestCancelled:'Request cancelled',
     cancelReasonPrompt:'Why are you cancelling? This message is sent to the player:', cancelReasonRequired:'Please write a reason', cancelReasonLabel:'Reason for cancellation',
+    myReportsTitle:'My reports', openReportBtn:'Open the full report', reportFrom:'Report by ', noReportsYet:'No reports yet', analysisNoLimitHint:'No length limit — write as much as you need.', reportTitle:'Performance analysis report',
     searchTitle:'Search', searchAllPh:'Type a player or professional name...', searchStartHint:'Type a name to search players, coaches, analysts, agents and scouts.', searchNoResults:'No results found',
     shareProfileLinkLabel:'See the full profile:',
     advancedSearchTitle:'Advanced search — players', positionFilterLabel:'Player position',
@@ -2485,10 +2487,31 @@ function renderMyClips(){
   const clips = state.requests
     .filter(r=>r.status==='done' && r.highlightClipUrl)
     .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const reports = state.requests
+    .filter(r=>r.status==='done' && r.reportUrl)
+    .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const reportsSection = `
+    <div class="section-title" style="margin-top:0">${t('myReportsTitle')} ${reports.length?`(${reports.length})`:''}</div>
+    <div class="section-line"></div>
+    ${!reports.length ? `
+      <div class="empty-state" style="padding:26px 20px">${icon('file',26)}<b>${t('noReportsYet')}</b></div>
+    ` : reports.map(r=>`
+      <a class="req-card" href="${r.reportUrl}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;cursor:pointer">
+        <div class="req-coach">
+          ${avatarHtml(r.coach, 34)}
+          <div style="font-size:13px;flex:1">
+            <div style="font-weight:600">${t('reportFrom')}${r.coach.name}</div>
+            <div class="req-meta">${fmtDateTime(r.createdAt)}${r.score!=null?` · ${r.score}/10`:''}</div>
+          </div>
+          <span style="color:var(--coral-dim)">${icon('file',18)}</span>
+        </div>
+      </a>
+    `).join('')}
+  `;
   if(!clips.length){
-    return `<div class="empty-state" style="padding:60px 20px">${icon('clip',34)}<b>${t('noClipsYet')}</b></div>`;
+    return reportsSection + `<div class="empty-state" style="padding:40px 20px">${icon('clip',34)}<b>${t('noClipsYet')}</b></div>`;
   }
-  return `<div>` + clips.map(r=>`
+  return reportsSection + `<div class="section-title" style="margin-top:26px">${t('myClipsTitle')} (${clips.length})</div><div class="section-line"></div>` + clips.map(r=>`
     <div class="req-card">
       <div class="req-coach" style="margin-bottom:10px">
         ${avatarHtml(r.coach, 34)}
@@ -2500,7 +2523,50 @@ function renderMyClips(){
       <video controls preload="metadata" style="width:100%;border-radius:12px;background:#000" src="${r.highlightClipUrl}"></video>
       <button class="select-btn" style="width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px" data-action="share-clip" data-clip-url="${r.highlightClipUrl}">${icon('share',16)} ${t('shareClip')}</button>
     </div>
-  `).join('') + `</div>`;
+  `).join('');
+}
+function escHtml(v){
+  return String(v==null?'':v).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function buildAnalysisReportHtml(r, score, analysisText, stats, statRole){
+  const rows = Object.keys(stats||{}).map(key=>{
+    const v = stats[key];
+    const display = (v && typeof v==='object') ? `${v.made}/${v.att} (${v.att?Math.round((v.made/v.att)*100):0}%)` : v;
+    return `<tr><td>${escHtml(statLabel(key, statRole))}</td><td class="v">${escHtml(display)}</td></tr>`;
+  }).join('');
+  const attach = (r.attachments||[]).map(a=>`<li><a href="${escHtml(a.url)}">${escHtml(a.name)}</a></li>`).join('');
+  const body = escHtml(analysisText).replace(/\n/g,'<br>');
+  return `<!DOCTYPE html>
+<html lang="he" dir="rtl"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escHtml(t('reportTitle'))} — ${escHtml(r.gkName||'')}</title>
+<style>
+  body{background:#0B0D09;color:#F4F7EE;font-family:'Segoe UI',Arial,sans-serif;line-height:1.75;
+       max-width:820px;margin:0 auto;padding:40px 24px 70px;}
+  .brand{color:#C6FF4D;font-weight:800;font-size:20px;letter-spacing:.5px;margin-bottom:26px;}
+  h1{font-size:25px;margin:0 0 4px;}
+  .meta{color:#7E8A73;font-size:13.5px;margin-bottom:26px;}
+  .score{display:inline-block;background:rgba(198,255,77,.12);border:1px solid rgba(198,255,77,.35);
+         color:#C6FF4D;border-radius:12px;padding:10px 18px;font-size:19px;font-weight:700;margin-bottom:26px;}
+  h2{font-size:16px;margin:30px 0 10px;border-bottom:1px solid rgba(243,241,231,.14);padding-bottom:8px;}
+  .analysis{white-space:normal;font-size:15px;color:#E7EADF;}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  td{padding:9px 4px;border-bottom:1px solid rgba(243,241,231,.08);color:#B9C2AC;}
+  td.v{text-align:end;color:#F4F7EE;font-weight:700;font-variant-numeric:tabular-nums;}
+  a{color:#C6FF4D;}
+  footer{margin-top:40px;color:#7E8A73;font-size:12.5px;text-align:center;}
+  @media print{ body{background:#fff;color:#111;} h1,.analysis{color:#111;} td{color:#333;} .brand{color:#4a7c12;} }
+</style></head><body>
+<div class="brand">AnzClip</div>
+<h1>${escHtml(t('reportTitle'))}</h1>
+<div class="meta">${escHtml(r.gkName||'')} · ${escHtml(t('reportFrom'))}${escHtml(r.coach?r.coach.name:'')} · ${escHtml(new Date().toLocaleDateString('he-IL'))}</div>
+${score!=null ? `<div class="score">${escHtml(t('overallScore'))}: ${escHtml(score)}/10</div>` : ''}
+<h2>${escHtml(t('coachAnalysisTitle'))}</h2>
+<div class="analysis">${body}</div>
+${rows ? `<h2>${escHtml(t('statsTitle'))}</h2><table>${rows}</table>` : ''}
+${attach ? `<h2>${escHtml(t('addAttachments'))}</h2><ul>${attach}</ul>` : ''}
+<footer>anzclip.com</footer>
+</body></html>`;
 }
 async function shareContent(title, text, url){
   const payload = url ? { title, text, url } : { title, text };
@@ -4411,6 +4477,11 @@ function renderRequests(){
               ${attachmentsViewHtml(r.attachments)}
             </div>
             ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
+            ${r.reportUrl ? `
+              <a class="select-btn" href="${r.reportUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;width:100%;margin-top:12px">
+                ${icon('file',16)} ${t('openReportBtn')}
+              </a>
+            ` : ''}
           ` : ''}
           ${r.highlightClipUrl ? `
             <div class="field-label" style="margin-top:14px">${t('highlightClipTitle')}</div>
@@ -4775,6 +4846,7 @@ function renderCoachCompose(){
 
       <div class="field-label">${t('coachAnalysisTitle')}</div>
       <textarea id="analysis-text" class="textarea-lg" placeholder="${t('fbPlaceholder')}"></textarea>
+      <div class="photo-hint" style="margin:6px 0 0">${t('analysisNoLimitHint')}</div>
 
       <div class="field-label">${t('addAttachments')}</div>
       <label class="attach-dropzone" for="attach-input">
@@ -6166,8 +6238,26 @@ function attachHandlers(){
       btn.textContent = originalLabel;
     }
 
-    const ok = await updateRequestDoc(r.id, {status:'done', score:scoreVal, analysis:analysisText, attachments:uploadedAttachments, stats, highlightClipUrl, gkSeen:false});
+    // the written analysis is also saved as a standalone file the player keeps in their profile
+    let reportUrl = null;
+    if(!clipOnlyOrder){
+      try{
+        const reportHtml = buildAnalysisReportHtml({...r, attachments:uploadedAttachments}, scoreVal, analysisText, stats, r.gkPlayerRole||'field');
+        const reportFile = new File([reportHtml], `anzclip-report.html`, {type:'text/html'});
+        btn.disabled = true;
+        const originalLabel = btn.textContent;
+        btn.textContent = `${t('uploadingAttachments')} 0%`;
+        reportUrl = await uploadFileToStorage(reportFile, `reports/${r.id}`, (pct)=>{
+          btn.textContent = `${t('uploadingAttachments')} ${pct}%`;
+        });
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+      }catch(err){ console.error('failed to build report file', err); }
+    }
+
+    const ok = await updateRequestDoc(r.id, {status:'done', score:scoreVal, analysis:analysisText, attachments:uploadedAttachments, stats, highlightClipUrl, reportUrl, gkSeen:false});
     if(!ok){ showToast(t('saveError')); return; }
+    r.reportUrl = reportUrl;
     r.status = 'done';
     r.score = scoreVal;
     r.analysis = analysisText;

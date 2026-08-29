@@ -780,8 +780,8 @@ const STR = {
     alreadyHaveAccount:'כבר יש לכם חשבון? התחברות', noSavedAccount:'לא נמצא חשבון שמור במכשיר הזה',
     welcomeBack:'ברוכים השבים',
     recommendedCoaches:'מאמנים מומלצים', noCoachesFound:'לא נמצאו מאמנים', viewProfile:'צפו בפרופיל',
-    shareStats:'שתפו את הסטטיסטיקה', shareClip:'שתפו קליף', shareStatsTitle:'הסטטיסטיקה שלי ב-AnzClip',
-    shareClipTitle:'קליף ביצועים ב-AnzClip', shareCopied:'הועתק ללוח — הדביקו בכל מקום', shareFailed:'השיתוף נכשל',
+    shareStats:'שתפו את הסטטיסטיקה', shareClip:'שתפו קליפ', shareStatsTitle:'הסטטיסטיקה שלי ב-AnzClip',
+    shareClipTitle:'קליפ ביצועים ב-AnzClip', shareCopied:'הועתק ללוח — הדביקו בכל מקום', shareFailed:'השיתוף נכשל',
     switchUser:'לא אתם? החלפת משתמש', logout:'התנתקות',
     fieldFullName:'שם מלא', fieldPhoto:'תמונת פרופיל (אופציונלי)', photoHint:'לחצו להעלאת תמונה',
     fieldDob:'תאריך לידה', fieldClub:'מועדון', fieldHeight:'גובה (ס״מ)', fieldAbout:'אודות',
@@ -805,6 +805,7 @@ const STR = {
     shareViaTitle:'שיתוף דרך', closeMenu:'סגירה',
     copyImageBtn:'העתיקו תמונה', copyImageHint:'פתחו את וואטסאפ/פייסבוק והדביקו (Ctrl+V) — זה יישלח כתמונה אמיתית, לא כקישור',
     imageCopied:'התמונה הועתקה ללוח', copyImageFailed:'ההעתקה נכשלה, נסו להוריד את התמונה במקום',
+    preparingClip:'מכינים את הקליפ לשיתוף...',
     extendCall:'הוסיפו 15 דקות', muteBtn:'השתקה', unmuteBtn:'ביטול השתקה', cameraOffBtn:'כיבוי מצלמה', cameraOnBtn:'הפעלת מצלמה',
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
@@ -847,9 +848,9 @@ const STR = {
     rateCoachPrompt:'איך היה הניתוח? דרגו את המאמן', yourRating:'הדירוג שנתתם', ratingSaved:'תודה על הדירוג!',
     ratingScaleHint:'1 = חלש · 5 = מצוין',
     addAttachments:'הוסיפו קבצים (אופציונלי)', attachmentsHint:'תמונות, PDF או כל קובץ אחר',
-    highlightClipUploadTitle:'העלאת קליף ביצועים', highlightClipUploadHint:'העלו את קובץ הקליף הערוך',
+    highlightClipUploadTitle:'העלאת קליפ ביצועים', highlightClipUploadHint:'העלו את קובץ הקליפ הערוך',
     myClipsNav:'הקליפים שלי', myClipsTitle:'הקליפים שלי', noClipsYet:'עדיין לא קיבלתם קליפים',
-    watchClip:'צפו בקליף', clipFrom:'קליף מ-',
+    watchClip:'צפו בקליפ', clipFrom:'קליפ מ-',
     uploadingAttachments:'מעלים קבצים...', attachmentsTitle:'קבצים מצורפים', removeAttachment:'הסירו',
     someAttachmentsFailed:'הניתוח נשלח, אך חלק מהקבצים המצורפים לא הועלו בהצלחה',
     coachTypeTitle:'סוג מאמן', coachTypeGK:'מאמן שוערים', coachTypeGeneral:'מאמן כללי', coachTypeAnalyst:'אנליסט', coachTypeMental:'מאמן מנטלי',
@@ -984,6 +985,7 @@ const STR = {
     shareViaTitle:'Share via', closeMenu:'Close',
     copyImageBtn:'Copy image', copyImageHint:'Open WhatsApp/Facebook and paste (Ctrl+V) — it will send as a real image, not a link',
     imageCopied:'Image copied to clipboard', copyImageFailed:'Copy failed, try downloading the image instead',
+    preparingClip:'Preparing the clip to share...',
     extendCall:'Add 15 minutes', muteBtn:'Mute', unmuteBtn:'Unmute', cameraOffBtn:'Turn off camera', cameraOnBtn:'Turn on camera',
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
@@ -2476,6 +2478,37 @@ async function drawShareCard({ name, subtitle, photo, initials, avatarColor, rat
 
   return new Promise(resolve=>canvas.toBlob(blob=>resolve(blob), 'image/png', 0.95));
 }
+function toBrandedUrl(firebaseUrl){
+  try{
+    const marker = '/o/';
+    const idx = firebaseUrl.indexOf(marker);
+    if(idx === -1) return firebaseUrl;
+    const tail = firebaseUrl.slice(idx + marker.length); // encodedPath?alt=media&token=...
+    return `https://anzclip.com/media/${tail}`;
+  }catch(e){ return firebaseUrl; }
+}
+async function shareVideoClip(title, text, videoUrl){
+  // Tier 1: fetch the actual video and share it as a real file attachment (best case — mobile)
+  if(navigator.canShare){
+    try{
+      showToast(t('preparingClip'));
+      const resp = await fetch(videoUrl);
+      const blob = await resp.blob();
+      const mime = blob.type || 'video/mp4';
+      const ext = mime.includes('webm') ? 'webm' : mime.includes('quicktime') ? 'mov' : 'mp4';
+      const file = new File([blob], `anzclip-clip.${ext}`, {type: mime});
+      if(navigator.canShare({ files:[file] })){
+        await navigator.share({ title, text, files:[file] });
+        return;
+      }
+    }catch(e){
+      if(e && e.name==='AbortError') return;
+      console.error('video file share failed, falling back to link', e);
+    }
+  }
+  // Tier 2: fall back to sharing the hosted link (still opens/plays for the recipient) — branded to anzclip.com
+  await shareContent(title, text, toBrandedUrl(videoUrl));
+}
 async function shareCardAsImage(title, text, cardConfig){
   let blob = null;
   try{ blob = await drawShareCard(cardConfig); }catch(e){ console.error('failed to draw share card', e); }
@@ -2497,7 +2530,8 @@ async function shareCardAsImage(title, text, cardConfig){
 
   // Tier 2 + 3 need a real public URL for the image, so upload it once
   const file = new File([blob], `anzclip-share-${Date.now()}.png`, {type:'image/png'});
-  const imageUrl = await uploadFileToStorage(file, 'shares');
+  const rawImageUrl = await uploadFileToStorage(file, 'shares');
+  const imageUrl = rawImageUrl ? toBrandedUrl(rawImageUrl) : null;
 
   if(imageUrl && navigator.share){
     try{
@@ -5809,7 +5843,7 @@ function attachHandlers(){
   });
   app.querySelectorAll('[data-action="share-clip"]').forEach(el=>{
     el.addEventListener('click', ()=>{
-      shareContent(t('shareClipTitle'), `🎬 ${t('shareClipTitle')}`, el.dataset.clipUrl);
+      shareVideoClip(t('shareClipTitle'), `🎬 ${t('shareClipTitle')}`, el.dataset.clipUrl);
     });
   });
 

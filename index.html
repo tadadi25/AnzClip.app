@@ -2333,8 +2333,16 @@ function roundRect(ctx, x, y, w, h, r){
   ctx.arcTo(x, y, x+w, y, r);
   ctx.closePath();
 }
-async function drawShareCard({ name, subtitle, photo, initials, avatarColor, ratingLine, lines }){
-  const W = 1080, H = 1350;
+async function drawShareCard({ name, subtitle, photo, initials, avatarColor, ratingLine, lines, charts }){
+  const W = 1080;
+  const headerH = ratingLine ? 730 : 670;
+  const rowH = 92;
+  const chartBlockH = 300; // label + chart + spacing
+  const footerH = 110;
+  const linesH = (lines && lines.length) ? lines.length*rowH + 20 : 0;
+  const chartsH = (charts && charts.length) ? charts.length*chartBlockH : 0;
+  const H = headerH + linesH + chartsH + footerH;
+
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -2391,10 +2399,11 @@ async function drawShareCard({ name, subtitle, photo, initials, avatarColor, rat
     ctx.fillText(ratingLine, W/2, 645);
   }
 
-  // stat rows
-  let y = ratingLine ? 730 : 670;
-  const rowH = 92, rowW = 840, rowX = (W-rowW)/2;
-  (lines||[]).slice(0,5).forEach(line=>{
+  let y = headerH;
+
+  // stat rows (text)
+  const rowW = 840, rowX = (W-rowW)/2;
+  (lines||[]).forEach(line=>{
     ctx.fillStyle = 'rgba(255,255,255,.05)';
     roundRect(ctx, rowX, y, rowW, rowH-16, 16); ctx.fill();
     ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, rowX, y, rowW, rowH-16, 16); ctx.stroke();
@@ -2405,8 +2414,27 @@ async function drawShareCard({ name, subtitle, photo, initials, avatarColor, rat
     y += rowH;
   });
 
+  // embedded chart images (real rendered graphs, copied from the on-screen canvases)
+  const chartW = 900, chartH = 220, chartX = (W-chartW)/2;
+  (charts||[]).forEach(chart=>{
+    ctx.fillStyle = '#F4F7EE'; ctx.font = '700 32px Rubik'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(chart.label, chartX, y+30);
+    const boxY = y+46;
+    ctx.fillStyle = 'rgba(255,255,255,.04)';
+    roundRect(ctx, chartX, boxY, chartW, chartH, 16); ctx.fill();
+    ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, chartX, boxY, chartW, chartH, 16); ctx.stroke();
+    if(chart.canvasEl && chart.canvasEl.width>0){
+      const pad = 16;
+      ctx.save();
+      roundRect(ctx, chartX, boxY, chartW, chartH, 16); ctx.clip();
+      ctx.drawImage(chart.canvasEl, chartX+pad, boxY+pad, chartW-pad*2, chartH-pad*2);
+      ctx.restore();
+    }
+    y += chartBlockH;
+  });
+
   ctx.fillStyle = '#7E8A73'; ctx.font = '500 26px Heebo'; ctx.textAlign='center';
-  ctx.fillText('anzclip.com', W/2, H-60);
+  ctx.fillText('anzclip.com', W/2, H-40);
 
   return new Promise(resolve=>canvas.toBlob(blob=>resolve(blob), 'image/png', 0.95));
 }
@@ -5626,7 +5654,10 @@ function attachHandlers(){
     const role = (state.user && state.user.playerRole) || 'field';
     const defs = STAT_DEFS[role] || STAT_DEFS.field;
     const statsArr = state.requests.map(r=>r.stats).filter(Boolean);
-    const summary = computeStatSummary(statsArr, defs).slice(0,5);
+    const summary = computeStatSummary(statsArr, defs).slice(0,4);
+    const charts = summary
+      .map(s=>({ label: s.label, canvasEl: document.getElementById('statchart-'+s.key) }))
+      .filter(c=>c.canvasEl);
     const btn = e.currentTarget;
     btn.disabled = true;
     await shareCardAsImage(t('shareStatsTitle'), t('shareStatsTitle'), {
@@ -5635,7 +5666,7 @@ function attachHandlers(){
       photo: state.user.photo,
       initials: state.user.name.split(' ').map(n=>n[0]).join(''),
       avatarColor: '#0B6E4F',
-      lines: summary.map(s=>({label:s.label, value:s.display}))
+      charts
     });
     btn.disabled = false;
   });
@@ -5644,7 +5675,10 @@ function attachHandlers(){
     if(!p) return;
     const defs = STAT_DEFS[p.playerRole||'field'] || STAT_DEFS.field;
     const statsArr = (state.playerPublicGames||[]).map(g=>g.stats);
-    const summary = computeStatSummary(statsArr, defs).slice(0,5);
+    const summary = computeStatSummary(statsArr, defs).slice(0,4);
+    const charts = summary
+      .map(s=>({ label: s.label, canvasEl: document.getElementById('pubstatchart-'+s.key) }))
+      .filter(c=>c.canvasEl);
     const btn = e.currentTarget;
     btn.disabled = true;
     await shareCardAsImage(t('shareStatsTitle'), t('shareStatsTitle'), {
@@ -5653,7 +5687,7 @@ function attachHandlers(){
       photo: p.photo,
       initials: p.name.split(' ').map(n=>n[0]).join(''),
       avatarColor: '#0B6E4F',
-      lines: summary.map(s=>({label:s.label, value:s.display}))
+      charts
     });
     btn.disabled = false;
   });

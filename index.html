@@ -780,7 +780,7 @@ const STR = {
     statusConfirmed:'מאושר', statusCompleted:'הושלם', statusCancelled:'בוטל', mentalCallsSummary:'סיכום שיחות',
     expectedIncomeTitle:'הכנסה צפויה', incomeEarned:'הכנסה מאושרת (שיחות שהושלמו)', incomeUpcoming:'הכנסה צפויה (שיחות מאושרות)',
     viewMyPublicProfile:'צפו בפרופיל הציבורי שלי', shareMyProfile:'שתפו את הפרופיל שלי', shareProfileTitle:'הפרופיל שלי ב-AnzClip',
-    imageSavedNote:'התמונה נשמרה — שתפו אותה מגלריית התמונות',
+    imageSavedNote:'התמונה נשמרה — שתפו אותה מגלריית התמונות', gamesAnalyzedLabel:'משחקים שנותחו',
     extendCall:'הוסיפו 15 דקות', muteBtn:'השתקה', unmuteBtn:'ביטול השתקה', cameraOffBtn:'כיבוי מצלמה', cameraOnBtn:'הפעלת מצלמה',
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
@@ -956,7 +956,7 @@ const STR = {
     statusConfirmed:'Confirmed', statusCompleted:'Completed', statusCancelled:'Cancelled', mentalCallsSummary:'Calls summary',
     expectedIncomeTitle:'Expected income', incomeEarned:'Earned (completed calls)', incomeUpcoming:'Upcoming (confirmed calls)',
     viewMyPublicProfile:'View my public profile', shareMyProfile:'Share my profile', shareProfileTitle:'My profile on AnzClip',
-    imageSavedNote:'Image saved — share it from your photo gallery',
+    imageSavedNote:'Image saved — share it from your photo gallery', gamesAnalyzedLabel:'Games analyzed',
     extendCall:'Add 15 minutes', muteBtn:'Mute', unmuteBtn:'Unmute', cameraOffBtn:'Turn off camera', cameraOnBtn:'Turn on camera',
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
@@ -3333,13 +3333,21 @@ function homeStatsCardsHtml(){
   const role = u.playerRole || 'field';
   const defs = STAT_DEFS[role] || STAT_DEFS.field;
   const statsArr = state.requests.map(r=>r.stats).filter(Boolean);
-  const summary = computeStatSummary(statsArr, defs).slice(0,5);
-  if(!summary.length) return '';
-  const icons = ['timer','target','goal','glove','trending'];
+  const gamesCount = statsArr.length;
+  const summary = computeStatSummary(statsArr, defs).slice(0,4);
+  if(!summary.length && !gamesCount) return '';
+  const icons = ['target','goal','glove','trending'];
   return `
     <div class="section-title">${t('statsPageTitle')}</div>
     <div class="section-line"></div>
     <div class="icon-stats-row">
+      ${gamesCount ? `
+        <div class="icon-stat-card">
+          ${icon('timer',22)}
+          <b class="mono">${gamesCount}</b>
+          <span>${t('gamesAnalyzedLabel')}</span>
+        </div>
+      ` : ''}
       ${summary.map((s,i)=>`
         <div class="icon-stat-card">
           ${icon(icons[i%icons.length],22)}
@@ -5666,6 +5674,7 @@ function attachHandlers(){
       photo: state.user.photo,
       initials: state.user.name.split(' ').map(n=>n[0]).join(''),
       avatarColor: '#0B6E4F',
+      lines: summary.map(s=>({label:s.label, value:s.display})),
       charts
     });
     btn.disabled = false;
@@ -5687,6 +5696,7 @@ function attachHandlers(){
       photo: p.photo,
       initials: p.name.split(' ').map(n=>n[0]).join(''),
       avatarColor: '#0B6E4F',
+      lines: summary.map(s=>({label:s.label, value:s.display})),
       charts
     });
     btn.disabled = false;

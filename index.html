@@ -4557,6 +4557,10 @@ function renderCoachDash(){
   })() : '';
   const mine = [...state.requests].sort((a,b)=>b.createdAt-a.createdAt);
   return `
+    <div class="hero-cta-row" style="margin-bottom:20px">
+      <button class="btn btn-ghost" data-action="view-my-public-profile">${icon('star',17)} ${t('myProfileBtn')}</button>
+      <button class="btn btn-ghost" data-action="open-income">${icon('chart',17)} ${t('myIncomeBtn')}</button>
+    </div>
     ${callsSummary}
     ${mine.length===0 ? `
       <div class="empty-state">${icon('clip',36)}<b>${t('noIncomingTitle')}</b><span>${t('noIncomingSub')(coach.name)}</span></div>
@@ -4933,8 +4937,8 @@ function attachHandlers(){
   app.querySelector('[data-action="back"]')?.addEventListener('click', ()=>{
     if(state.view==='confirm') go('upload');
     else if(state.view==='upload') go('coach-profile');
-    else if(state.view==='income') go('home');
-    else if(state.view==='coach-profile' && state.isSelfViewingProfile) go('home');
+    else if(state.view==='income') go(state.role==='coach' ? 'coach-dash' : 'home');
+    else if(state.view==='coach-profile' && state.isSelfViewingProfile) go(state.role==='coach' ? 'coach-dash' : 'home');
     else if(state.view==='coach-profile') go(state.role==='viewer' ? 'viewer-home' : 'coaches');
     else if(state.view==='coaches') go('home');
     else if(state.view==='coach-compose') go('coach-dash');

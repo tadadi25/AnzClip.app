@@ -172,8 +172,13 @@
     color:rgba(255,255,255,.75); font-size:13px; font-family:'Heebo';
   }
   .call-controls{
-    position:absolute; bottom:26px; left:50%; transform:translateX(-50%);
-    display:flex; gap:14px;
+    position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
+    display:flex; gap:16px; align-items:flex-start;
+  }
+  .call-ctl{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .call-ctl-label{
+    font-family:'Heebo'; font-size:11px; font-weight:500; color:rgba(255,255,255,.88);
+    text-shadow:0 1px 4px rgba(0,0,0,.7); white-space:nowrap; text-align:center;
   }
   .call-btn{
     width:52px; height:52px; border-radius:50%; border:none; background:rgba(255,255,255,.15);
@@ -280,7 +285,7 @@
   .field-label{font-size:13px; font-weight:600; color:var(--chalk-dim); margin:20px 0 8px;}
   .chip-row{display:flex; gap:8px; flex-wrap:wrap;}
   .chip{
-    padding:9px 16px; border-radius:100px; font-size:13.5px; cursor:pointer;
+    padding:9px 16px; border-radius:100px; font-size:13.5px; cursor:pointer; white-space:nowrap;
     background:var(--surface); border:1px solid rgba(243,241,231,.12); color:var(--chalk-dim);
     transition:all .15s;
   }
@@ -470,6 +475,12 @@
     position:absolute; top:-5px; inset-inline-end:-8px; background:#ff3b30; color:#fff;
     font-family:'IBM Plex Mono'; font-weight:700; font-size:10px; min-width:16px; height:16px; border-radius:9px;
     display:flex; align-items:center; justify-content:center; padding:0 4px; line-height:1; box-shadow:0 0 0 2px rgba(24,27,20,.92);
+  }
+  .chip-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    background:#ff3b30; color:#fff; font-family:'IBM Plex Mono'; font-weight:700; font-size:10px;
+    min-width:17px; height:17px; border-radius:9px; padding:0 5px; line-height:1;
+    margin-inline-start:6px; vertical-align:middle; flex:0 0 auto;
   }
   .toast{
     position:fixed; bottom:calc(var(--nav-total) + 20px); left:50%; transform:translateX(-50%); z-index:50;
@@ -840,7 +851,7 @@ const STR = {
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
     confirmEndCall:'האם אתם בטוחים שברצונכם לסיים את השיחה?',
-    callEndedByOther:'הצד השני סיים את השיחה', callConnectionLost:'החיבור לצד השני נותק',
+    callEndedByOther:'הצד השני סיים את השיחה', callConnectionLost:'החיבור לצד השני נותק', callEnded:'השיחה הסתיימה',
     recordCall:'הקליטו שיחה', recordingLive:'מוקלט', recordingSaved:'ההקלטה נשמרה במחשב שלכם',
     recordingNotSupported:'הדפדפן הזה לא תומך בהקלטת שיחות', noRecordingYet:'אין הקלטה עדיין',
     mentalPackagesTitle:'חבילות שיחות', addMentalPackage:'הוסיפו חבילת שיחות', sessionCountLabel:'מספר שיחות',
@@ -1027,7 +1038,7 @@ const STR = {
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
     confirmEndCall:'Are you sure you want to end the call?',
-    callEndedByOther:'The other side ended the call', callConnectionLost:'Connection to the other side was lost',
+    callEndedByOther:'The other side ended the call', callConnectionLost:'Connection to the other side was lost', callEnded:'The call has ended',
     recordCall:'Record call', recordingLive:'Recording', recordingSaved:'Recording saved to your device',
     recordingNotSupported:'This browser does not support call recording', noRecordingYet:'No recording yet',
     mentalPackagesTitle:'Call packages', addMentalPackage:'Add a call package', sessionCountLabel:'Number of calls',
@@ -1366,6 +1377,11 @@ async function markRequestsSeen(){
     r.gkSeen = true;
     updateRequestDoc(r.id, {gkSeen:true});
   }
+}
+// clears the red badge only for the tab currently open, so the other one keeps its count
+function markSeenForRequestsTab(){
+  if((state.requestsTab || 'analysis')==='calls') markCallRequestsSeen();
+  else markRequestsSeen();
 }
 async function markCallRequestsSeen(){
   const field = state.role==='coach' ? 'coachSeen' : 'gkSeen';
@@ -1739,12 +1755,16 @@ async function initVideoCall(){
     micOn = !micOn;
     __rtcLocalStream.getAudioTracks().forEach(tr=>tr.enabled = micOn);
     e.currentTarget.classList.toggle('muted', !micOn);
+    const lbl = document.getElementById('toggle-mic-label');
+    if(lbl) lbl.textContent = micOn ? t('muteBtn') : t('unmuteBtn');
   });
   document.getElementById('toggle-cam')?.addEventListener('click', (e)=>{
     if(!__rtcLocalStream) return;
     camOn = !camOn;
     __rtcLocalStream.getVideoTracks().forEach(tr=>tr.enabled = camOn);
     e.currentTarget.classList.toggle('cam-off', !camOn);
+    const lbl = document.getElementById('toggle-cam-label');
+    if(lbl) lbl.textContent = camOn ? t('cameraOffBtn') : t('cameraOnBtn');
   });
   document.getElementById('end-call')?.addEventListener('click', ()=>{
     if(!confirm(t('confirmEndCall'))) return;
@@ -1761,11 +1781,15 @@ async function initVideoCall(){
       const started = startCallRecording();
       if(started){
         e.currentTarget.classList.add('recording');
+        const lbl = document.getElementById('toggle-record-label');
+        if(lbl) lbl.textContent = t('recordingLive');
         await updateCallRequestDoc(r.id, { isRecording:true, recordingBy: state.role }).catch(()=>{});
       }
     } else {
       stopCallRecording();
       e.currentTarget.classList.remove('recording');
+      const lbl = document.getElementById('toggle-record-label');
+      if(lbl) lbl.textContent = t('recordCall');
       await updateCallRequestDoc(r.id, { isRecording:false }).catch(()=>{});
       downloadCallRecording();
       showToast(t('recordingSaved'));
@@ -1975,8 +1999,10 @@ function teardownVideoCall(){
 }
 function handleRemoteHangup(msg){
   if(!__rtcActiveCallId) return; // already torn down
+  const endedId = __rtcActiveCallId;
   if(__rtcIsRecording){ stopCallRecording(); downloadCallRecording(); }
   teardownVideoCall();
+  setCallStatusLocally(endedId, 'completed');
   if(msg) showToast(msg);
   if(state.view==='video-call') go('call-request-detail');
 }
@@ -1986,7 +2012,7 @@ function endVideoCall(){
   teardownVideoCall();
   // tell the other side the call is over, so their screen closes too
   if(r && r.status!=='completed' && r.status!=='cancelled'){
-    r.status = 'completed';
+    setCallStatusLocally(r.id, 'completed');
     updateCallRequestDoc(r.id, { status:'completed', isRecording:false }).catch(()=>{});
   }
 }
@@ -2292,6 +2318,8 @@ function renderCallRequestDetail(){
       </div>
       ${isCallJoinable(r) ? `
         <button class="btn btn-primary btn-block" data-action="join-call">${icon('clip',18)} ${t('joinCall')}</button>
+      ` : isCallOver(r) ? `
+        <div class="empty-state" style="padding:26px 16px">${icon('check',26)}<b>${t('callEnded')}</b></div>
       ` : `
         <div class="req-meta" style="text-align:center">${t('callNotYetOpen')}</div>
       `}
@@ -2313,6 +2341,16 @@ function renderCallRequestDetail(){
     ` : ''}
     ${r.status==='cancelled' ? `<div class="empty-state" style="padding:30px 16px">${icon('x',26)}<b>${t('statusCancelled')}</b></div>` : ''}
   `;
+}
+function isCallOver(r){
+  if(!r || !r.confirmedSlot) return false;
+  const totalMin = (r.durationMinutes||30) + (r.extendedMinutes||0);
+  return Date.now() > (r.confirmedSlot.dateTimeMs + totalMin*60*1000);
+}
+function setCallStatusLocally(id, status){
+  if(state.viewingCallRequest && state.viewingCallRequest.id===id) state.viewingCallRequest.status = status;
+  const inList = (state.callRequests||[]).find(c=>c.id===id);
+  if(inList) inList.status = status;
 }
 function isCallJoinable(r){
   if(!r.confirmedSlot) return false;
@@ -2366,11 +2404,28 @@ function renderVideoCall(){
       <div class="call-timer mono" id="call-timer">--:--</div>
       <div class="recording-indicator" id="recording-indicator" style="display:none">${icon('clip',13)} ${t('recordingLive')}</div>
       <div class="call-controls">
-        <button class="call-btn" id="toggle-mic">${icon('ghost',20)}</button>
-        <button class="call-btn" id="toggle-cam">${icon('eye',20)}</button>
-        ${state.role==='coach' ? `<button class="call-btn call-btn-extend" id="extend-call">+15</button>` : ''}
-        <button class="call-btn" id="toggle-record" title="${t('recordCall')}">${icon('clip',20)}</button>
-        <button class="call-btn call-btn-end" id="end-call">${icon('x',20)}</button>
+        <div class="call-ctl">
+          <button class="call-btn" id="toggle-mic">${icon('ghost',20)}</button>
+          <span class="call-ctl-label" id="toggle-mic-label">${t('muteBtn')}</span>
+        </div>
+        <div class="call-ctl">
+          <button class="call-btn" id="toggle-cam">${icon('eye',20)}</button>
+          <span class="call-ctl-label" id="toggle-cam-label">${t('cameraOffBtn')}</span>
+        </div>
+        ${state.role==='coach' ? `
+          <div class="call-ctl">
+            <button class="call-btn call-btn-extend" id="extend-call">+15</button>
+            <span class="call-ctl-label">${t('extendCall')}</span>
+          </div>
+        ` : ''}
+        <div class="call-ctl">
+          <button class="call-btn" id="toggle-record" title="${t('recordCall')}">${icon('clip',20)}</button>
+          <span class="call-ctl-label" id="toggle-record-label">${t('recordCall')}</span>
+        </div>
+        <div class="call-ctl">
+          <button class="call-btn call-btn-end" id="end-call">${icon('x',20)}</button>
+          <span class="call-ctl-label">${t('endCall')}</span>
+        </div>
       </div>
       <div class="call-status" id="call-status">${t('connectingCall')}</div>
     </div>
@@ -4226,10 +4281,13 @@ function renderConfirm(){
 /* ---------------- REQUESTS ---------------- */
 function renderRequests(){
   const tab = state.requestsTab || 'analysis';
+  const unseenAnalysis = (state.requests||[]).filter(r=>r.gkSeen===false).length;
+  const unseenCalls = (state.callRequests||[]).filter(c=>c.gkSeen===false).length;
+  const badge = n => n>0 ? `<span class="chip-badge">${n>9?'9+':n}</span>` : '';
   const tabBar = `
     <div class="filter-bar" style="margin-bottom:16px">
-      <div class="chip ${tab==='analysis'?'active':''}" data-requests-tab="analysis">${t('analyzedGamesTab')}</div>
-      <div class="chip ${tab==='calls'?'active':''}" data-requests-tab="calls">${t('myCallRequests')}</div>
+      <div class="chip ${tab==='analysis'?'active':''}" data-requests-tab="analysis">${t('analyzedGamesTab')}${badge(unseenAnalysis)}</div>
+      <div class="chip ${tab==='calls'?'active':''}" data-requests-tab="calls">${t('myCallRequests')}${badge(unseenCalls)}</div>
     </div>
   `;
   if(tab==='calls'){
@@ -4800,8 +4858,7 @@ function attachHandlers(){
     el.addEventListener('click', async ()=>{
       if(state.user) await loadMyRequests(state.user.uid);
       go('requests');
-      markRequestsSeen();
-      markCallRequestsSeen();
+      markSeenForRequestsTab();
       render();
     });
   });
@@ -6131,6 +6188,7 @@ function attachHandlers(){
   app.querySelectorAll('[data-requests-tab]').forEach(el=>{
     el.addEventListener('click', ()=>{
       state.requestsTab = el.dataset.requestsTab;
+      markSeenForRequestsTab();
       render();
     });
   });

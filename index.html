@@ -178,6 +178,12 @@
   .call-btn.muted, .call-btn.cam-off{ background:var(--coral); color:#1a0f0a; }
   .call-btn-extend{ background:var(--gold); color:#1a0f0a; }
   .call-btn-end{ background:#ff3b30; }
+  .call-btn.recording{ background:#ff3b30; color:#fff; }
+  .recording-indicator{
+    position:absolute; top:60px; inset-inline-start:16px;
+    background:rgba(255,59,48,.9); color:#fff; font-family:'Heebo'; font-weight:700; font-size:12px;
+    padding:5px 12px; border-radius:100px; display:flex; align-items:center; gap:6px;
+  }
   .clip-thumb-card{position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:1/1; cursor:pointer;}
   .clip-thumb-card video{width:100%; height:100%; object-fit:cover; display:block;}
   .clip-thumb-overlay{
@@ -764,7 +770,7 @@ const STR = {
     pricingByGame:'תמחור לפי משחק', singleGamePriceLabel:'מחיר למשחק בודד (₪)',
     mentalPricingTitle:'תמחור ייעוץ מנטלי', mentalSessionPriceLabel:'מחיר לשיחה בודדת (₪)',
     mentalDurationLabel:'אורך שיחה', requestCall:'בקשו שיחה', callDurationBadge:'שיחה של',
-    myCallRequests:'בקשות שיחה', requestCallTitle:'בקשת שיחת ייעוץ',
+    myCallRequests:'בקשות שיחה', requestCallTitle:'בקשת שיחת ייעוץ', analyzedGamesTab:'משחקים שנותחו', noCallRequestsTitle:'עדיין אין בקשות שיחה',
     proposeTimesTitle:'הציעו זמנים לשחקן', proposeTimesHint:'הציעו 2-3 אפשרויות של תאריך ושעה',
     addTimeSlot:'הוסיפו אפשרות זמן', sendProposal:'שלחו הצעה לשחקן', dateLabel:'תאריך', timeLabel:'שעה',
     chooseTimeTitle:'בחרו זמן לשיחה', requestMoreOptions:'הציעו לי עוד אפשרויות', confirmSlot:'אשרו זמן זה',
@@ -776,6 +782,8 @@ const STR = {
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
     confirmEndCall:'האם אתם בטוחים שברצונכם לסיים את השיחה?',
+    recordCall:'הקליטו שיחה', recordingLive:'מוקלט', recordingSaved:'ההקלטה נשמרה במחשב שלכם',
+    recordingNotSupported:'הדפדפן הזה לא תומך בהקלטת שיחות', noRecordingYet:'אין הקלטה עדיין',
     mentalPackagesTitle:'חבילות שיחות', addMentalPackage:'הוסיפו חבילת שיחות', sessionCountLabel:'מספר שיחות',
     priceFrom:'החל מ-', videoDuration:'אורך סרטון', totalDuration:'משך כולל', selectedVideos:'סרטונים שנבחרו',
     addVideo:'הוסיפו סרטון', addMoreVideos:'הוסיפו עוד סרטון', priceForYourVideo:'מחיר לניתוח', upTo:'עד', minutesUnit:'דקות',
@@ -935,7 +943,7 @@ const STR = {
     pricingByGame:'Pricing per game', singleGamePriceLabel:'Price per single game (₪)',
     mentalPricingTitle:'Mental coaching pricing', mentalSessionPriceLabel:'Price per single call (₪)',
     mentalDurationLabel:'Call length', requestCall:'Request a call', callDurationBadge:'Call length',
-    myCallRequests:'Call requests', requestCallTitle:'Request a coaching call',
+    myCallRequests:'Call requests', requestCallTitle:'Request a coaching call', analyzedGamesTab:'Analyzed games', noCallRequestsTitle:'No call requests yet',
     proposeTimesTitle:'Propose times to the player', proposeTimesHint:'Offer 2-3 date and time options',
     addTimeSlot:'Add a time option', sendProposal:'Send proposal to player', dateLabel:'Date', timeLabel:'Time',
     chooseTimeTitle:'Choose a call time', requestMoreOptions:'Ask for more options', confirmSlot:'Confirm this time',
@@ -947,6 +955,8 @@ const STR = {
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
     confirmEndCall:'Are you sure you want to end the call?',
+    recordCall:'Record call', recordingLive:'Recording', recordingSaved:'Recording saved to your device',
+    recordingNotSupported:'This browser does not support call recording', noRecordingYet:'No recording yet',
     mentalPackagesTitle:'Call packages', addMentalPackage:'Add a call package', sessionCountLabel:'Number of calls',
     priceFrom:'From ', videoDuration:'Video length', totalDuration:'Total length', selectedVideos:'Selected videos',
     addVideo:'Add video', addMoreVideos:'Add another video', priceForYourVideo:'Price for this analysis', upTo:'Up to', minutesUnit:'min',
@@ -1036,7 +1046,7 @@ let state = {
   coachClips: [],
   viewingPlayer: null, playerPublicGames: [], playerPublicClips: [], allPlayers: [], allAgents: [], allScouts: [], viewingContact: null,
   advancedSearch: { position:'', statFilters:[], results:null },
-  homeCoachQuery: '', homeCoachTypeFilter: 'all',
+  homeCoachQuery: '', homeCoachTypeFilter: 'all', requestsTab: 'analysis',
   callRequests: [], viewingCallRequest: null, callDraft: { paymentChoice:null }, proposedSlotsDraft: [],
   coachId: null,
   composeId: null,
@@ -1607,6 +1617,7 @@ function renderPlayerProfile(){
 }
 /* ---------------- WebRTC video call ---------------- */
 let __rtcPC = null, __rtcLocalStream = null, __rtcTimerInterval = null, __rtcRoomUnsub = null, __rtcCandidatesUnsub = null;
+let __rtcRecorder = null, __rtcRecordedChunks = [], __rtcRecordAnimFrame = null, __rtcAudioCtx = null, __rtcIsRecording = false;
 let __rtcActiveCallId = null;
 async function initVideoCall(){
   const r = state.viewingCallRequest;
@@ -1641,6 +1652,21 @@ async function initVideoCall(){
     const newExt = (r.extendedMinutes||0) + 15;
     await updateCallRequestDoc(r.id, { extendedMinutes: newExt });
     r.extendedMinutes = newExt;
+  });
+  document.getElementById('toggle-record')?.addEventListener('click', async (e)=>{
+    if(!__rtcIsRecording){
+      const started = startCallRecording();
+      if(started){
+        e.currentTarget.classList.add('recording');
+        await updateCallRequestDoc(r.id, { isRecording:true, recordingBy: state.role }).catch(()=>{});
+      }
+    } else {
+      stopCallRecording();
+      e.currentTarget.classList.remove('recording');
+      await updateCallRequestDoc(r.id, { isRecording:false }).catch(()=>{});
+      downloadCallRecording();
+      showToast(t('recordingSaved'));
+    }
   });
 
   if(!navigator.mediaDevices || !window.RTCPeerConnection){
@@ -1715,6 +1741,8 @@ async function initVideoCall(){
       catch(e){ console.error('setRemoteDescription(answer) failed', e); }
     }
     if(data.extendedMinutes!=null) r.extendedMinutes = data.extendedMinutes;
+    const recIndicator = document.getElementById('recording-indicator');
+    if(recIndicator) recIndicator.style.display = data.isRecording ? 'flex' : 'none';
     if(data.status==='cancelled' || data.status==='completed'){
       endVideoCall();
     }
@@ -1748,7 +1776,76 @@ async function initVideoCall(){
   updateTimer();
   __rtcTimerInterval = setInterval(updateTimer, 1000);
 }
+function startCallRecording(){
+  const localVideo = document.getElementById('local-video');
+  const remoteVideo = document.getElementById('remote-video');
+  if(!localVideo || !remoteVideo) return false;
+  if(typeof MediaRecorder === 'undefined') { showToast(t('recordingNotSupported')); return false; }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1280; canvas.height = 720;
+  const ctx = canvas.getContext('2d');
+
+  function drawFrame(){
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    if(remoteVideo.videoWidth) ctx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
+    if(localVideo.videoWidth){
+      const pipW = 220, pipH = 300;
+      ctx.drawImage(localVideo, canvas.width-pipW-24, canvas.height-pipH-24, pipW, pipH);
+    }
+    __rtcRecordAnimFrame = requestAnimationFrame(drawFrame);
+  }
+  drawFrame();
+
+  const canvasStream = canvas.captureStream(30);
+
+  try{
+    __rtcAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const dest = __rtcAudioCtx.createMediaStreamDestination();
+    if(__rtcLocalStream && __rtcLocalStream.getAudioTracks().length){
+      __rtcAudioCtx.createMediaStreamSource(new MediaStream(__rtcLocalStream.getAudioTracks())).connect(dest);
+    }
+    if(remoteVideo.srcObject && remoteVideo.srcObject.getAudioTracks && remoteVideo.srcObject.getAudioTracks().length){
+      __rtcAudioCtx.createMediaStreamSource(new MediaStream(remoteVideo.srcObject.getAudioTracks())).connect(dest);
+    }
+    var combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+  }catch(e){
+    console.error('audio mixing failed, recording video only', e);
+    var combinedStream = canvasStream;
+  }
+
+  __rtcRecordedChunks = [];
+  try{
+    __rtcRecorder = new MediaRecorder(combinedStream, { mimeType:'video/webm;codecs=vp8,opus' });
+  }catch(e){
+    __rtcRecorder = new MediaRecorder(combinedStream);
+  }
+  __rtcRecorder.ondataavailable = (e)=>{ if(e.data && e.data.size>0) __rtcRecordedChunks.push(e.data); };
+  __rtcRecorder.start(1000);
+  __rtcIsRecording = true;
+  return true;
+}
+function stopCallRecording(){
+  if(__rtcRecordAnimFrame){ cancelAnimationFrame(__rtcRecordAnimFrame); __rtcRecordAnimFrame = null; }
+  if(__rtcRecorder && __rtcRecorder.state!=='inactive'){ try{ __rtcRecorder.stop(); }catch(e){} }
+  if(__rtcAudioCtx){ __rtcAudioCtx.close().catch(()=>{}); __rtcAudioCtx = null; }
+  __rtcIsRecording = false;
+}
+function downloadCallRecording(){
+  if(!__rtcRecordedChunks.length){ showToast(t('noRecordingYet')); return; }
+  const blob = new Blob(__rtcRecordedChunks, {type:'video/webm'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `anzclip-call-${Date.now()}.webm`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 8000);
+}
 function teardownVideoCall(){
+  if(__rtcIsRecording) stopCallRecording();
   if(__rtcTimerInterval){ clearInterval(__rtcTimerInterval); __rtcTimerInterval = null; }
   if(__rtcRoomUnsub){ __rtcRoomUnsub(); __rtcRoomUnsub = null; }
   if(__rtcCandidatesUnsub){ __rtcCandidatesUnsub(); __rtcCandidatesUnsub = null; }
@@ -1758,9 +1855,10 @@ function teardownVideoCall(){
 }
 function endVideoCall(){
   const r = state.viewingCallRequest;
+  if(__rtcIsRecording){ stopCallRecording(); downloadCallRecording(); }
   teardownVideoCall();
   if(r && r.status==='confirmed'){
-    updateCallRequestDoc(r.id, { status:'completed' }).catch(()=>{});
+    updateCallRequestDoc(r.id, { status:'completed', isRecording:false }).catch(()=>{});
   }
 }
 
@@ -2118,10 +2216,12 @@ function renderVideoCall(){
       <video id="remote-video" autoplay playsinline></video>
       <video id="local-video" autoplay playsinline muted></video>
       <div class="call-timer mono" id="call-timer">--:--</div>
+      <div class="recording-indicator" id="recording-indicator" style="display:none">${icon('clip',13)} ${t('recordingLive')}</div>
       <div class="call-controls">
         <button class="call-btn" id="toggle-mic">${icon('ghost',20)}</button>
         <button class="call-btn" id="toggle-cam">${icon('eye',20)}</button>
         ${state.role==='coach' ? `<button class="call-btn call-btn-extend" id="extend-call">+15</button>` : ''}
+        <button class="call-btn" id="toggle-record" title="${t('recordCall')}">${icon('clip',20)}</button>
         <button class="call-btn call-btn-end" id="end-call">${icon('x',20)}</button>
       </div>
       <div class="call-status" id="call-status">${t('connectingCall')}</div>
@@ -3663,12 +3763,22 @@ function renderConfirm(){
 
 /* ---------------- REQUESTS ---------------- */
 function renderRequests(){
-  const callSection = renderCallRequestsList(false);
+  const tab = state.requestsTab || 'analysis';
+  const tabBar = `
+    <div class="filter-bar" style="margin-bottom:16px">
+      <div class="chip ${tab==='analysis'?'active':''}" data-requests-tab="analysis">${t('analyzedGamesTab')}</div>
+      <div class="chip ${tab==='calls'?'active':''}" data-requests-tab="calls">${t('myCallRequests')}</div>
+    </div>
+  `;
+  if(tab==='calls'){
+    const callList = renderCallRequestsList(false);
+    return tabBar + (callList || `<div class="empty-state">${icon('clip',36)}<b>${t('noCallRequestsTitle')}</b></div>`);
+  }
   if(state.requests.length===0){
-    return `<div class="empty-state">${icon('clip',36)}<b>${t('noRequestsTitle')}</b><span>${t('noRequestsSub')}</span></div>${callSection}`;
+    return `${tabBar}<div class="empty-state">${icon('clip',36)}<b>${t('noRequestsTitle')}</b><span>${t('noRequestsSub')}</span></div>`;
   }
   const sorted = [...state.requests].sort((a,b)=> b.createdAt - a.createdAt);
-  return sorted.map(r=>{
+  return tabBar + sorted.map(r=>{
     const statusLabel = {requested:t('statusRequested'), pending:t('statusPending'), progress:t('statusProgress'), done:t('statusDone'), declined:t('statusDeclined')}[r.status];
     const statusClass = {requested:'status-pending', pending:'status-pending', progress:'status-progress', done:'status-done', declined:'status-declined'}[r.status];
     return `
@@ -3721,7 +3831,7 @@ function renderRequests(){
         `}
       </div>
     `;
-  }).join('') + callSection;
+  }).join('');
 }
 function renderCallRequestsList(isCoachView){
   const list = state.callRequests || [];
@@ -5368,6 +5478,12 @@ function attachHandlers(){
   });
   app.querySelector('[data-action="join-call"]')?.addEventListener('click', ()=>{
     go('video-call');
+  });
+  app.querySelectorAll('[data-requests-tab]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      state.requestsTab = el.dataset.requestsTab;
+      render();
+    });
   });
   app.querySelectorAll('[data-open-call-request]').forEach(el=>{
     el.addEventListener('click', ()=>{

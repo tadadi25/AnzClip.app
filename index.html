@@ -2543,16 +2543,19 @@ function roundRect(ctx, x, y, w, h, r){
   ctx.arcTo(x, y, x+w, y, r);
   ctx.closePath();
 }
-async function drawShareCard({ name, subtitle, photo, initials, avatarColor, ratingLine, lines, charts, linkLine }){
+async function drawShareCard({ name, subtitle, photo, initials, avatarColor, ratingLine, lines, charts, linkLine, maxCharts }){
   const W = 1080;
   const headerH = ratingLine ? 730 : 670;
-  const rowH = 92;
-  const chartBlockH = 300; // label + chart + spacing
+  // 4-up stat tiles, 3-up charts: compact without making the graphs unreadable
+  const COLS = 4;
+  const CHART_COLS = 3;
+  const rowH = 78;
+  const chartBlockH = 214; // label + chart + spacing
   const footerH = linkLine ? 175 : 110;
   const linesArr = lines||[];
-  const chartsArr = charts||[];
-  const lineRows = Math.ceil(linesArr.length/2);
-  const chartRows = Math.ceil(chartsArr.length/2);
+  const chartsArr = (charts||[]).slice(0, maxCharts==null ? 6 : maxCharts);
+  const lineRows = Math.ceil(linesArr.length/COLS);
+  const chartRows = Math.ceil(chartsArr.length/CHART_COLS);
   const linesH = lineRows ? lineRows*rowH + 20 : 0;
   const chartsH = chartRows ? chartRows*chartBlockH : 0;
   let H = headerH + linesH + chartsH + footerH;
@@ -2618,35 +2621,36 @@ async function drawShareCard({ name, subtitle, photo, initials, avatarColor, rat
   let y = headerH;
 
   // stat rows (text) — 2-column grid
-  const colGap = 20;
-  const rowW = (840-colGap)/2, rowX0 = (W-840)/2;
+  const colGap = 14;
+  const gridW = 980;
+  const rowW = (gridW-colGap*(COLS-1))/COLS, rowX0 = (W-gridW)/2;
   linesArr.forEach((line,i)=>{
-    const col = i%2, row = Math.floor(i/2);
+    const col = i%COLS, row = Math.floor(i/COLS);
     const rx = rowX0 + col*(rowW+colGap), ry = headerH + row*rowH;
     ctx.fillStyle = 'rgba(255,255,255,.05)';
-    roundRect(ctx, rx, ry, rowW, rowH-16, 14); ctx.fill();
-    ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, rx, ry, rowW, rowH-16, 14); ctx.stroke();
-    ctx.fillStyle = '#B9C2AC'; ctx.font = '500 22px Heebo'; ctx.textAlign='left';
-    ctx.fillText(line.label.length>26 ? line.label.slice(0,25)+'…' : line.label, rx+22, ry+34);
-    ctx.fillStyle = '#F4F7EE'; ctx.font = '700 30px "IBM Plex Mono"'; ctx.textAlign='left';
-    ctx.fillText(line.value, rx+22, ry+66);
+    roundRect(ctx, rx, ry, rowW, rowH-12, 12); ctx.fill();
+    ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, rx, ry, rowW, rowH-12, 12); ctx.stroke();
+    ctx.fillStyle = '#B9C2AC'; ctx.font = '500 17px Heebo'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(line.label.length>17 ? line.label.slice(0,16)+'…' : line.label, rx+14, ry+28);
+    ctx.fillStyle = '#F4F7EE'; ctx.font = '700 24px "IBM Plex Mono"'; ctx.textAlign='left';
+    ctx.fillText(line.value, rx+14, ry+56);
   });
   y = headerH + linesH;
 
   // embedded chart images (real rendered graphs, copied from the on-screen canvases) — 2-column grid
-  const chartW = (900-colGap)/2, chartX0 = (W-900)/2;
+  const chartW = (gridW-colGap*(CHART_COLS-1))/CHART_COLS, chartX0 = (W-gridW)/2;
   chartsArr.forEach((chart,i)=>{
-    const col = i%2, row = Math.floor(i/2);
+    const col = i%CHART_COLS, row = Math.floor(i/CHART_COLS);
     const chartX = chartX0 + col*(chartW+colGap);
     const rowY = y + row*chartBlockH;
-    ctx.fillStyle = '#F4F7EE'; ctx.font = '700 26px Rubik'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-    ctx.fillText(chart.label.length>20 ? chart.label.slice(0,19)+'…' : chart.label, chartX, rowY+26);
-    const boxY = rowY+42, chartH = 220;
+    ctx.fillStyle = '#F4F7EE'; ctx.font = '700 22px Rubik'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(chart.label.length>18 ? chart.label.slice(0,17)+'…' : chart.label, chartX, rowY+22);
+    const boxY = rowY+36, chartH = 160;
     ctx.fillStyle = 'rgba(255,255,255,.04)';
     roundRect(ctx, chartX, boxY, chartW, chartH, 14); ctx.fill();
     ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, chartX, boxY, chartW, chartH, 14); ctx.stroke();
     if(chart.canvasEl && chart.canvasEl.width>0){
-      const pad = 12;
+      const pad = 10;
       ctx.save();
       roundRect(ctx, chartX, boxY, chartW, chartH, 14); ctx.clip();
       ctx.drawImage(chart.canvasEl, chartX+pad, boxY+pad, chartW-pad*2, chartH-pad*2);

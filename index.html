@@ -5757,7 +5757,7 @@ function attachHandlers(){
     const role = (state.user && state.user.playerRole) || 'field';
     const defs = STAT_DEFS[role] || STAT_DEFS.field;
     const statsArr = state.requests.map(r=>r.stats).filter(Boolean);
-    const summary = computeStatSummary(statsArr, defs).slice(0,4);
+    const summary = computeStatSummary(statsArr, defs);
     const charts = summary
       .map(s=>({ label: s.label, canvasEl: document.getElementById('statchart-'+s.key) }))
       .filter(c=>c.canvasEl);
@@ -5779,7 +5779,7 @@ function attachHandlers(){
     if(!p) return;
     const defs = STAT_DEFS[p.playerRole||'field'] || STAT_DEFS.field;
     const statsArr = (state.playerPublicGames||[]).map(g=>g.stats);
-    const summary = computeStatSummary(statsArr, defs).slice(0,4);
+    const summary = computeStatSummary(statsArr, defs);
     const charts = summary
       .map(s=>({ label: s.label, canvasEl: document.getElementById('pubstatchart-'+s.key) }))
       .filter(c=>c.canvasEl);

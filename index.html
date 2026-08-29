@@ -2,12 +2,16 @@
 <html lang="he" dir="rtl" id="html-root">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>AnzClip — Player Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800;900&family=Heebo:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
+    /* bottom-nav clearance: height + iOS home-indicator inset */
+    --nav-h:64px;
+    --nav-safe:env(safe-area-inset-bottom, 0px);
+    --nav-total:calc(var(--nav-h) + var(--nav-safe));
     --bg:#0B0D09;
     --surface:#181B14;
     --surface-2:#22261A;
@@ -39,7 +43,7 @@
     background:transparent;
     display:flex; flex-direction:column;
     position:relative;
-    padding-bottom:78px;
+    padding-bottom:calc(var(--nav-total) + 12px);
   }
   .mono{font-family:'IBM Plex Mono', monospace;}
   .display{font-family:'Rubik', sans-serif;}
@@ -273,7 +277,7 @@
   textarea:focus, input:focus{outline:2px solid var(--coral-dim); outline-offset:1px;}
 
   .sticky-cta{
-    position:sticky; bottom:0; padding:14px 0 6px; margin-top:18px;
+    position:sticky; bottom:var(--nav-total); padding:14px 0 6px; margin-top:18px;
     background:linear-gradient(to top, var(--bg) 60%, transparent);
   }
   .upload-progress-track{
@@ -392,6 +396,7 @@
   .app-shell{ display:block; }
 
   @media (min-width: 900px){
+    :root{ --nav-h:0px; --nav-safe:0px; }
     body{ align-items:flex-start; }
     #app{ max-width:1180px; padding-bottom:0; }
     .app-shell{ display:grid; grid-template-columns:248px 1fr; align-items:start; min-height:100vh; }
@@ -434,6 +439,7 @@
     position:fixed; bottom:0; left:50%; transform:translateX(-50%);
     width:100%; max-width:480px; background:rgba(24,27,20,.92); backdrop-filter:blur(10px);
     border-top:1px solid rgba(243,241,231,.08); display:flex; z-index:30;
+    padding-bottom:var(--nav-safe); box-sizing:content-box;
   }
   .nav-btn{
     flex:1; background:none; border:none; padding:12px 4px 10px; cursor:pointer;
@@ -447,7 +453,7 @@
     display:flex; align-items:center; justify-content:center; padding:0 4px; line-height:1; box-shadow:0 0 0 2px rgba(24,27,20,.92);
   }
   .toast{
-    position:fixed; bottom:88px; left:50%; transform:translateX(-50%); z-index:50;
+    position:fixed; bottom:calc(var(--nav-total) + 20px); left:50%; transform:translateX(-50%); z-index:50;
     background:var(--chalk); color:#0B0D09; padding:13px 20px; border-radius:100px;
     font-family:'Heebo'; font-weight:700; font-size:13.5px; box-shadow:0 10px 30px rgba(0,0,0,.4);
     display:flex; align-items:center; gap:8px; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
@@ -1651,7 +1657,7 @@ function renderPlayerProfile(){
   if(!p) return renderHome();
   const isPrivate = p.statsPublic===false;
   return `
-    <div style="padding-bottom:100px">
+    <div>
     <div class="coach-top" style="margin-bottom:14px">
       ${personAvatarHtml(p.name, p.photo, 56)}
       <div>
@@ -2328,7 +2334,7 @@ function renderMyClips(){
   if(!clips.length){
     return `<div class="empty-state" style="padding:60px 20px">${icon('clip',34)}<b>${t('noClipsYet')}</b></div>`;
   }
-  return `<div style="padding-bottom:90px">` + clips.map(r=>`
+  return `<div>` + clips.map(r=>`
     <div class="req-card">
       <div class="req-coach" style="margin-bottom:10px">
         ${avatarHtml(r.coach, 34)}
@@ -2704,7 +2710,7 @@ function renderMyStats(){
   }).join('');
   const summaryCard = statSummaryCardHtml(games.map(g=>g.stats), defs);
   return `
-    <div style="padding-bottom:100px">
+    <div>
       <button class="select-btn" style="width:100%;margin-bottom:18px" data-action="share-stats">${icon('share',16)} ${t('shareStats')}</button>
       ${summaryCard}${charts}
     </div>
@@ -3597,7 +3603,7 @@ function renderHome(){
   const u = state.user;
   const age = u ? calcAge(u.dob) : null;
   return `
-    <div style="padding-bottom:90px">
+    <div>
     ${u ? `
       <div class="profile-strip">
         ${u.photo ? `<img class="avatar-img" src="${u.photo}">` : `<div class="avatar" style="background:var(--coral)">${u.name.split(' ').map(n=>n[0]).join('')}</div>`}

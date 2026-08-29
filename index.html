@@ -777,7 +777,9 @@ const STR = {
     callConfirmedTitle:'השיחה נקבעה', callScheduledFor:'מועד השיחה', joinCall:'הצטרפו לשיחה',
     callNotYetOpen:'השיחה תיפתח קרוב למועד שנקבע', waitingForProposal:'ממתינים שהמאמן יציע זמנים',
     waitingForConfirm:'ממתינים שהשחקן יאשר זמן', statusRequested:'התקבלה בקשה', statusProposed:'הוצעו זמנים',
-    statusConfirmed:'מאושר', statusCompleted:'הושלם', statusCancelled:'בוטל',
+    statusConfirmed:'מאושר', statusCompleted:'הושלם', statusCancelled:'בוטל', mentalCallsSummary:'סיכום שיחות',
+    expectedIncomeTitle:'הכנסה צפויה', incomeEarned:'הכנסה מאושרת (שיחות שהושלמו)', incomeUpcoming:'הכנסה צפויה (שיחות מאושרות)',
+    viewMyPublicProfile:'צפו בפרופיל הציבורי שלי', shareMyProfile:'שתפו את הפרופיל שלי', shareProfileTitle:'הפרופיל שלי ב-AnzClip',
     extendCall:'הוסיפו 15 דקות', muteBtn:'השתקה', unmuteBtn:'ביטול השתקה', cameraOffBtn:'כיבוי מצלמה', cameraOnBtn:'הפעלת מצלמה',
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
@@ -950,7 +952,9 @@ const STR = {
     callConfirmedTitle:'Call scheduled', callScheduledFor:'Call time', joinCall:'Join the call',
     callNotYetOpen:'The call will open close to the scheduled time', waitingForProposal:'Waiting for the coach to propose times',
     waitingForConfirm:'Waiting for the player to confirm a time', statusRequested:'Request received', statusProposed:'Times proposed',
-    statusConfirmed:'Confirmed', statusCompleted:'Completed', statusCancelled:'Cancelled',
+    statusConfirmed:'Confirmed', statusCompleted:'Completed', statusCancelled:'Cancelled', mentalCallsSummary:'Calls summary',
+    expectedIncomeTitle:'Expected income', incomeEarned:'Earned (completed calls)', incomeUpcoming:'Upcoming (confirmed calls)',
+    viewMyPublicProfile:'View my public profile', shareMyProfile:'Share my profile', shareProfileTitle:'My profile on AnzClip',
     extendCall:'Add 15 minutes', muteBtn:'Mute', unmuteBtn:'Unmute', cameraOffBtn:'Turn off camera', cameraOnBtn:'Turn on camera',
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
@@ -1038,7 +1042,7 @@ let state = {
   profileDraft: {},
   composeAttachments: [],
   composeClipFile: null,
-  viewingCoach: null,
+  viewingCoach: null, isSelfViewingProfile: false,
   adminPendingCoaches: [],
   adminStats: null,
   activePackages: [],
@@ -1467,6 +1471,27 @@ async function rateCoachRequest(reqId, coachUid, n, reviewText, gkUid, gkName, g
     await db.collection('reviews').add({
       coachUid, gkUid, gkName: gkName||'', gkPhoto: gkPhoto||null,
       rating: n, text: reviewText||'', createdAt: Date.now(), requestId: reqId
+    });
+  }catch(e){ console.error('creating public review failed', e); }
+  return { reqOk, coachOk };
+}
+async function rateCallRequest(callId, coachUid, n, reviewText, gkUid, gkName, gkPhoto){
+  let reqOk = false, coachOk = false;
+  try{
+    await db.collection('callRequests').doc(callId).update({ gkRating: n, reviewText: reviewText||'' });
+    reqOk = true;
+  }catch(e){ console.error('saving rating on call request failed', e); }
+  try{
+    await db.collection('users').doc(coachUid).update({
+      ratingSum: firebase.firestore.FieldValue.increment(n),
+      ratingCount: firebase.firestore.FieldValue.increment(1)
+    });
+    coachOk = true;
+  }catch(e){ console.error('updating coach aggregate rating failed', e); }
+  try{
+    await db.collection('reviews').add({
+      coachUid, gkUid, gkName: gkName||'', gkPhoto: gkPhoto||null,
+      rating: n, text: reviewText||'', createdAt: Date.now(), callId
     });
   }catch(e){ console.error('creating public review failed', e); }
   return { reqOk, coachOk };
@@ -1938,7 +1963,10 @@ function renderViewerHome(){
         <div class="coach-sub">${roleSub}${u.club?' · '+u.club:''}</div>
       </div>
     </div>
-    <button class="select-btn" style="width:100%;margin-bottom:22px" data-action="open-profile">${t('editProfile')}</button>
+    <button class="select-btn" style="width:100%;margin-bottom:10px" data-action="open-profile">${t('editProfile')}</button>
+    ${(u.role==='agent'||u.role==='scout') ? `
+      <button class="select-btn" style="width:100%;margin-bottom:22px" data-action="share-my-contact-profile">${icon('share',16)} ${t('shareMyProfile')}</button>
+    ` : ''}
 
     <div class="field-label" style="margin-top:0">${t('searchCoachLabel')}</div>
     <input class="form-input" id="unified-search-input" type="text" placeholder="${t('searchPlayerPh')}" value="${state.filters.unifiedQuery||''}">
@@ -2162,7 +2190,20 @@ function renderCallRequestDetail(){
       `}
     ` : ''}
 
-    ${r.status==='completed' ? `<div class="empty-state" style="padding:30px 16px">${icon('check',26)}<b>${t('statusCompleted')}</b></div>` : ''}
+    ${r.status==='completed' ? `
+      <div class="empty-state" style="padding:30px 16px">${icon('check',26)}<b>${t('statusCompleted')}</b></div>
+      ${!isCoachView ? (r.gkRating ? `
+        <div class="rating-given">${t('yourRating')}: ${starsHtml(r.gkRating,18)}</div>
+        ${r.reviewText ? `<div class="req-meta" style="margin-top:6px">"${r.reviewText}"</div>` : ''}
+      ` : `
+        <div class="field-label" style="margin-top:14px">${t('rateCoachPrompt')}</div>
+        <div class="star-rating" data-rate-req="${r.id}" data-selected="0">
+          ${[1,2,3,4,5].map(n=>`<button type="button" data-rate-star="${n}">${icon('star',24)}</button>`).join('')}
+        </div>
+        <textarea id="review-text-${r.id}" placeholder="${t('reviewPlaceholder')}" style="margin-top:8px;min-height:60px"></textarea>
+        <button class="btn btn-ghost btn-block" style="margin-top:8px" data-submit-call-rating="${r.id}">${t('submitRating')}</button>
+      `) : ''}
+    ` : ''}
     ${r.status==='cancelled' ? `<div class="empty-state" style="padding:30px 16px">${icon('x',26)}<b>${t('statusCancelled')}</b></div>` : ''}
   `;
 }
@@ -3228,6 +3269,7 @@ function renderHome(){
           <span>${[age!==null?age+' '+t('ageUnit'):null, u.club||null, u.height?u.height+' cm':null].filter(Boolean).join(' · ')||'&nbsp;'}</span>
         </div>
         <button class="demo-link" data-action="open-profile" style="margin:0 0 0 10px">${icon('edit',16)}</button>
+        <button class="demo-link" data-action="share-my-player-profile" style="margin:0 0 0 10px" title="${t('shareMyProfile')}">${icon('share',16)}</button>
         <button class="demo-link" data-action="switch-user" style="margin:0">${t('switchUser')}</button>
       </div>
     ` : ''}
@@ -3577,7 +3619,7 @@ function renderCoachProfile(){
           <div class="summary-row"><span>${p.sessionCount} ${t('mentalPackagesTitle')}</span><span class="mono">₪${p.price}</span></div>
         `).join('')}
       </div>
-      ${state.role!=='viewer' ? `<button class="btn btn-primary btn-block" style="margin-top:14px" data-action="open-request-call">${t('requestCall')}</button>` : ''}
+      ${(state.role!=='viewer' && !state.isSelfViewingProfile) ? `<button class="btn btn-primary btn-block" style="margin-top:14px" data-action="open-request-call">${t('requestCall')}</button>` : ''}
     ` : ''}
 
     ${(!c.isFullyBooked && state.role!=='viewer') ? `
@@ -3638,7 +3680,11 @@ function renderCoachProfile(){
       <button class="demo-link" data-action="show-more-reviews" style="display:block;margin:6px auto 0">${t('showMoreReviews')}</button>
     ` : ''}
 
-    ${state.role==='viewer' ? `
+    ${state.isSelfViewingProfile ? `
+      <div class="sticky-cta">
+        <button class="btn btn-primary btn-block" data-action="share-my-coach-profile">${icon('share',16)} ${t('shareMyProfile')}</button>
+      </div>
+    ` : state.role==='viewer' ? `
       <div class="req-meta" style="text-align:center;margin-top:22px">${t('viewerReadOnlyNote')}</div>
     ` : `
       <div class="sticky-cta">
@@ -3929,8 +3975,23 @@ function renderCoachDash(){
   if(!coach){
     return `<div class="empty-state">${icon('clip',36)}<b>${t('noIncomingTitle')}</b></div>`;
   }
+  const isMental = (coach.coachTypes||[]).includes('mental');
+  const callsSummary = isMental ? (()=>{
+    const calls = state.callRequests || [];
+    const completed = calls.filter(c=>c.status==='completed').length;
+    const upcoming = calls.filter(c=>c.status==='confirmed').length;
+    return `
+      <div class="section-title" style="margin-top:0">${t('mentalCallsSummary')}</div>
+      <div class="section-line"></div>
+      <div style="display:flex;gap:10px;margin-bottom:22px">
+        <div class="stat-chip"><b class="mono">${completed}</b><span>${t('statusCompleted')}</span></div>
+        <div class="stat-chip"><b class="mono">${upcoming}</b><span>${t('statusConfirmed')}</span></div>
+      </div>
+    `;
+  })() : '';
   const mine = [...state.requests].sort((a,b)=>b.createdAt-a.createdAt);
   return `
+    ${callsSummary}
     ${mine.length===0 ? `
       <div class="empty-state">${icon('clip',36)}<b>${t('noIncomingTitle')}</b><span>${t('noIncomingSub')(coach.name)}</span></div>
     ` : mine.map(r=>{
@@ -4111,6 +4172,24 @@ function renderProfile(){
     <div class="field-label">${t('fieldEmail')}</div>
     <input class="form-input" type="email" value="${state.user.email}" disabled style="opacity:.55;cursor:not-allowed">
     <div class="photo-hint" style="margin:6px 0 0">${t('emailFixedNote')}</div>
+
+    ${(isCoach && (state.user.coachTypes||[]).includes('mental')) ? (()=>{
+      const calls = state.callRequests || [];
+      const earned = calls.filter(c=>c.status==='completed').reduce((s,c)=>s+(c.price||0),0);
+      const upcoming = calls.filter(c=>c.status==='confirmed').reduce((s,c)=>s+(c.price||0),0);
+      return `
+        <div class="section-title">${t('expectedIncomeTitle')}</div>
+        <div class="section-line"></div>
+        <div class="summary-card" style="margin-bottom:18px">
+          <div class="summary-row"><span>${t('incomeEarned')}</span><span class="mono">₪${earned}</span></div>
+          <div class="summary-row"><span>${t('incomeUpcoming')}</span><span class="mono">₪${upcoming}</span></div>
+        </div>
+      `;
+    })() : ''}
+
+    ${isCoach ? `
+      <button class="select-btn" style="width:100%;margin-bottom:18px" data-action="view-my-public-profile">${icon('star',16)} ${t('viewMyPublicProfile')}</button>
+    ` : ''}
 
     ${isCoach ? `
       <div class="field-label">${t('country')}</div>
@@ -4381,6 +4460,7 @@ function attachHandlers(){
         if(!coach) return;
         state.viewingCoach = coach;
         state.selectedCoach = coach;
+        state.isSelfViewingProfile = false;
         state.draft.wantsHighlightClip = false;
         state.draft.paymentChoice = null;
         state.reviewsExpanded = false;
@@ -4960,6 +5040,50 @@ function attachHandlers(){
       state.profileDraft = { ...state.user };
       go('profile');
     });
+  });
+  app.querySelector('[data-action="view-my-public-profile"]')?.addEventListener('click', async ()=>{
+    const self = buildCoachProfile({uid: state.user.uid, ...state.user}, 0);
+    state.viewingCoach = self;
+    state.selectedCoach = self;
+    state.isSelfViewingProfile = true;
+    state.reviewsExpanded = false;
+    state.coachReviews = await loadCoachReviews(state.user.uid);
+    state.coachClips = await loadCoachClips(state.user.uid);
+    go('coach-profile');
+  });
+  app.querySelector('[data-action="share-my-coach-profile"]')?.addEventListener('click', ()=>{
+    const c = state.viewingCoach;
+    if(!c) return;
+    const avgRating = c.rating!=null ? c.rating.toFixed(1) : null;
+    const lines = [
+      `👤 ${c.name}`,
+      (c.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · '),
+      avgRating ? `⭐ ${avgRating} (${c.ratingCount} ${t('reviewsTitle')})` : null,
+    ].filter(Boolean);
+    shareContent(t('shareProfileTitle'), `${t('shareProfileTitle')}\n\n${lines.join('\n')}`);
+  });
+  app.querySelector('[data-action="share-my-contact-profile"]')?.addEventListener('click', ()=>{
+    const u = state.user;
+    const lines = [
+      `👤 ${u.name}`,
+      u.role==='scout' ? t('registerScoutTitle') : t('registerAgentTitle'),
+      u.years ? `${u.years} ${t('yearsExp')}` : null,
+      u.club ? `${t('representingClubLabel')}: ${u.club}` : null,
+    ].filter(Boolean);
+    shareContent(t('shareProfileTitle'), `${t('shareProfileTitle')}\n\n${lines.join('\n')}`);
+  });
+  app.querySelector('[data-action="share-my-player-profile"]')?.addEventListener('click', ()=>{
+    const u = state.user;
+    const role = u.playerRole || 'field';
+    const defs = STAT_DEFS[role] || STAT_DEFS.field;
+    const statsArr = state.requests.map(r=>r.stats).filter(Boolean);
+    const summary = computeStatSummary(statsArr, defs).slice(0,3);
+    const lines = [
+      `👤 ${u.name}`,
+      role==='goalkeeper' ? t('playerRoleGK') : t('playerRoleField'),
+      ...summary.map(s=>`${s.label}: ${s.display}`),
+    ].filter(Boolean);
+    shareContent(t('shareProfileTitle'), `${t('shareProfileTitle')}\n\n${lines.join('\n')}`);
   });
   app.querySelector('[data-action="toggle-fully-booked"]')?.addEventListener('click', async ()=>{
     const newVal = !state.user.isFullyBooked;
@@ -5611,6 +5735,7 @@ function attachHandlers(){
       if(!coach) return;
       state.viewingCoach = coach;
       state.selectedCoach = coach;
+      state.isSelfViewingProfile = false;
       state.draft.wantsHighlightClip = false;
       state.draft.paymentChoice = null;
       state.reviewsExpanded = false;
@@ -5794,6 +5919,24 @@ function attachHandlers(){
       req.reviewText = reviewText;
       showToast(t('ratingSaved'));
       if(!result.coachOk) console.warn('Rating saved on the request, but updating the coach\'s aggregate rating failed (check Firestore rules for the users collection).');
+      render();
+    });
+  });
+  app.querySelectorAll('[data-submit-call-rating]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const callId = btn.dataset.submitCallRating;
+      const call = state.viewingCallRequest && state.viewingCallRequest.id===callId ? state.viewingCallRequest : (state.callRequests||[]).find(c=>c.id===callId);
+      if(!call) return;
+      const wrap = app.querySelector(`[data-rate-req="${callId}"]`);
+      const n = parseInt(wrap?.dataset.selected||'0', 10);
+      if(!n){ showToast(t('requiredAnalysis')); return; }
+      const reviewText = app.querySelector(`#review-text-${callId}`)?.value?.trim() || '';
+      const result = await rateCallRequest(callId, call.coachUid, n, reviewText, state.user.uid, state.user.name, state.user.photo);
+      if(!result.reqOk){ showToast(t('saveError')); return; }
+      call.gkRating = n;
+      call.reviewText = reviewText;
+      if(state.viewingCallRequest) state.viewingCallRequest = call;
+      showToast(t('ratingSaved'));
       render();
     });
   });

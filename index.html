@@ -184,6 +184,27 @@
     background:rgba(255,59,48,.9); color:#fff; font-family:'Heebo'; font-weight:700; font-size:12px;
     padding:5px 12px; border-radius:100px; display:flex; align-items:center; gap:6px;
   }
+  .share-menu-overlay{
+    position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.6);
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .share-menu-sheet{
+    width:100%; max-width:480px; background:var(--surface); border-radius:22px 22px 0 0;
+    padding:20px 20px 28px; max-height:80vh; overflow-y:auto;
+  }
+  .share-menu-title{ font-family:'Rubik'; font-weight:700; font-size:16px; margin-bottom:14px; text-align:center; }
+  .share-menu-preview{ width:100%; max-height:260px; object-fit:contain; border-radius:14px; margin-bottom:16px; background:#000; }
+  .share-menu-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-bottom:18px; }
+  .share-menu-item{
+    display:flex; flex-direction:column; align-items:center; gap:8px; padding:14px 6px;
+    background:var(--surface-2); border-radius:14px; text-decoration:none; color:var(--chalk);
+    font-family:'Heebo'; font-size:12px; font-weight:600; text-align:center;
+  }
+  .share-menu-dot{ width:34px; height:34px; border-radius:50%; background:var(--pcolor,#0B6E4F); display:block; }
+  .share-menu-close{
+    width:100%; background:none; border:1.5px solid rgba(243,241,231,.15); color:var(--chalk-dim);
+    font-family:'Heebo'; font-weight:700; font-size:14px; padding:12px; border-radius:12px; cursor:pointer;
+  }
   .clip-thumb-card{position:relative; border-radius:14px; overflow:hidden; background:#000; aspect-ratio:1/1; cursor:pointer;}
   .clip-thumb-card video{width:100%; height:100%; object-fit:cover; display:block;}
   .clip-thumb-overlay{
@@ -781,6 +802,7 @@ const STR = {
     expectedIncomeTitle:'הכנסה צפויה', incomeEarned:'הכנסה מאושרת (שיחות שהושלמו)', incomeUpcoming:'הכנסה צפויה (שיחות מאושרות)',
     viewMyPublicProfile:'צפו בפרופיל הציבורי שלי', shareMyProfile:'שתפו את הפרופיל שלי', shareProfileTitle:'הפרופיל שלי ב-AnzClip',
     imageSavedNote:'התמונה נשמרה — שתפו אותה מגלריית התמונות', gamesAnalyzedLabel:'משחקים שנותחו',
+    shareViaTitle:'שיתוף דרך', closeMenu:'סגירה',
     extendCall:'הוסיפו 15 דקות', muteBtn:'השתקה', unmuteBtn:'ביטול השתקה', cameraOffBtn:'כיבוי מצלמה', cameraOnBtn:'הפעלת מצלמה',
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
@@ -957,6 +979,7 @@ const STR = {
     expectedIncomeTitle:'Expected income', incomeEarned:'Earned (completed calls)', incomeUpcoming:'Upcoming (confirmed calls)',
     viewMyPublicProfile:'View my public profile', shareMyProfile:'Share my profile', shareProfileTitle:'My profile on AnzClip',
     imageSavedNote:'Image saved — share it from your photo gallery', gamesAnalyzedLabel:'Games analyzed',
+    shareViaTitle:'Share via', closeMenu:'Close',
     extendCall:'Add 15 minutes', muteBtn:'Mute', unmuteBtn:'Unmute', cameraOffBtn:'Turn off camera', cameraOnBtn:'Turn on camera',
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
@@ -2441,7 +2464,10 @@ async function drawShareCard({ name, subtitle, photo, initials, avatarColor, rat
 async function shareCardAsImage(title, text, cardConfig){
   let blob = null;
   try{ blob = await drawShareCard(cardConfig); }catch(e){ console.error('failed to draw share card', e); }
-  if(blob && navigator.canShare){
+  if(!blob){ await shareContent(title, text); return; }
+
+  // Tier 1: native OS share sheet WITH the image file attached (best case — mainly Android/iOS)
+  if(navigator.canShare){
     try{
       const file = new File([blob], 'anzclip-profile.png', {type:'image/png'});
       if(navigator.canShare({ files:[file] })){
@@ -2450,20 +2476,70 @@ async function shareCardAsImage(title, text, cardConfig){
       }
     }catch(e){
       if(e && e.name==='AbortError') return;
-      console.error('image share failed, falling back', e);
+      console.error('image file share failed, falling back', e);
     }
   }
-  if(blob){
-    // fallback: download the image directly
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'anzclip-profile.png';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url), 8000);
-    showToast(t('imageSavedNote'));
+
+  // Tier 2 + 3 need a real public URL for the image, so upload it once
+  const file = new File([blob], `anzclip-share-${Date.now()}.png`, {type:'image/png'});
+  const imageUrl = await uploadFileToStorage(file, 'shares');
+
+  if(imageUrl && navigator.share){
+    try{
+      await navigator.share({ title, text, url: imageUrl });
+      return;
+    }catch(e){
+      if(e && e.name==='AbortError') return;
+      console.error('url share failed, falling back to platform menu', e);
+    }
+  }
+
+  if(imageUrl){
+    showSharePlatformMenu(title, text, imageUrl);
     return;
   }
-  await shareContent(title, text);
+
+  // last resort: download the image directly
+  const localUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = localUrl; a.download = 'anzclip-profile.png';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(localUrl), 8000);
+  showToast(t('imageSavedNote'));
+}
+function showSharePlatformMenu(title, text, url){
+  const existing = document.getElementById('share-platform-overlay');
+  if(existing) existing.remove();
+
+  const platforms = [
+    { key:'whatsapp', label:'WhatsApp', color:'#25D366', href:`https://wa.me/?text=${encodeURIComponent(text+'\n'+url)}` },
+    { key:'facebook', label:'Facebook', color:'#1877F2', href:`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
+    { key:'twitter', label:'X / Twitter', color:'#000000', href:`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}` },
+    { key:'telegram', label:'Telegram', color:'#26A5E4', href:`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}` },
+    { key:'email', label:'Email', color:'#7E8A73', href:`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text+'\n\n'+url)}` },
+  ];
+
+  const overlay = document.createElement('div');
+  overlay.id = 'share-platform-overlay';
+  overlay.className = 'share-menu-overlay';
+  overlay.innerHTML = `
+    <div class="share-menu-sheet">
+      <div class="share-menu-title">${t('shareViaTitle')}</div>
+      <img src="${url}" class="share-menu-preview">
+      <div class="share-menu-grid">
+        ${platforms.map(p=>`
+          <a href="${p.href}" target="_blank" rel="noopener" class="share-menu-item" style="--pcolor:${p.color}">
+            <span class="share-menu-dot"></span>${p.label}
+          </a>
+        `).join('')}
+      </div>
+      <button type="button" class="share-menu-close" id="share-menu-close-btn">${t('closeMenu')}</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const close = ()=> overlay.remove();
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) close(); });
+  document.getElementById('share-menu-close-btn')?.addEventListener('click', close);
 }
 function computeStatSummary(statsArray, defs){
   return defs.map(s=>{

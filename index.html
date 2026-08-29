@@ -875,6 +875,7 @@ const STR = {
     clipOnlyNote:'הזמנה זו כוללת קליפ ביצועים בלבד — ללא ניתוח כתוב.',
     cancelRequestBtn:'בטלו את הבקשה', confirmCancelRequest:'לבטל את הבקשה? השחקן יקבל על כך הודעה.', requestCancelled:'הבקשה בוטלה',
     cancelReasonPrompt:'מה הסיבה לביטול? ההודעה תישלח לשחקן:', cancelReasonRequired:'יש לכתוב סיבה לביטול', cancelReasonLabel:'סיבת הביטול',
+    viewAnalysisBtn:'לחץ לצפייה בניתוח', hideAnalysisBtn:'הסתירו את הניתוח',
     myReportsTitle:'הדוחות שלי', openReportBtn:'פתחו את הדוח המלא', reportFrom:'דוח מאת ', noReportsYet:'עדיין אין דוחות', analysisNoLimitHint:'אין הגבלת אורך — כתבו כמה שצריך.', reportTitle:'דוח ניתוח ביצועים',
     searchTitle:'חיפוש', searchAllPh:'הקלידו שם של שחקן או בעל מקצוע...', searchStartHint:'הקלידו שם כדי לחפש שחקנים, מאמנים, אנליסטים, סוכנים וסקאוטים.', searchNoResults:'לא נמצאו תוצאות',
     shareProfileLinkLabel:'לצפייה בפרופיל המלא:',
@@ -1073,6 +1074,7 @@ const STR = {
     clipOnlyNote:'This order is for a highlight clip only — no written analysis.',
     cancelRequestBtn:'Cancel this request', confirmCancelRequest:'Cancel this request? The player will be notified.', requestCancelled:'Request cancelled',
     cancelReasonPrompt:'Why are you cancelling? This message is sent to the player:', cancelReasonRequired:'Please write a reason', cancelReasonLabel:'Reason for cancellation',
+    viewAnalysisBtn:'View the analysis', hideAnalysisBtn:'Hide the analysis',
     myReportsTitle:'My reports', openReportBtn:'Open the full report', reportFrom:'Report by ', noReportsYet:'No reports yet', analysisNoLimitHint:'No length limit — write as much as you need.', reportTitle:'Performance analysis report',
     searchTitle:'Search', searchAllPh:'Type a player or professional name...', searchStartHint:'Type a name to search players, coaches, analysts, agents and scouts.', searchNoResults:'No results found',
     shareProfileLinkLabel:'See the full profile:',
@@ -1145,7 +1147,7 @@ let state = {
   profileDraft: {},
   composeAttachments: [],
   composeClipFile: null,
-  viewingCoach: null, isSelfViewingProfile: false,
+  viewingCoach: null, isSelfViewingProfile: false, expandedAnalysisId: null,
   adminPendingCoaches: [],
   adminStats: null,
   activePackages: [],
@@ -4747,14 +4749,32 @@ function renderCoachDash(){
               <div class="countdown" data-countdown="${r.deadline}">${timeLeftStr(r.deadline)}</div>
               <button class="btn btn-primary btn-block" style="margin-top:10px" data-open-compose="${r.id}">${t('writeAnalysis')}</button>
               <button class="select-btn" style="width:100%;margin-top:8px" data-cancel-request="${r.id}">${t('cancelRequestBtn')}</button>
-            ` : `
-              <div class="analysis-box">
-              <div class="analysis-score">${icon('star',20)}<b>${r.score}/10</b><span style="font-size:12px;color:var(--muted)">${t('theAnalysisSent')}</span></div>
-              <div class="analysis-item"><b>${t('coachAnalysisTitle')}</b><span>${r.analysis}</span></div>
-              ${attachmentsViewHtml(r.attachments)}
-            </div>
-            ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
-          `}
+            ` : (()=>{
+              const open = state.expandedAnalysisId===r.id;
+              const preview = (r.analysis||'').replace(/\s+/g,' ').trim();
+              return `
+                <div class="summary-card" style="margin-bottom:10px">
+                  <div class="summary-row">
+                    <span>${r.score!=null?`${icon('star',15)} ${r.score}/10`:t('theAnalysisSent')}</span>
+                    <span class="req-meta" style="max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview.slice(0,70)}${preview.length>70?'…':''}</span>
+                  </div>
+                </div>
+                <button class="select-btn" style="width:100%" data-toggle-analysis="${r.id}">${icon('file',16)} ${open?t('hideAnalysisBtn'):t('viewAnalysisBtn')}</button>
+                ${open ? `
+                  <div class="analysis-box" style="margin-top:10px">
+                    ${r.score!=null?`<div class="analysis-score">${icon('star',20)}<b>${r.score}/10</b><span style="font-size:12px;color:var(--muted)">${t('theAnalysisSent')}</span></div>`:''}
+                    <div class="analysis-item"><b>${t('coachAnalysisTitle')}</b><span>${r.analysis||''}</span></div>
+                    ${attachmentsViewHtml(r.attachments)}
+                  </div>
+                  ${statsViewHtml(r.stats, r.gkPlayerRole||'field')}
+                  ${r.reportUrl ? `
+                    <a class="select-btn" href="${r.reportUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;width:100%;margin-top:10px">
+                      ${icon('file',16)} ${t('openReportBtn')}
+                    </a>
+                  ` : ''}
+                ` : ''}
+              `;
+            })()}
         `}
         </div>
       `;
@@ -6076,6 +6096,13 @@ function attachHandlers(){
   });
 
   // coach dashboard: open compose
+  app.querySelectorAll('[data-toggle-analysis]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const id = el.dataset.toggleAnalysis;
+      state.expandedAnalysisId = state.expandedAnalysisId===id ? null : id;
+      render();
+    });
+  });
   app.querySelectorAll('[data-open-compose]').forEach(el=>{
     el.addEventListener('click', ()=>{
       state.composeId = el.dataset.openCompose;

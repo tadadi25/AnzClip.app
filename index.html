@@ -844,6 +844,7 @@ const STR = {
     recordCall:'הקליטו שיחה', recordingLive:'מוקלט', recordingSaved:'ההקלטה נשמרה במחשב שלכם',
     recordingNotSupported:'הדפדפן הזה לא תומך בהקלטת שיחות', noRecordingYet:'אין הקלטה עדיין',
     mentalPackagesTitle:'חבילות שיחות', addMentalPackage:'הוסיפו חבילת שיחות', sessionCountLabel:'מספר שיחות',
+    pkgOfCallsPre:'חבילת', pkgOfCallsPost:'שיחות',
     priceFrom:'החל מ-', videoDuration:'אורך סרטון', totalDuration:'משך כולל', selectedVideos:'סרטונים שנבחרו',
     addVideo:'הוסיפו סרטון', addMoreVideos:'הוסיפו עוד סרטון', priceForYourVideo:'מחיר לניתוח', upTo:'עד', minutesUnit:'דקות',
     packagesTitle:'חבילות', addPackage:'הוסיפו חבילה', removePackage:'הסירו',
@@ -885,7 +886,7 @@ const STR = {
     uploadingAttachments:'מעלים קבצים...', attachmentsTitle:'קבצים מצורפים', removeAttachment:'הסירו',
     someAttachmentsFailed:'הניתוח נשלח, אך חלק מהקבצים המצורפים לא הועלו בהצלחה',
     coachTypeTitle:'סוג מאמן', coachTypeGK:'מאמן שוערים', coachTypeGeneral:'מאמן כללי', coachTypeAnalyst:'אנליסט', coachTypeMental:'מאמן מנטלי',
-    coachTypeHint:'אפשר לסמן כמה סוגים',
+    coachTypeHint:'בחרו סוג אחד — לכל מקצוע חשבון נפרד',
     generalSpecTitle:'התמחות', fieldPositions:'עמדות משחק', positionsHint:'אפשר לסמן כמה עמדות',
     playerRoleTitle:'תפקיד', playerRoleGK:'שוער', playerRoleField:'שחקן שדה', playerRoleHint:'זה קובע אילו מאמנים תראו',
     requiredPlayerRole:'יש לבחור אם אתם שוער או שחקן שדה',
@@ -1030,6 +1031,7 @@ const STR = {
     recordCall:'Record call', recordingLive:'Recording', recordingSaved:'Recording saved to your device',
     recordingNotSupported:'This browser does not support call recording', noRecordingYet:'No recording yet',
     mentalPackagesTitle:'Call packages', addMentalPackage:'Add a call package', sessionCountLabel:'Number of calls',
+    pkgOfCallsPre:'Package of', pkgOfCallsPost:'calls',
     priceFrom:'From ', videoDuration:'Video length', totalDuration:'Total length', selectedVideos:'Selected videos',
     addVideo:'Add video', addMoreVideos:'Add another video', priceForYourVideo:'Price for this analysis', upTo:'Up to', minutesUnit:'min',
     packagesTitle:'Packages', addPackage:'Add package', removePackage:'Remove',
@@ -1071,7 +1073,7 @@ const STR = {
     uploadingAttachments:'Uploading files...', attachmentsTitle:'Attached files', removeAttachment:'Remove',
     someAttachmentsFailed:"Analysis sent, but some attached files failed to upload",
     coachTypeTitle:'Coach type', coachTypeGK:'Goalkeeper coach', coachTypeGeneral:'General coach', coachTypeAnalyst:'Analyst', coachTypeMental:'Mental coach',
-    coachTypeHint:'You can select more than one',
+    coachTypeHint:'Pick one type — each profession needs its own account',
     generalSpecTitle:'Specialization', fieldPositions:'Playing positions', positionsHint:'You can select more than one',
     playerRoleTitle:'Role', playerRoleGK:'Goalkeeper', playerRoleField:'Field player', playerRoleHint:'This determines which coaches you\'ll see',
     requiredPlayerRole:'Please choose whether you are a goalkeeper or a field player',
@@ -2214,7 +2216,7 @@ function renderRequestCall(){
   if(choice.startsWith('pkg:')){
     const pid = choice.slice(4);
     const pkg = (c.mentalPackages||[]).find(p=>p.id===pid);
-    if(pkg){ choiceSummary = `${pkg.sessionCount} ${t('mentalPackagesTitle')} — ₪${pkg.price}`; coachAmount = pkg.price; }
+    if(pkg){ choiceSummary = `${t('pkgOfCallsPre')} ${pkg.sessionCount} ${t('pkgOfCallsPost')} — ₪${pkg.price}`; coachAmount = pkg.price; }
   }
   const fee = computeFee(coachAmount);
   return `
@@ -2229,7 +2231,7 @@ function renderRequestCall(){
     <div class="field-label" style="margin-top:0">${t('requestCallTitle')}</div>
     <div class="chip-row">
       <div class="chip ${choice==='single'?'active':''}" data-call-payment-choice="single">${t('requestCall')} (₪${c.mentalSessionPrice})</div>
-      ${(c.mentalPackages||[]).map(p=>`<div class="chip ${choice==='pkg:'+p.id?'active':''}" data-call-payment-choice="pkg:${p.id}">${p.sessionCount} ${t('mentalPackagesTitle')} (₪${p.price})</div>`).join('')}
+      ${(c.mentalPackages||[]).map(p=>`<div class="chip ${choice==='pkg:'+p.id?'active':''}" data-call-payment-choice="pkg:${p.id}">${t('pkgOfCallsPre')} ${p.sessionCount} ${t('pkgOfCallsPost')} (₪${p.price})</div>`).join('')}
     </div>
 
     <div class="summary-card" style="margin-top:16px">
@@ -3376,6 +3378,9 @@ function renderSignupMental(){
 function renderSignupCoach(){
   const d = state.signupDraft;
   const specs = d.specialties || [];
+  // one profession per account: a mental coach has no video pricing or turnaround
+  const suTypes = d.coachTypes || ['goalkeeper'];
+  const suMentalOnly = suTypes.length>0 && suTypes.every(ct=>ct==='mental');
   return `
     <div class="onboard" style="padding-top:30px">
       <div class="onboard-top">
@@ -3433,13 +3438,15 @@ function renderSignupCoach(){
           `).join('')}
         </div>
 
-        <div class="field-label">${t('pricingByGame')}</div>
-        <div class="field-label" style="margin-top:0;font-weight:400;font-size:12.5px">${t('singleGamePriceLabel')}</div>
-        <input class="form-input" id="su-single-price" type="number" min="0" value="${d.singleGamePrice||''}">
+        ${!suMentalOnly ? `
+          <div class="field-label">${t('pricingByGame')}</div>
+          <div class="field-label" style="margin-top:0;font-weight:400;font-size:12.5px">${t('singleGamePriceLabel')}</div>
+          <input class="form-input" id="su-single-price" type="number" min="0" value="${d.singleGamePrice||''}">
 
-        <div class="field-label">${t('packagesTitle')}</div>
-        <div id="su-packages-list">${packageEditorRowsHtml(d.packages||[])}</div>
-        <button type="button" class="demo-link" data-add-package="su" style="display:block;margin-top:4px">+ ${t('addPackage')}</button>
+          <div class="field-label">${t('packagesTitle')}</div>
+          <div id="su-packages-list">${packageEditorRowsHtml(d.packages||[])}</div>
+          <button type="button" class="demo-link" data-add-package="su" style="display:block;margin-top:4px">+ ${t('addPackage')}</button>
+        ` : ''}
 
         ${(d.coachTypes||[]).includes('mental') ? `
           <div class="field-label" style="margin-top:22px">${t('mentalPricingTitle')}</div>
@@ -3455,25 +3462,29 @@ function renderSignupCoach(){
           <button type="button" class="demo-link" data-add-mental-package="su" style="display:block;margin-top:4px">+ ${t('addMentalPackage')}</button>
         ` : ''}
 
-        <div class="field-label" style="margin-top:18px">${t('fieldTurnaround')}</div>
-        <select class="form-input" id="su-turnaround">
-          ${TURNAROUND_OPTIONS.map(h=>`<option value="${h}" ${String(d.turnaround)===String(h)?'selected':''}>${fmtHours(h)}</option>`).join('')}
-        </select>
+        ${!suMentalOnly ? `
+          <div class="field-label" style="margin-top:18px">${t('fieldTurnaround')}</div>
+          <select class="form-input" id="su-turnaround">
+            ${TURNAROUND_OPTIONS.map(h=>`<option value="${h}" ${String(d.turnaround)===String(h)?'selected':''}>${fmtHours(h)}</option>`).join('')}
+          </select>
+        ` : ''}
 
         <div class="field-label">${t('fieldAbout')}</div>
         <textarea id="su-about" placeholder="${t('aboutCoachPh')}">${d.about||''}</textarea>
 
-        <div class="field-label">${t('highlightClipTitle')}</div>
-        <div class="chip-row" id="su-clip-toggle">
-          <div class="chip ${d.highlightClipEnabled?'active':''}" data-su-clip-toggle="1">${t('highlightClipOfferLabel')}</div>
-        </div>
-        ${d.highlightClipEnabled ? `
-          <div class="field-label">${t('highlightClipPriceLabel')}</div>
-          <input class="form-input" id="su-clip-price" type="number" min="0" value="${d.highlightClipPrice||''}">
-          <div class="field-label">${t('highlightClipTurnaroundLabel')}</div>
-          <select class="form-input" id="su-clip-turnaround">
-            ${TURNAROUND_OPTIONS.map(h=>`<option value="${h}" ${String(d.highlightClipTurnaround)===String(h)?'selected':''}>${fmtHours(h)}</option>`).join('')}
-          </select>
+        ${!suMentalOnly ? `
+          <div class="field-label">${t('highlightClipTitle')}</div>
+          <div class="chip-row" id="su-clip-toggle">
+            <div class="chip ${d.highlightClipEnabled?'active':''}" data-su-clip-toggle="1">${t('highlightClipOfferLabel')}</div>
+          </div>
+          ${d.highlightClipEnabled ? `
+            <div class="field-label">${t('highlightClipPriceLabel')}</div>
+            <input class="form-input" id="su-clip-price" type="number" min="0" value="${d.highlightClipPrice||''}">
+            <div class="field-label">${t('highlightClipTurnaroundLabel')}</div>
+            <select class="form-input" id="su-clip-turnaround">
+              ${TURNAROUND_OPTIONS.map(h=>`<option value="${h}" ${String(d.highlightClipTurnaround)===String(h)?'selected':''}>${fmtHours(h)}</option>`).join('')}
+            </select>
+          ` : ''}
         ` : ''}
 
         <div class="field-label">${t('fieldCertificate')}</div>
@@ -3913,8 +3924,14 @@ function renderCoaches(){
     </div>
 
     ${list.map(c=>{
+      const cTypes = c.coachTypes || [];
+      const mentalOnly = cTypes.length>0 && cTypes.every(ct=>ct==='mental');
       const cheapestPkg = (c.packages||[]).slice().sort((a,b)=>a.price-b.price)[0];
-      const priceBlockHtml = `
+      const cheapestCallPkg = (c.mentalPackages||[]).slice().sort((a,b)=>a.price-b.price)[0];
+      const priceBlockHtml = mentalOnly ? `
+          <div class="price">₪${c.mentalSessionPrice||0}</div>
+          <div class="turnaround">${t('requestCall')}${cheapestCallPkg?` · ${t('mentalPackagesTitle')} ${t('priceFrom')}₪${cheapestCallPkg.price}`:''}</div>
+      ` : `
           <div class="price">₪${c.singleGamePrice}</div>
           <div class="turnaround">${t('singleGameOption')}${cheapestPkg?` · ${t('packagesTitle')} ${t('priceFrom')}₪${cheapestPkg.price}`:''}</div>
       `;
@@ -3934,8 +3951,10 @@ function renderCoaches(){
           ${(c.coachTypes||[]).map(ct=>`<div class="badge spec">${COACH_TYPE_LABEL[state.lang][ct]}</div>`).join('')}
           ${(c.coachTypes||[]).includes('general') ? (c.generalSpecialties||[]).map(s=>`<div class="badge spec">${GENERAL_SPEC_LABEL[state.lang][s]}</div>`).join('') : ''}
           ${c.specialties.map(s=>`<div class="badge">${SPEC_LABEL[state.lang][s]}</div>`).join('')}
-          <div class="badge">${t('deliveryIn')} ${fmtHours(c.turnaround)}</div>
-          ${c.highlightClipEnabled ? `<div class="badge">${t('highlightClipTitle')} +₪${c.highlightClipPrice}</div>` : ''}
+          ${mentalOnly
+            ? `<div class="badge">${t('mentalDurationLabel')} ${c.mentalCallDuration||30} ${t('minutesUnit')}</div>`
+            : `<div class="badge">${t('deliveryIn')} ${fmtHours(c.turnaround)}</div>`}
+          ${!mentalOnly && c.highlightClipEnabled ? `<div class="badge">${t('highlightClipTitle')} +₪${c.highlightClipPrice}</div>` : ''}
           ${c.isFullyBooked ? `<div class="badge" style="background:rgba(198,255,77,.12);color:var(--coral-dim);border-color:rgba(198,255,77,.25)">${t('fullyBookedBadge')}</div>` : ''}
         </div>
         <div class="coach-bottom">
@@ -3991,8 +4010,10 @@ function renderCoachProfile(){
       ${(c.coachTypes||[]).map(ct=>`<div class="badge spec">${COACH_TYPE_LABEL[state.lang][ct]}</div>`).join('')}
       ${(c.coachTypes||[]).includes('general') ? (c.generalSpecialties||[]).map(s=>`<div class="badge spec">${GENERAL_SPEC_LABEL[state.lang][s]}</div>`).join('') : ''}
       ${c.specialties.map(s=>`<div class="badge">${SPEC_LABEL[state.lang][s]}</div>`).join('')}
-      <div class="badge">${t('deliveryIn')} ${fmtHours(c.turnaround)}</div>
-      ${c.highlightClipEnabled ? `<div class="badge">${t('highlightClipTitle')} +₪${c.highlightClipPrice}</div>` : ''}
+      ${isMentalOnly
+        ? `<div class="badge">${t('mentalDurationLabel')} ${c.mentalCallDuration||30} ${t('minutesUnit')}</div>`
+        : `<div class="badge">${t('deliveryIn')} ${fmtHours(c.turnaround)}</div>`}
+      ${!isMentalOnly && c.highlightClipEnabled ? `<div class="badge">${t('highlightClipTitle')} +₪${c.highlightClipPrice}</div>` : ''}
       ${c.isFullyBooked ? `<div class="badge" style="background:rgba(198,255,77,.12);color:var(--coral-dim);border-color:rgba(198,255,77,.25)">${t('fullyBookedBadge')}</div>` : ''}
     </div>
 
@@ -4009,7 +4030,7 @@ function renderCoachProfile(){
         <div class="summary-row"><span>${t('mentalDurationLabel')}</span><span class="mono">${c.mentalCallDuration} ${t('minutesUnit')}</span></div>
         <div class="summary-row"><span>${t('mentalSessionPriceLabel')}</span><span class="mono">₪${c.mentalSessionPrice}</span></div>
         ${(c.mentalPackages||[]).map(p=>`
-          <div class="summary-row"><span>${p.sessionCount} ${t('mentalPackagesTitle')}</span><span class="mono">₪${p.price}</span></div>
+          <div class="summary-row"><span>${t('pkgOfCallsPre')} ${p.sessionCount} ${t('pkgOfCallsPost')}</span><span class="mono">₪${p.price}</span></div>
         `).join('')}
       </div>
       ${(state.role!=='viewer' && !state.isSelfViewingProfile && !isMentalOnly) ? `<button class="btn btn-primary btn-block" style="margin-top:14px" data-action="open-request-call">${t('requestCall')}</button>` : ''}
@@ -4554,6 +4575,9 @@ function renderProfile(){
   const d = state.profileDraft;
   const isCoach = state.user.role==='coach';
   const isViewer = state.role==='viewer';
+  // a coach who only does mental coaching has no video deliverable, so no turnaround / per-game pricing
+  const pfTypes = d.coachTypes || [];
+  const pfMentalOnly = pfTypes.length>0 && pfTypes.every(ct=>ct==='mental');
   return `
     <label class="avatar-upload" for="profile-photo-input">
       ${d.photo ? `<img src="${d.photo}">` : icon('ghost',30)}
@@ -4610,13 +4634,15 @@ function renderProfile(){
       <div class="chip-row" id="pf-spec-chips">
         ${['kids','teens','adults'].map(s=>`<div class="chip ${(d.specialties||[]).includes(s)?'active':''}" data-pf-spec="${s}">${SPEC_LABEL[state.lang][s]}</div>`).join('')}
       </div>
-      <div class="field-label">${t('pricingByGame')}</div>
-      <div class="field-label" style="margin-top:0;font-weight:400;font-size:12.5px">${t('singleGamePriceLabel')}</div>
-      <input class="form-input" id="pf-single-price" type="number" min="0" value="${d.singleGamePrice||0}">
+      ${!pfMentalOnly ? `
+        <div class="field-label">${t('pricingByGame')}</div>
+        <div class="field-label" style="margin-top:0;font-weight:400;font-size:12.5px">${t('singleGamePriceLabel')}</div>
+        <input class="form-input" id="pf-single-price" type="number" min="0" value="${d.singleGamePrice||0}">
 
-      <div class="field-label">${t('packagesTitle')}</div>
-      <div id="pf-packages-list">${packageEditorRowsHtml(d.packages||[])}</div>
-      <button type="button" class="demo-link" data-add-package="pf" style="display:block;margin-top:4px">+ ${t('addPackage')}</button>
+        <div class="field-label">${t('packagesTitle')}</div>
+        <div id="pf-packages-list">${packageEditorRowsHtml(d.packages||[])}</div>
+        <button type="button" class="demo-link" data-add-package="pf" style="display:block;margin-top:4px">+ ${t('addPackage')}</button>
+      ` : ''}
 
       ${(d.coachTypes||[]).includes('mental') ? `
         <div class="field-label" style="margin-top:22px">${t('mentalPricingTitle')}</div>
@@ -4632,21 +4658,23 @@ function renderProfile(){
         <button type="button" class="demo-link" data-add-mental-package="pf" style="display:block;margin-top:4px">+ ${t('addMentalPackage')}</button>
       ` : ''}
 
-      <div class="field-label" style="margin-top:18px">${t('fieldTurnaround')}</div>
-      <select class="form-input" id="pf-turnaround">
-        ${TURNAROUND_OPTIONS.map(h=>`<option value="${h}" ${String(d.turnaround)===String(h)?'selected':''}>${fmtHours(h)}</option>`).join('')}
-      </select>
-      <div class="field-label">${t('highlightClipTitle')}</div>
-      <div class="chip-row" id="pf-clip-toggle">
-        <div class="chip ${d.highlightClipEnabled?'active':''}" data-pf-clip-toggle="1">${t('highlightClipOfferLabel')}</div>
-      </div>
-      ${d.highlightClipEnabled ? `
-        <div class="field-label">${t('highlightClipPriceLabel')}</div>
-        <input class="form-input" id="pf-clip-price" type="number" min="0" value="${d.highlightClipPrice||0}">
-        <div class="field-label">${t('highlightClipTurnaroundLabel')}</div>
-        <select class="form-input" id="pf-clip-turnaround">
-          ${TURNAROUND_OPTIONS.map(h=>`<option value="${h}" ${String(d.highlightClipTurnaround)===String(h)?'selected':''}>${fmtHours(h)}</option>`).join('')}
+      ${!pfMentalOnly ? `
+        <div class="field-label" style="margin-top:18px">${t('fieldTurnaround')}</div>
+        <select class="form-input" id="pf-turnaround">
+          ${TURNAROUND_OPTIONS.map(h=>`<option value="${h}" ${String(d.turnaround)===String(h)?'selected':''}>${fmtHours(h)}</option>`).join('')}
         </select>
+        <div class="field-label">${t('highlightClipTitle')}</div>
+        <div class="chip-row" id="pf-clip-toggle">
+          <div class="chip ${d.highlightClipEnabled?'active':''}" data-pf-clip-toggle="1">${t('highlightClipOfferLabel')}</div>
+        </div>
+        ${d.highlightClipEnabled ? `
+          <div class="field-label">${t('highlightClipPriceLabel')}</div>
+          <input class="form-input" id="pf-clip-price" type="number" min="0" value="${d.highlightClipPrice||0}">
+          <div class="field-label">${t('highlightClipTurnaroundLabel')}</div>
+          <select class="form-input" id="pf-clip-turnaround">
+            ${TURNAROUND_OPTIONS.map(h=>`<option value="${h}" ${String(d.highlightClipTurnaround)===String(h)?'selected':''}>${fmtHours(h)}</option>`).join('')}
+          </select>
+        ` : ''}
       ` : ''}
 
       <div class="field-label">${t('fieldCertificate')}</div>
@@ -5224,8 +5252,8 @@ function attachHandlers(){
   app.querySelectorAll('[data-su-coach-type]').forEach(el=>{
     el.addEventListener('click', ()=>{
       const ct = el.dataset.suCoachType;
-      const types = state.signupDraft.coachTypes || ['goalkeeper'];
-      state.signupDraft.coachTypes = types.includes(ct) ? types.filter(x=>x!==ct) : [...types, ct];
+      state.signupDraft.coachTypes = [ct]; // one profession per account
+      if(ct!=='general') state.signupDraft.generalSpecialties = [];
       render();
     });
   });
@@ -5585,8 +5613,8 @@ function attachHandlers(){
   app.querySelectorAll('[data-pf-coach-type]').forEach(el=>{
     el.addEventListener('click', ()=>{
       const ct = el.dataset.pfCoachType;
-      const types = state.profileDraft.coachTypes || ['goalkeeper'];
-      state.profileDraft.coachTypes = types.includes(ct) ? types.filter(x=>x!==ct) : [...types, ct];
+      state.profileDraft.coachTypes = [ct]; // one profession per account
+      if(ct!=='general') state.profileDraft.generalSpecialties = [];
       render();
     });
   });

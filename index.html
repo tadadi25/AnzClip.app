@@ -2366,9 +2366,15 @@ async function drawShareCard({ name, subtitle, photo, initials, avatarColor, rat
   const rowH = 92;
   const chartBlockH = 300; // label + chart + spacing
   const footerH = 110;
-  const linesH = (lines && lines.length) ? lines.length*rowH + 20 : 0;
-  const chartsH = (charts && charts.length) ? charts.length*chartBlockH : 0;
-  const H = headerH + linesH + chartsH + footerH;
+  const linesArr = lines||[];
+  const chartsArr = charts||[];
+  const lineRows = Math.ceil(linesArr.length/2);
+  const chartRows = Math.ceil(chartsArr.length/2);
+  const linesH = lineRows ? lineRows*rowH + 20 : 0;
+  const chartsH = chartRows ? chartRows*chartBlockH : 0;
+  let H = headerH + linesH + chartsH + footerH;
+  const MAX_H = 8000; // generous safety net — actual mobile/desktop canvas limits are much higher than this
+  H = Math.min(H, MAX_H);
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -2428,36 +2434,41 @@ async function drawShareCard({ name, subtitle, photo, initials, avatarColor, rat
 
   let y = headerH;
 
-  // stat rows (text)
-  const rowW = 840, rowX = (W-rowW)/2;
-  (lines||[]).forEach(line=>{
+  // stat rows (text) — 2-column grid
+  const colGap = 20;
+  const rowW = (840-colGap)/2, rowX0 = (W-840)/2;
+  linesArr.forEach((line,i)=>{
+    const col = i%2, row = Math.floor(i/2);
+    const rx = rowX0 + col*(rowW+colGap), ry = headerH + row*rowH;
     ctx.fillStyle = 'rgba(255,255,255,.05)';
-    roundRect(ctx, rowX, y, rowW, rowH-16, 16); ctx.fill();
-    ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, rowX, y, rowW, rowH-16, 16); ctx.stroke();
-    ctx.fillStyle = '#B9C2AC'; ctx.font = '500 30px Heebo'; ctx.textAlign='left';
-    ctx.fillText(line.label, rowX+32, y+50);
-    ctx.fillStyle = '#F4F7EE'; ctx.font = '700 34px "IBM Plex Mono"'; ctx.textAlign='right';
-    ctx.fillText(line.value, rowX+rowW-32, y+52);
-    y += rowH;
+    roundRect(ctx, rx, ry, rowW, rowH-16, 14); ctx.fill();
+    ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, rx, ry, rowW, rowH-16, 14); ctx.stroke();
+    ctx.fillStyle = '#B9C2AC'; ctx.font = '500 22px Heebo'; ctx.textAlign='left';
+    ctx.fillText(line.label.length>18 ? line.label.slice(0,17)+'…' : line.label, rx+22, ry+34);
+    ctx.fillStyle = '#F4F7EE'; ctx.font = '700 30px "IBM Plex Mono"'; ctx.textAlign='left';
+    ctx.fillText(line.value, rx+22, ry+66);
   });
+  y = headerH + linesH;
 
-  // embedded chart images (real rendered graphs, copied from the on-screen canvases)
-  const chartW = 900, chartH = 220, chartX = (W-chartW)/2;
-  (charts||[]).forEach(chart=>{
-    ctx.fillStyle = '#F4F7EE'; ctx.font = '700 32px Rubik'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-    ctx.fillText(chart.label, chartX, y+30);
-    const boxY = y+46;
+  // embedded chart images (real rendered graphs, copied from the on-screen canvases) — 2-column grid
+  const chartW = (900-colGap)/2, chartX0 = (W-900)/2;
+  chartsArr.forEach((chart,i)=>{
+    const col = i%2, row = Math.floor(i/2);
+    const chartX = chartX0 + col*(chartW+colGap);
+    const rowY = y + row*chartBlockH;
+    ctx.fillStyle = '#F4F7EE'; ctx.font = '700 26px Rubik'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(chart.label.length>20 ? chart.label.slice(0,19)+'…' : chart.label, chartX, rowY+26);
+    const boxY = rowY+42, chartH = 220;
     ctx.fillStyle = 'rgba(255,255,255,.04)';
-    roundRect(ctx, chartX, boxY, chartW, chartH, 16); ctx.fill();
-    ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, chartX, boxY, chartW, chartH, 16); ctx.stroke();
+    roundRect(ctx, chartX, boxY, chartW, chartH, 14); ctx.fill();
+    ctx.strokeStyle = 'rgba(243,241,231,.1)'; ctx.lineWidth=1.5; roundRect(ctx, chartX, boxY, chartW, chartH, 14); ctx.stroke();
     if(chart.canvasEl && chart.canvasEl.width>0){
-      const pad = 16;
+      const pad = 12;
       ctx.save();
-      roundRect(ctx, chartX, boxY, chartW, chartH, 16); ctx.clip();
+      roundRect(ctx, chartX, boxY, chartW, chartH, 14); ctx.clip();
       ctx.drawImage(chart.canvasEl, chartX+pad, boxY+pad, chartW-pad*2, chartH-pad*2);
       ctx.restore();
     }
-    y += chartBlockH;
   });
 
   ctx.fillStyle = '#7E8A73'; ctx.font = '500 26px Heebo'; ctx.textAlign='center';

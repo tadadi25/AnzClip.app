@@ -806,6 +806,11 @@ const STR = {
     copyImageBtn:'העתיקו תמונה', copyImageHint:'פתחו את וואטסאפ/פייסבוק והדביקו (Ctrl+V) — זה יישלח כתמונה אמיתית, לא כקישור',
     imageCopied:'התמונה הועתקה ללוח', copyImageFailed:'ההעתקה נכשלה, נסו להוריד את התמונה במקום',
     preparingClip:'מכינים את הקליפ לשיתוף...',
+    emailNewCallBody:'שלח/ה לכם בקשה חדשה לשיחת ייעוץ מנטלי. היכנסו לאפליקציה כדי להציע זמנים.',
+    emailProposedTimesSubject:'הציע/ה זמנים לשיחה', emailProposedTimesBody:'הציע/ה לכם כמה אפשרויות זמן לשיחת הייעוץ. היכנסו לאפליקציה כדי לבחור זמן.',
+    emailSlotConfirmedSubject:'אישר/ה את מועד השיחה', emailSlotConfirmedBody:'אישר/ה את מועד השיחה שהצעתם.',
+    emailMoreOptionsSubject:'ביקש/ה עוד אפשרויות זמן', emailMoreOptionsBody:'ביקש/ה עוד אפשרויות זמן לשיחה. היכנסו לאפליקציה כדי להציע זמנים נוספים.',
+    contactSupportTitle:'שירות לקוחות', contactSupportSub:'יש לכם שאלה או בעיה? צרו איתנו קשר',
     extendCall:'הוסיפו 15 דקות', muteBtn:'השתקה', unmuteBtn:'ביטול השתקה', cameraOffBtn:'כיבוי מצלמה', cameraOnBtn:'הפעלת מצלמה',
     endCall:'סיימו שיחה', callTimeUp:'הזמן שהוקצה לשיחה הסתיים', connectingCall:'מתחברים לשיחה...',
     webrtcNotSupported:'הדפדפן הזה לא תומך בשיחות וידאו', micCameraDenied:'יש לאשר גישה למצלמה ולמיקרופון',
@@ -986,6 +991,11 @@ const STR = {
     copyImageBtn:'Copy image', copyImageHint:'Open WhatsApp/Facebook and paste (Ctrl+V) — it will send as a real image, not a link',
     imageCopied:'Image copied to clipboard', copyImageFailed:'Copy failed, try downloading the image instead',
     preparingClip:'Preparing the clip to share...',
+    emailNewCallBody:'sent you a new mental coaching call request. Open the app to propose times.',
+    emailProposedTimesSubject:'proposed call times', emailProposedTimesBody:'proposed a few time options for your coaching call. Open the app to choose a time.',
+    emailSlotConfirmedSubject:'confirmed the call time', emailSlotConfirmedBody:'confirmed the call time you proposed.',
+    emailMoreOptionsSubject:'requested more time options', emailMoreOptionsBody:'requested more time options for the call. Open the app to propose additional times.',
+    contactSupportTitle:'Customer support', contactSupportSub:'Have a question or an issue? Contact us',
     extendCall:'Add 15 minutes', muteBtn:'Mute', unmuteBtn:'Unmute', cameraOffBtn:'Turn off camera', cameraOnBtn:'Turn on camera',
     endCall:'End call', callTimeUp:'The allotted call time is up', connectingCall:'Connecting to call...',
     webrtcNotSupported:'This browser does not support video calls', micCameraDenied:'Please allow camera and microphone access',
@@ -1326,6 +1336,14 @@ async function markRequestsSeen(){
   for(const r of unseen){
     r.gkSeen = true;
     updateRequestDoc(r.id, {gkSeen:true});
+  }
+}
+async function markCallRequestsSeen(){
+  const field = state.role==='coach' ? 'coachSeen' : 'gkSeen';
+  const unseen = (state.callRequests||[]).filter(c=>c[field]===false);
+  for(const c of unseen){
+    c[field] = true;
+    updateCallRequestDoc(c.id, {[field]:true});
   }
 }
 async function loadIncomingRequests(uid){
@@ -1965,6 +1983,9 @@ function renderViewerPending(){
     <div class="empty-state" style="padding:70px 20px">
       ${icon('briefcase',34)}
       <b>${t('viewerPendingApproval')}</b>
+    </div>
+    <div style="text-align:center;margin-bottom:14px">
+      <a href="mailto:anzclip.support@gmail.com" style="color:var(--coral-dim);font-size:13px">anzclip.support@gmail.com</a>
     </div>
     <div style="text-align:center">
       <button class="auth-link" data-action="logout">${t('logout')}</button>
@@ -2894,15 +2915,17 @@ function navItemsForRole(){
   }
   if(state.role==='coach'){
     const newCount = state.requests.filter(r=>r.status==='requested').length;
+    const newCallCount = (state.callRequests||[]).filter(c=>c.coachSeen===false).length;
     return [
-      { action:'nav-coach-dash', iconName:'list', label:t('navIncoming'), active:state.view==='coach-dash', badge:newCount },
+      { action:'nav-coach-dash', iconName:'list', label:t('navIncoming'), active:state.view==='coach-dash', badge:newCount+newCallCount },
       { action:'nav-viewer-home', iconName:'search', label:t('directoryTitle'), active:state.view==='viewer-home' },
     ];
   }
   const unseenCount = state.requests.filter(r=>r.gkSeen===false).length;
+  const unseenCallCount = (state.callRequests||[]).filter(c=>c.gkSeen===false).length;
   return [
     { action:'nav-home', iconName:'home', label:t('navHome'), active:state.view==='home' },
-    { action:'nav-requests', iconName:'list', label:t('navRequests'), active:state.view==='requests', badge:unseenCount },
+    { action:'nav-requests', iconName:'list', label:t('navRequests'), active:state.view==='requests', badge:unseenCount+unseenCallCount },
     { action:'nav-my-stats', iconName:'chart', label:t('myStatsNav'), active:state.view==='my-stats' },
     { action:'nav-my-clips', iconName:'clip', label:t('myClipsNav'), active:state.view==='my-clips' },
   ];
@@ -4628,6 +4651,13 @@ function renderProfile(){
 
     <button class="btn btn-primary btn-block" style="margin-top:22px" data-action="save-profile">${t('saveChanges')}</button>
 
+    <div class="section-title" style="margin-top:34px">${t('contactSupportTitle')}</div>
+    <div class="section-line"></div>
+    <a href="mailto:anzclip.support@gmail.com" class="select-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;width:100%">
+      ${icon('share',16)} anzclip.support@gmail.com
+    </a>
+    <div class="req-meta" style="text-align:center;margin-top:8px">${t('contactSupportSub')}</div>
+
     <div class="section-title" style="margin-top:34px">${t('changePasswordTitle')}</div>
     <div class="section-line"></div>
     <div class="field-label" style="margin-top:0">${t('currentPassword')}</div>
@@ -4685,6 +4715,7 @@ function attachHandlers(){
       if(state.user) await loadMyRequests(state.user.uid);
       go('requests');
       markRequestsSeen();
+      markCallRequestsSeen();
       render();
     });
   });
@@ -4833,7 +4864,10 @@ function attachHandlers(){
   app.querySelectorAll('[data-action="nav-coach-dash"]').forEach(el=>{
     el.addEventListener('click', async ()=>{
       if(state.user) await loadIncomingRequests(state.user.uid);
+      if(state.user) await loadIncomingCallRequests(state.user.uid);
       go('coach-dash');
+      markCallRequestsSeen();
+      render();
     });
   });
   app.querySelector('[data-action="open-onboarding"]')?.addEventListener('click', ()=>{
@@ -5886,8 +5920,8 @@ function attachHandlers(){
     const fee = computeFee(coachAmount);
     btn.disabled = true;
     const id = await createCallRequestDoc({
-      gkUid: state.user.uid, gkName: state.user.name, gkPhoto: state.user.photo||null,
-      coachUid: c.id, coachName: c.name, coachPhoto: c.photo||null,
+      gkUid: state.user.uid, gkName: state.user.name, gkPhoto: state.user.photo||null, gkEmail: state.user.email||null,
+      coachUid: c.id, coachName: c.name, coachPhoto: c.photo||null, coachEmail: c.email||null,
       durationMinutes: Number(c.mentalCallDuration)||30,
       paymentType: pkgId ? 'package' : 'single', packageId: pkgId,
       price: coachAmount, platformFee: fee.fee, totalCharged: fee.total,
@@ -5896,6 +5930,16 @@ function attachHandlers(){
     });
     btn.disabled = false;
     if(!id){ showToast(t('saveError')); return; }
+    if(c.email){
+      sendEmailNotification(
+        c.email,
+        `${state.user.name} ${t('requestCallTitle')}`,
+        `<div dir="rtl" style="font-family:sans-serif">
+          <h2>${t('requestCallTitle')}</h2>
+          <p><b>${state.user.name}</b> ${t('emailNewCallBody')}</p>
+        </div>`
+      );
+    }
     showToast(t('requestCallTitle'));
     await loadMyCallRequests(state.user.uid);
     go('requests');
@@ -5936,6 +5980,16 @@ function attachHandlers(){
     if(!ok){ showToast(t('saveError')); return; }
     r.proposedSlots = slots; r.status = 'proposed';
     state.viewingCallRequest = r;
+    if(r.gkEmail){
+      sendEmailNotification(
+        r.gkEmail,
+        `${r.coachName} ${t('emailProposedTimesSubject')}`,
+        `<div dir="rtl" style="font-family:sans-serif">
+          <h2>${t('emailProposedTimesSubject')}</h2>
+          <p><b>${r.coachName}</b> ${t('emailProposedTimesBody')}</p>
+        </div>`
+      );
+    }
     showToast(t('sendProposal'));
     go('call-request-detail');
   });
@@ -5949,6 +6003,17 @@ function attachHandlers(){
       if(!ok){ showToast(t('saveError')); return; }
       r.confirmedSlot = slot; r.status = 'confirmed';
       state.viewingCallRequest = r;
+      if(r.coachEmail){
+        sendEmailNotification(
+          r.coachEmail,
+          `${r.gkName} ${t('emailSlotConfirmedSubject')}`,
+          `<div dir="rtl" style="font-family:sans-serif">
+            <h2>${t('emailSlotConfirmedSubject')}</h2>
+            <p><b>${r.gkName}</b> ${t('emailSlotConfirmedBody')}</p>
+            <p>${t('callScheduledFor')}: ${fmtDateTime(slot.dateTimeMs)}</p>
+          </div>`
+        );
+      }
       showToast(t('callConfirmedTitle'));
       render();
     });
@@ -5960,6 +6025,16 @@ function attachHandlers(){
     if(!ok){ showToast(t('saveError')); return; }
     r.status = 'requested'; r.proposedSlots = [];
     state.viewingCallRequest = r;
+    if(r.coachEmail){
+      sendEmailNotification(
+        r.coachEmail,
+        `${r.gkName} ${t('emailMoreOptionsSubject')}`,
+        `<div dir="rtl" style="font-family:sans-serif">
+          <h2>${t('emailMoreOptionsSubject')}</h2>
+          <p><b>${r.gkName}</b> ${t('emailMoreOptionsBody')}</p>
+        </div>`
+      );
+    }
     render();
   });
   app.querySelector('[data-action="join-call"]')?.addEventListener('click', ()=>{

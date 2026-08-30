@@ -608,11 +608,20 @@
   #bg-photo{
     position:fixed; inset:0; z-index:0; pointer-events:none;
     background-image:
-      linear-gradient(180deg, rgba(11,13,9,.72) 0%, rgba(11,13,9,.85) 55%, rgba(11,13,9,.94) 100%),
+      linear-gradient(180deg, rgba(11,13,9,.58) 0%, rgba(11,13,9,.80) 55%, rgba(11,13,9,.93) 100%),
       url('/bg.jpg');
     background-size: cover;
-    background-position: center 22%;
+    background-position: center center;
     background-repeat: no-repeat;
+  }
+  /* landscape artwork for wide screens, portrait artwork for phones */
+  @media (min-aspect-ratio: 1/1){
+    #bg-photo{
+      background-image:
+        linear-gradient(180deg, rgba(11,13,9,.55) 0%, rgba(11,13,9,.78) 55%, rgba(11,13,9,.92) 100%),
+        url('/bg-wide.jpg');
+      background-position: center 40%;
+    }
   }
   #app{ position:relative; z-index:1; }
 </style>

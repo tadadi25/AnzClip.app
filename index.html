@@ -855,11 +855,11 @@ const STR = {
     heroTitle:'בוחרים מאמן/אנליסט.<br>מעלים משחק.<br>משתפרים.',
     heroSub:'בחרו מאמן/אנליסט לפי ותק, התמחות ומחיר, העלו סרטון מאימון או ממשחק, וקבלו ניתוח ביצועים מפורט תוך פרק זמן מוגדר מראש.',
     uploadCta:'בחרו מאמן/אנליסט',
-    statCoaches:'מאמנים/אנליסטים', statCoachesGK:'מאמני שוערים/אנליסטים', statDone:'ניתוחים שהושלמו', statTurnaround:'זמן מסירה',
+    statCoaches:'אנשי מקצוע', statCoachesGK:'אנשי מקצוע', statDone:'ניתוחים שהושלמו', statTurnaround:'זמן מסירה',
     howTitle:'איך זה עובד',
-    step1t:'בוחרים מאמן/אנליסט', step1s:'לפי סוג, התמחות, ותק, דירוג ומחיר.',
-    step2t:'מעלים סרטון של משחק שתרצו לנתח', step2s:'מאימון, משחק או תרגול עצמאי — כל קטע שבו רואים אתכם בפעולה.',
-    step3t:'מקבלים ניתוח מפורט', step3s:'המאמן/אנליסט מתחייב לפרק זמן מסירה קבוע מראש, בלי הפתעות.',
+    step1t:'בוחרים מאמן, אנליסט או מאמן מנטלי', step1s:'לפי סוג, התמחות, ותק, דירוג ומחיר.',
+    step2t:'מעלים סרטון של משחק שתרצו לנתח, או קובעים שיחה עם מאמן מנטלי', step2s:'לניתוח — כל קטע משחק שבו רואים אתכם בפעולה. לייעוץ מנטלי — בוחרים מועד שנוח לכם ונפגשים בשיחת וידאו.',
+    step3t:'מקבלים ניתוח מפורט או שיחת ייעוץ אישית', step3s:'האנליסט מתחייב לזמן מסירה קבוע מראש, והמאמן המנטלי לשיחה באורך ובמועד שסוכמו — בלי הפתעות.',
     changePrefs:'שינוי שפה ומדינה',
     dropTitle:'גררו לכאן סרטון או לחצו לבחירה', dropSub:'MP4, MOV — עד כמה דקות של אימון או משחק',
     demoFileBtn:'אין אפשרות לבחור קובץ כאן? המשיכו עם סרטון לדוגמה',
@@ -930,6 +930,7 @@ const STR = {
     alreadyHaveAccount:'כבר יש לכם חשבון? התחברות', noSavedAccount:'לא נמצא חשבון שמור במכשיר הזה',
     welcomeBack:'ברוכים השבים',
     recommendedCoaches:'מאמנים מומלצים', noCoachesFound:'לא נמצאו מאמנים', viewProfile:'צפו בפרופיל',
+    pickStatsToShare:'בחרו אילו נתונים לשתף', selectAll:'סמנו הכל', clearAll:'נקו הכל', preparingShare:'מכינים…', pickAtLeastOne:'בחרו לפחות נתון אחד לשיתוף',
     shareStats:'שתפו את הסטטיסטיקה', shareClip:'שתפו קליפ', shareStatsTitle:'הסטטיסטיקה שלי ב-AnzClip',
     shareClipTitle:'קליפ ביצועים ב-AnzClip', shareCopied:'הועתק ללוח — הדביקו בכל מקום', shareFailed:'השיתוף נכשל',
     switchUser:'לא אתם? החלפת משתמש', logout:'התנתקות',
@@ -1056,11 +1057,11 @@ const STR = {
     heroTitle:'Pick a coach/analyst.<br>Upload the match.<br>Improve.',
     heroSub:'Choose a coach/analyst by experience, specialty and price, upload a video from training or a match, and get a detailed performance analysis within a set turnaround time.',
     uploadCta:'Choose a coach/analyst',
-    statCoaches:'Coaches/analysts', statCoachesGK:'GK coaches/analysts', statDone:'Analyses done', statTurnaround:'Turnaround',
+    statCoaches:'Professionals', statCoachesGK:'Professionals', statDone:'Analyses done', statTurnaround:'Turnaround',
     howTitle:'How it works',
-    step1t:'Choose a coach/analyst', step1s:'By type, specialty, experience, rating and price.',
-    step2t:'Upload a video of the game you want analyzed', step2s:'From training, a match, or solo practice — any clip that shows you in action.',
-    step3t:'Get a detailed analysis', step3s:'The coach/analyst commits to a fixed turnaround time, no surprises.',
+    step1t:'Choose a coach, analyst or mental coach', step1s:'By type, specialty, experience, rating and price.',
+    step2t:'Upload a game video, or book a call with a mental coach', step2s:'For analysis — any game footage that shows you in action. For mental coaching — pick a time that works for you and meet on a video call.',
+    step3t:'Get a detailed analysis or a personal coaching call', step3s:'The analyst commits to a fixed turnaround time, and the mental coach to the agreed length and slot — no surprises.',
     changePrefs:'Change language & country',
     dropTitle:'Drag a video here or tap to choose', dropSub:'MP4, MOV — up to a few minutes of training or a match',
     demoFileBtn:"Can't pick a file here? Continue with a sample video",
@@ -1131,6 +1132,7 @@ const STR = {
     alreadyHaveAccount:'Already have an account? Log in', noSavedAccount:'No saved account found on this device',
     welcomeBack:'Welcome back',
     recommendedCoaches:'Recommended coaches', noCoachesFound:'No coaches found', viewProfile:'View profile',
+    pickStatsToShare:'Choose what to share', selectAll:'Select all', clearAll:'Clear all', preparingShare:'Preparing…', pickAtLeastOne:'Pick at least one stat to share',
     shareStats:'Share stats', shareClip:'Share clip', shareStatsTitle:'My stats on AnzClip',
     shareClipTitle:'Highlight clip on AnzClip', shareCopied:'Copied to clipboard — paste it anywhere', shareFailed:'Sharing failed',
     switchUser:'Not you? Switch user', logout:'Log out',
@@ -1268,6 +1270,7 @@ let state = {
   composeAttachments: [],
   composeClipFile: null,
   viewingCoach: null, isSelfViewingProfile: false, expandedAnalysisId: null, sport: 'football',
+  shareStatKeys: null, shareStatsPickerOpen: false,
   adminPendingCoaches: [],
   adminStats: null,
   activePackages: [],
@@ -3051,6 +3054,24 @@ function statSummaryCardHtml(statsArray, defs){
     </div>
   `).join('');
 }
+function selectedShareStatKeys(available){
+  const all = available.map(s=>s.key);
+  if(!Array.isArray(state.shareStatKeys)) return all;      // nothing chosen yet -> share everything
+  return state.shareStatKeys.filter(k=>all.includes(k));
+}
+let __sharingBusy = false;
+async function runShare(btn, fn){
+  if(__sharingBusy) return;                                 // a second click while working is ignored, not queued
+  __sharingBusy = true;
+  const label = btn ? btn.innerHTML : null;
+  if(btn){ btn.disabled = true; btn.textContent = t('preparingShare'); }
+  try{ await fn(); }
+  catch(err){ console.error('share failed', err); showToast(t('saveError')); }
+  finally{
+    __sharingBusy = false;
+    if(btn){ btn.disabled = false; btn.innerHTML = label; }
+  }
+}
 function renderMyStats(){
   const role = (state.user && state.user.playerRole) || 'field';
   const defs = STAT_DEFS[role] || STAT_DEFS.field;
@@ -3071,9 +3092,27 @@ function renderMyStats(){
     `;
   }).join('');
   const summaryCard = statSummaryCardHtml(games.map(g=>g.stats), defs);
+  const available = computeStatSummary(games.map(g=>g.stats), defs);
+  const selected = selectedShareStatKeys(available);
   return `
     <div>
-      <button class="select-btn" style="width:100%;margin-bottom:18px" data-action="share-stats">${icon('share',16)} ${t('shareStats')}</button>
+      <button type="button" class="select-btn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" data-action="toggle-share-picker">
+        ${icon('chart',16)} ${t('pickStatsToShare')} (${selected.length}/${available.length})
+      </button>
+      ${state.shareStatsPickerOpen ? `
+        <div class="summary-card" style="margin-top:10px">
+          <div class="chip-row" style="margin-bottom:10px">
+            <div class="chip" data-share-stat-all="1">${t('selectAll')}</div>
+            <div class="chip" data-share-stat-none="1">${t('clearAll')}</div>
+          </div>
+          <div class="chip-row" style="flex-wrap:wrap;gap:6px">
+            ${available.map(st=>`
+              <div class="chip ${selected.includes(st.key)?'active':''}" data-share-stat="${st.key}">${st.label}</div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+      <button type="button" class="btn btn-primary btn-block" style="margin:10px 0 18px" data-action="share-stats">${icon('share',16)} ${t('shareStats')}</button>
       ${summaryCard}${charts}
     </div>
   `;
@@ -6500,26 +6539,51 @@ function attachHandlers(){
   app.querySelector('[data-action="scroll-how-it-works"]')?.addEventListener('click', ()=>{
     document.getElementById('how-it-works')?.scrollIntoView({behavior:'smooth', block:'start'});
   });
-  app.querySelector('[data-action="share-stats"]')?.addEventListener('click', async (e)=>{
-    const role = (state.user && state.user.playerRole) || 'field';
-    const defs = STAT_DEFS[role] || STAT_DEFS.field;
-    const statsArr = state.requests.map(r=>r.stats).filter(Boolean);
-    const summary = computeStatSummary(statsArr, defs);
-    const charts = summary
-      .map(s=>({ label: s.label, canvasEl: document.getElementById('statchart-'+s.key) }))
-      .filter(c=>c.canvasEl);
-    const btn = e.currentTarget;
-    btn.disabled = true;
-    await shareCardAsImage(t('shareStatsTitle'), t('shareStatsTitle'), {
-      name: state.user.name,
-      subtitle: role==='goalkeeper' ? t('playerRoleGK') : t('playerRoleField'),
-      photo: state.user.photo,
-      initials: state.user.name.split(' ').map(n=>n[0]).join(''),
-      avatarColor: '#0B6E4F',
-      lines: summary.map(s=>({label:s.label, value:s.display})),
-      charts
+  app.querySelector('[data-action="toggle-share-picker"]')?.addEventListener('click', ()=>{
+    state.shareStatsPickerOpen = !state.shareStatsPickerOpen;
+    render();
+  });
+  app.querySelectorAll('[data-share-stat]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const role = (state.user && state.user.playerRole) || 'field';
+      const available = computeStatSummary(state.requests.map(r=>r.stats).filter(Boolean), STAT_DEFS[role]);
+      const current = selectedShareStatKeys(available);
+      const key = el.dataset.shareStat;
+      state.shareStatKeys = current.includes(key) ? current.filter(k=>k!==key) : [...current, key];
+      render();
     });
-    btn.disabled = false;
+  });
+  app.querySelector('[data-share-stat-all]')?.addEventListener('click', ()=>{
+    state.shareStatKeys = null;
+    render();
+  });
+  app.querySelector('[data-share-stat-none]')?.addEventListener('click', ()=>{
+    state.shareStatKeys = [];
+    render();
+  });
+  app.querySelector('[data-action="share-stats"]')?.addEventListener('click', (e)=>{
+    const btn = e.currentTarget;
+    runShare(btn, async ()=>{
+      const role = (state.user && state.user.playerRole) || 'field';
+      const defs = STAT_DEFS[role] || STAT_DEFS.field;
+      const statsArr = state.requests.map(r=>r.stats).filter(Boolean);
+      const all = computeStatSummary(statsArr, defs);
+      const keys = selectedShareStatKeys(all);
+      if(!keys.length){ showToast(t('pickAtLeastOne')); return; }
+      const summary = all.filter(s=>keys.includes(s.key));
+      const charts = summary
+        .map(s=>({ label: s.label, canvasEl: document.getElementById('statchart-'+s.key) }))
+        .filter(c=>c.canvasEl);
+      await shareCardAsImage(t('shareStatsTitle'), t('shareStatsTitle'), {
+        name: state.user.name,
+        subtitle: role==='goalkeeper' ? t('playerRoleGK') : t('playerRoleField'),
+        photo: state.user.photo,
+        initials: state.user.name.split(' ').map(n=>n[0]).join(''),
+        avatarColor: '#0B6E4F',
+        lines: summary.map(s=>({label:s.label, value:s.display})),
+        charts
+      });
+    });
   });
   app.querySelector('[data-action="share-player-stats"]')?.addEventListener('click', async (e)=>{
     const p = state.viewingPlayer;

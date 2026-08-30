@@ -652,24 +652,33 @@ const SPEC_LABEL = {
   he:{kids:'ילדים', teens:'נוער', adults:'בוגרים'},
   en:{kids:'Kids', teens:'Teens', adults:'Adults'},
 };
-const GENERAL_SPEC_LABEL = {
-  he:{defense:'הגנה', attack:'התקפה', midfield:'קישור'},
-  en:{defense:'Defense', attack:'Attack', midfield:'Midfield'},
+const SPORTS = ['football','basketball'];
+const SPORT_LABEL = {
+  he:{ football:'כדורגל', basketball:'כדורסל' },
+  en:{ football:'Football', basketball:'Basketball' },
 };
-const POSITION_LABEL = {
-  he:{goalkeeper:'שוער', center_back:'בלם', fullback:'מגן', midfielder:'קשר', winger:'כנף', striker:'חלוץ'},
-  en:{goalkeeper:'Goalkeeper', center_back:'Center back', fullback:'Fullback', midfielder:'Midfielder', winger:'Winger', striker:'Striker'},
-};
-const COACH_TYPE_LABEL = {
-  he:{goalkeeper:'מאמן שוערים', general:'מאמן כללי', analyst:'אנליסט', mental:'מאמן מנטלי'},
-  en:{goalkeeper:'Goalkeeper coach', general:'General coach', analyst:'Analyst', mental:'Mental coach'},
-};
+const SPORT_EMOJI = { football:'⚽', basketball:'🏀' };
 
-const STAT_CATEGORY_LABEL = {
-  he:{ general:'נתונים כלליים', attacking:'התקפה', playmaking:'יצירת מצבים', progression:'התקדמות', defending:'הגנה', goalkeeping:'שוערות' },
-  en:{ general:'General', attacking:'Attacking', playmaking:'Playmaking', progression:'Progression', defending:'Defending', goalkeeping:'Goalkeeping' },
-};
-const STAT_DEFS = {
+const SPORT_DATA = {
+  football: {
+    positions: {
+      he:{goalkeeper:'שוער', center_back:'בלם', fullback:'מגן', midfielder:'קשר', winger:'כנף', striker:'חלוץ'},
+      en:{goalkeeper:'Goalkeeper', center_back:'Center back', fullback:'Fullback', midfielder:'Midfielder', winger:'Winger', striker:'Striker'},
+    },
+    fieldPositions: ['center_back','fullback','midfielder','winger','striker'],
+    coachTypes: {
+      he:{goalkeeper:'מאמן שוערים', general:'מאמן כללי', analyst:'אנליסט', mental:'מאמן מנטלי'},
+      en:{goalkeeper:'Goalkeeper coach', general:'General coach', analyst:'Analyst', mental:'Mental coach'},
+    },
+    generalSpec: {
+      he:{defense:'הגנה', attack:'התקפה', midfield:'קישור'},
+      en:{defense:'Defense', attack:'Attack', midfield:'Midfield'},
+    },
+    statCategories: {
+      he:{ general:'נתונים כלליים', attacking:'התקפה', playmaking:'יצירת מצבים', progression:'התקדמות', defending:'הגנה', goalkeeping:'שוערות' },
+      en:{ general:'General', attacking:'Attacking', playmaking:'Playmaking', progression:'Progression', defending:'Defending', goalkeeping:'Goalkeeping' },
+    },
+    statDefs: {
   field: [
     { key:'goals', type:'count', category:'general', he:'שערים', en:'Goals' },
     { key:'assists', type:'count', category:'general', he:'בישולים', en:'Assists' },
@@ -710,20 +719,109 @@ const STAT_DEFS = {
     { key:'passAccuracy', type:'ratio', category:'goalkeeping', he:'מסירות מדויקות', en:'Accurate passes' },
     { key:'longPasses', type:'ratio', category:'goalkeeping', he:'מסירות ארוכות מדויקות', en:'Accurate long passes' },
     { key:'touches', type:'count', category:'goalkeeping', he:'נגיעות בכדור', en:'Touches' },
-  ],
+  ],},
+  },
+  basketball: {
+    positions: {
+      he:{point_guard:'רכז', shooting_guard:'קלע', small_forward:'פורוורד קטן', power_forward:'פורוורד כוח', center:'סנטר'},
+      en:{point_guard:'Point guard', shooting_guard:'Shooting guard', small_forward:'Small forward', power_forward:'Power forward', center:'Center'},
+    },
+    fieldPositions: ['point_guard','shooting_guard','small_forward','power_forward','center'],
+    coachTypes: {
+      he:{general:'מאמן כללי', shooting:'מאמן קליעה', analyst:'אנליסט', mental:'מאמן מנטלי'},
+      en:{general:'General coach', shooting:'Shooting coach', analyst:'Analyst', mental:'Mental coach'},
+    },
+    generalSpec: {
+      he:{defense:'הגנה', attack:'התקפה', playmaking:'יצירה'},
+      en:{defense:'Defense', attack:'Attack', playmaking:'Playmaking'},
+    },
+    statCategories: {
+      he:{ general:'נתונים כלליים', scoring:'קליעה', playmaking:'יצירה', rebounding:'ריבאונדים', defending:'הגנה' },
+      en:{ general:'General', scoring:'Scoring', playmaking:'Playmaking', rebounding:'Rebounding', defending:'Defending' },
+    },
+    statDefs: {
+      field: [
+        { key:'points', type:'count', category:'general', he:'נקודות', en:'Points' },
+        { key:'minutes', type:'count', category:'general', he:'דקות משחק', en:'Minutes played' },
+        { key:'plusMinus', type:'count', category:'general', he:'הפרש (+/-)', en:'Plus/minus' },
+
+        { key:'fieldGoals', type:'ratio', category:'scoring', he:'קליעות מהשדה', en:'Field goals' },
+        { key:'twoPointers', type:'ratio', category:'scoring', he:'זריקות שתי נקודות', en:'2-point shots' },
+        { key:'threePointers', type:'ratio', category:'scoring', he:'זריקות שלוש נקודות', en:'3-point shots' },
+        { key:'freeThrows', type:'ratio', category:'scoring', he:'זריקות עונשין', en:'Free throws' },
+        { key:'pointsInPaint', type:'count', category:'scoring', he:'נקודות בצבע', en:'Points in the paint' },
+        { key:'fastBreakPoints', type:'count', category:'scoring', he:'נקודות ממעבר מהיר', en:'Fast break points' },
+
+        { key:'assists', type:'count', category:'playmaking', he:'אסיסטים', en:'Assists' },
+        { key:'turnovers', type:'count', category:'playmaking', he:'איבודי כדור', en:'Turnovers' },
+        { key:'touches', type:'count', category:'playmaking', he:'נגיעות בכדור', en:'Touches' },
+        { key:'passAccuracy', type:'ratio', category:'playmaking', he:'מסירות מדויקות', en:'Accurate passes' },
+
+        { key:'reboundsOff', type:'count', category:'rebounding', he:'ריבאונדים בהתקפה', en:'Offensive rebounds' },
+        { key:'reboundsDef', type:'count', category:'rebounding', he:'ריבאונדים בהגנה', en:'Defensive rebounds' },
+        { key:'boxOuts', type:'ratio', category:'rebounding', he:'חסימות ריבאונד מוצלחות', en:'Successful box outs' },
+
+        { key:'steals', type:'count', category:'defending', he:'חטיפות', en:'Steals' },
+        { key:'blocks', type:'count', category:'defending', he:'חסימות', en:'Blocks' },
+        { key:'defStops', type:'ratio', category:'defending', he:'הגנות מוצלחות', en:'Successful defensive stops' },
+        { key:'fouls', type:'count', category:'defending', he:'עבירות אישיות', en:'Personal fouls' },
+        { key:'chargesDrawn', type:'count', category:'defending', he:'עבירות התקפיות שגרר', en:'Charges drawn' },
+      ],
+    },
+  },
 };
+
+function currentSport(){
+  if(state.user && state.user.sport) return state.user.sport;
+  if(state.signupDraft && state.signupDraft.sport) return state.signupDraft.sport;
+  return state.sport || 'football';
+}
+function sportData(sport){ return SPORT_DATA[sport || currentSport()] || SPORT_DATA.football; }
+function sportOf(u){ return (u && u.sport) || 'football'; }
+function sportPositions(sport){ return Object.keys(sportData(sport).positions.he); }
+function sportFieldPositions(sport){ return sportData(sport).fieldPositions; }
+function sportCoachTypes(sport){ return Object.keys(sportData(sport).coachTypes.he); }
+function sportGeneralSpecs(sport){ return Object.keys(sportData(sport).generalSpec.he); }
+function sportHasGoalkeeper(sport){ return !!sportData(sport).statDefs.goalkeeper; }
+function sportLabel(sport){ return (SPORT_LABEL[state.lang] || SPORT_LABEL.he)[sport || currentSport()]; }
+
+// Labels resolve against the active sport and fall back to the other sport, so a
+// record created in the other discipline never renders as a blank label.
+function sportLabelMap(kind, lang){
+  const primary = (sportData()[kind] || {})[lang] || {};
+  return new Proxy({}, { get:(_, key)=>{
+    if(primary[key]!=null) return primary[key];
+    for(const sp of SPORTS){
+      const m = (SPORT_DATA[sp][kind] || {})[lang];
+      if(m && m[key]!=null) return m[key];
+    }
+    return String(key);
+  }});
+}
+const POSITION_LABEL = new Proxy({}, { get:(_, lang)=> sportLabelMap('positions', lang) });
+const COACH_TYPE_LABEL = new Proxy({}, { get:(_, lang)=> sportLabelMap('coachTypes', lang) });
+const GENERAL_SPEC_LABEL = new Proxy({}, { get:(_, lang)=> sportLabelMap('generalSpec', lang) });
+const STAT_CATEGORY_LABEL = new Proxy({}, { get:(_, lang)=> sportLabelMap('statCategories', lang) });
+const STAT_DEFS = new Proxy({}, { get:(_, role)=>{
+  const d = sportData().statDefs;
+  return d[role] || d.field;
+}});
+function combinedStatDefs(){
+  const d = sportData().statDefs;
+  const out = [];
+  if(d.goalkeeper) out.push(...d.goalkeeper.map(s=>({ ...s, role:'goalkeeper', id:'goalkeeper:'+s.key })));
+  out.push(...d.field.map(s=>({ ...s, role:'field', id:'field:'+s.key })));
+  return out;
+}
 function statLabel(key, role){
   const def = (STAT_DEFS[role]||[]).find(s=>s.key===key);
   return def ? def[state.lang] : key;
 }
-const COMBINED_STAT_DEFS = [
-  ...STAT_DEFS.goalkeeper.map(s=>({ ...s, role:'goalkeeper', id:'goalkeeper:'+s.key })),
-  ...STAT_DEFS.field.map(s=>({ ...s, role:'field', id:'field:'+s.key })),
-];
+
 function relevantStatDefsForPosition(position){
   if(position==='goalkeeper') return STAT_DEFS.goalkeeper.map(s=>({ ...s, role:'goalkeeper', id:'goalkeeper:'+s.key }));
   if(position) return STAT_DEFS.field.map(s=>({ ...s, role:'field', id:'field:'+s.key }));
-  return COMBINED_STAT_DEFS;
+  return combinedStatDefs();
 }
 
 const SAMPLE_ANALYSIS = {
@@ -734,7 +832,7 @@ const SAMPLE_ANALYSIS = {
 /* ---------------- STRINGS ---------------- */
 const STR = {
   he: {
-    tagline:'ניתוח מקצועי לשחקני כדורגל', coachView:'תצוגת מאמן',
+    tagline:'ניתוח מקצועי לשחקני {sport}', coachView:'תצוגת מאמן',
     navHome:'בית', navRequests:'הבקשות שלי', navIncoming:'בקשות נכנסות',
     back:'חזרה',
     roleGK:'אני שוער', roleCoach:'אני מאמן',
@@ -797,6 +895,8 @@ const STR = {
     sendAnalysis:'שלחו ניתוח לשוער', fbPlaceholder:'כתבו כאן את הניתוח המלא שלכם...',
     coachAnalysisTitle:'ניתוח המאמן',
     toastSent:'הבקשה נשלחה למאמן בהצלחה', toastAnalysisRcvd:'הניתוח התקבל מהמאמן', toastAnalysisSent:'הניתוח נשלח לשוער',
+    onbSportTitle:'באיזה תחום אתם?', onbSportSub:'הפלטפורמה מותאמת לכל ענף בנפרד — סטטיסטיקות, עמדות ובעלי מקצוע.',
+    sportFixedNote:'התחום נקבע בהרשמה ולא ניתן לשינוי מאוחר יותר.',
     onbLangTitle:'באיזו שפה תרצו להשתמש?', onbLangSub:'תוכלו לשנות זאת בכל שלב מתוך מסך הבית.',
     onbNext:'המשיכו',
     onbCountryTitle:'מאיזו מדינה תרצו לקבל ניתוח?', onbCountrySub:'נציג לכם קודם מאמנים מהמדינה שתבחרו — אפשר תמיד לשנות אחר כך.',
@@ -933,7 +1033,7 @@ const STR = {
     adminApproved:'המאמן אושר', adminRejected:'הבקשה נדחתה', adminEntry:'ניהול — אישור מאמנים',
   },
   en: {
-    tagline:'Professional analysis for football players', coachView:'Coach view',
+    tagline:'Professional analysis for {sport} players', coachView:'Coach view',
     navHome:'Home', navRequests:'My requests', navIncoming:'Incoming requests',
     back:'Back',
     roleGK:"I'm a goalkeeper", roleCoach:"I'm a coach",
@@ -996,6 +1096,8 @@ const STR = {
     sendAnalysis:'Send analysis to goalkeeper', fbPlaceholder:'Write your full analysis here...',
     coachAnalysisTitle:"Coach's analysis",
     toastSent:'Request sent to the coach', toastAnalysisRcvd:'Analysis received from the coach', toastAnalysisSent:'Analysis sent to the goalkeeper',
+    onbSportTitle:'Which sport are you in?', onbSportSub:'The platform is tailored per sport — stats, positions and professionals.',
+    sportFixedNote:'Your sport is set at signup and cannot be changed later.',
     onbLangTitle:'Which language would you like to use?', onbLangSub:'You can change this anytime from the home screen.',
     onbNext:'Continue',
     onbCountryTitle:'Which country would you like coaching from?', onbCountrySub:"We'll show coaches from that country first — you can always change it later.",
@@ -1132,7 +1234,11 @@ const STR = {
     adminApproved:'Coach approved', adminRejected:'Request rejected', adminEntry:'Admin — coach approvals',
   }
 };
-function t(key){ return STR[state.lang][key]; }
+function t(key){
+  const v = STR[state.lang][key];
+  // {sport} lets a handful of strings read "football" or "basketball" as appropriate
+  return (typeof v === 'string' && v.indexOf('{sport}')!==-1) ? v.replace('{sport}', sportLabel()) : v;
+}
 
 /* ---------------- STATE ---------------- */
 let state = {
@@ -1147,7 +1253,7 @@ let state = {
   profileDraft: {},
   composeAttachments: [],
   composeClipFile: null,
-  viewingCoach: null, isSelfViewingProfile: false, expandedAnalysisId: null,
+  viewingCoach: null, isSelfViewingProfile: false, expandedAnalysisId: null, sport: 'football',
   adminPendingCoaches: [],
   adminStats: null,
   activePackages: [],
@@ -1201,13 +1307,14 @@ async function loadPrefs(){
       const p = JSON.parse(res.value);
       state.lang = p.lang || 'en';
       state.countryFilter = p.country || 'all';
+      state.sport = p.sport || 'football';
       state.filters.country = state.countryFilter;
       hasLangPref = true;
     }
   }catch(e){ /* no prefs yet, keep onboarding */ }
 }
 async function savePrefs(){
-  await storageSet('gk_prefs_v1', JSON.stringify({lang:state.lang, country:state.countryFilter}), false);
+  await storageSet('gk_prefs_v1', JSON.stringify({lang:state.lang, country:state.countryFilter, sport:state.sport}), false);
 }
 let hasLangPref = false;
 
@@ -1321,16 +1428,24 @@ async function refreshCoachDirectory(){
   COACHES.length = 0;
   try{
     const snap = await db.collection('users').where('role','==','coach').where('isVerified','==',true).get();
+    const sport = currentSport();
     let i = 0;
-    snap.forEach(doc=>{ COACHES.push(buildCoachProfile({uid:doc.id, ...doc.data()}, i)); i++; });
+    snap.forEach(doc=>{
+      const d = doc.data();
+      if(sportOf(d)!==sport) return; // each sport has its own directory
+      COACHES.push(buildCoachProfile({uid:doc.id, ...d}, i));
+      i++;
+    });
   }catch(e){ console.error('failed to load coach directory', e); }
 }
 async function loadAllPlayers(){
   try{
     const snap = await db.collection('users').where('role','==','gk').get();
+    const sport = currentSport();
     const list = [];
     snap.forEach(doc=>{
       const d = doc.data();
+      if(sportOf(d)!==sport) return;
       list.push({ uid:doc.id, name:d.name, photo:d.photo||null, playerRole:d.playerRole||'field', positions:d.positions||[], statsPublic:d.statsPublic!==false });
     });
     list.sort((a,b)=> a.name.localeCompare(b.name));
@@ -2178,7 +2293,7 @@ function renderViewerHome(){
     <div class="field-label" style="margin-top:0">${t('positionFilterLabel')}</div>
     <div class="chip-row">
       <div class="chip ${!state.advancedSearch.position?'active':''}" data-adv-position="">${t('filterAll')}</div>
-      ${['goalkeeper','center_back','fullback','midfielder','winger','striker'].map(p=>`
+      ${sportPositions().map(p=>`
         <div class="chip ${state.advancedSearch.position===p?'active':''}" data-adv-position="${p}">${POSITION_LABEL[state.lang][p]}</div>
       `).join('')}
     </div>
@@ -3091,7 +3206,7 @@ function go(view){ state.view = view; render(); window.scrollTo(0,0); }
 function render(){
   applyDocDir();
   const app = document.getElementById('app');
-  const bareViews = ['lang-select','country-select','auth','auth-professional','login','signup-gk','signup-coach','signup-mental','signup-viewer','verify-email','forgot-password'];
+  const bareViews = ['lang-select','sport-select','country-select','auth','auth-professional','login','signup-gk','signup-coach','signup-mental','signup-viewer','verify-email','forgot-password'];
   if(bareViews.includes(state.view)){
     const showLangToggle = state.view!=='lang-select';
     app.innerHTML = `
@@ -3219,6 +3334,7 @@ function renderView(){
   switch(state.view){
     case 'lang-select': return renderLangSelect();
     case 'country-select': return renderCountrySelect();
+    case 'sport-select': return renderSportSelect();
     case 'auth': return renderAuth();
     case 'auth-professional': return renderAuthProfessional();
     case 'login': return renderLogin();
@@ -3280,6 +3396,27 @@ function renderLangSelect(){
         </div>
       </div>
       <button class="btn btn-primary btn-block" data-action="onb-to-country">${t('onbNext')}</button>
+    </div>
+  `;
+}
+
+function renderSportSelect(){
+  return `
+    <div class="onboard">
+      <div class="onboard-top">
+        <div class="onboard-progress"><div class="done"></div><div class="done"></div></div>
+        <h2>${t('onbSportTitle')}</h2>
+        <p class="sub">${t('onbSportSub')}</p>
+        <div class="country-grid">
+          ${SPORTS.map(sp=>`
+            <div class="country-option ${state.sport===sp?'active':''}" data-sport="${sp}">
+              <span class="flag">${SPORT_EMOJI[sp]}</span><b>${SPORT_LABEL[state.lang][sp]}</b>
+            </div>
+          `).join('')}
+        </div>
+        <div class="photo-hint" style="margin-top:14px">${t('sportFixedNote')}</div>
+      </div>
+      <button class="btn btn-primary btn-block" data-action="onb-sport-next">${t('onbNext')}</button>
     </div>
   `;
 }
@@ -3454,17 +3591,19 @@ function renderSignupGK(){
         </div>
         <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('passwordHint')}</div>
 
+        ${sportHasGoalkeeper() ? `
         <div class="field-label">${t('playerRoleTitle')}</div>
         <div class="chip-row" id="su-player-role-chips">
           <div class="chip ${d.playerRole==='goalkeeper'?'active':''}" data-su-player-role="goalkeeper">${t('playerRoleGK')}</div>
           <div class="chip ${d.playerRole==='field'?'active':''}" data-su-player-role="field">${t('playerRoleField')}</div>
         </div>
         <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('playerRoleHint')}</div>
+        ` : ''}
 
-        ${d.playerRole==='field' ? `
+        ${(d.playerRole==='field' || !sportHasGoalkeeper()) ? `
           <div class="field-label">${t('fieldPositions')}</div>
           <div class="chip-row" id="su-position-chips">
-            ${['center_back','fullback','midfielder','winger','striker'].map(p=>`
+            ${sportFieldPositions().map(p=>`
               <div class="chip ${(d.positions||[]).includes(p)?'active':''}" data-su-position="${p}">${POSITION_LABEL[state.lang][p]}</div>
             `).join('')}
           </div>
@@ -3601,15 +3740,15 @@ function renderSignupCoach(){
 
         <div class="field-label">${t('coachTypeTitle')}</div>
         <div class="chip-row" id="su-coach-type-chips">
-          ${['goalkeeper','general','analyst','mental'].map(ct=>`
-            <div class="chip ${(d.coachTypes||['goalkeeper']).includes(ct)?'active':''}" data-su-coach-type="${ct}">${COACH_TYPE_LABEL[state.lang][ct]}</div>
+          ${sportCoachTypes().map(ct=>`
+            <div class="chip ${(d.coachTypes||[sportCoachTypes()[0]]).includes(ct)?'active':''}" data-su-coach-type="${ct}">${COACH_TYPE_LABEL[state.lang][ct]}</div>
           `).join('')}
         </div>
         <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('coachTypeHint')}</div>
         ${(d.coachTypes||[]).includes('general') ? `
           <div class="field-label">${t('generalSpecTitle')}</div>
           <div class="chip-row" id="su-genspec-chips">
-            ${['defense','attack','midfield'].map(s=>`
+            ${sportGeneralSpecs().map(s=>`
               <div class="chip ${(d.generalSpecialties||[]).includes(s)?'active':''}" data-su-genspec="${s}">${GENERAL_SPEC_LABEL[state.lang][s]}</div>
             `).join('')}
           </div>
@@ -3797,7 +3936,7 @@ function homeCoachesRowHtml(){
     <div class="field-label" style="margin-top:0">${t('searchCoachLabel')}</div>
     <input class="form-input" id="home-coach-search" type="text" placeholder="${t('searchCoachPh')}" value="${state.homeCoachQuery||''}">
     <div class="filter-bar" style="margin-top:10px">
-      ${[['all',t('filterAllTypes')],['goalkeeper',t('coachTypeGK')],['general',t('coachTypeGeneral')],['analyst',t('coachTypeAnalyst')],['mental',t('coachTypeMental')]].map(([v,l])=>`
+      ${[['all',t('filterAllTypes')], ...sportCoachTypes().map(ct=>[ct, COACH_TYPE_LABEL[state.lang][ct]])].map(([v,l])=>`
         <div class="chip ${typeFilter===v?'active':''}" data-home-coach-type="${v}">${l}</div>
       `).join('')}
     </div>
@@ -4070,9 +4209,11 @@ function renderCoaches(){
   const list = filteredCoaches();
   const isGkPlayer = state.user && state.user.role==='gk' && state.user.playerRole==='goalkeeper';
   const isFieldPlayer = state.user && state.user.role==='gk' && state.user.playerRole==='field';
-  const typeOptions = isGkPlayer ? [['all',t('filterAllTypes')],['goalkeeper',t('coachTypeGK')],['analyst',t('coachTypeAnalyst')],['mental',t('coachTypeMental')]]
-    : isFieldPlayer ? [['all',t('filterAllTypes')],['general',t('coachTypeGeneral')],['analyst',t('coachTypeAnalyst')],['mental',t('coachTypeMental')]]
-    : [['all',t('filterAllTypes')],['goalkeeper',t('coachTypeGK')],['general',t('coachTypeGeneral')],['analyst',t('coachTypeAnalyst')],['mental',t('coachTypeMental')]];
+  const allTypes = sportCoachTypes().map(ct=>[ct, COACH_TYPE_LABEL[state.lang][ct]]);
+  const relevant = isGkPlayer ? allTypes.filter(([ct])=>ct!=='general')
+    : isFieldPlayer ? allTypes.filter(([ct])=>ct!=='goalkeeper')
+    : allTypes;
+  const typeOptions = [['all',t('filterAllTypes')], ...relevant];
   return `
     <div class="field-label" style="margin-top:0">${t('searchCoachLabel')}</div>
     <input class="form-input" id="coach-search-input" type="text" placeholder="${t('searchCoachPh')}" value="${state.filters.query||''}">
@@ -4086,7 +4227,7 @@ function renderCoaches(){
     ${state.filters.coachType==='general' ? `
       <div class="field-label">${t('filterSpecialization')}</div>
       <div class="filter-bar">
-        ${[['all',t('filterAllTypes')],['defense',GENERAL_SPEC_LABEL[state.lang].defense],['attack',GENERAL_SPEC_LABEL[state.lang].attack],['midfield',GENERAL_SPEC_LABEL[state.lang].midfield]].map(([v,l])=>`
+        ${[['all',t('filterAllTypes')], ...sportGeneralSpecs().map(sp=>[sp, GENERAL_SPEC_LABEL[state.lang][sp]])].map(([v,l])=>`
           <div class="chip ${state.filters.generalSpec===v?'active':''}" data-genspec-filter="${v}">${l}</div>
         `).join('')}
       </div>
@@ -4939,15 +5080,15 @@ function renderProfile(){
       </select>
       <div class="field-label">${t('coachTypeTitle')}</div>
       <div class="chip-row" id="pf-coach-type-chips">
-        ${['goalkeeper','general','analyst','mental'].map(ct=>`
-          <div class="chip ${(d.coachTypes||['goalkeeper']).includes(ct)?'active':''}" data-pf-coach-type="${ct}">${COACH_TYPE_LABEL[state.lang][ct]}</div>
+        ${sportCoachTypes().map(ct=>`
+          <div class="chip ${(d.coachTypes||[sportCoachTypes()[0]]).includes(ct)?'active':''}" data-pf-coach-type="${ct}">${COACH_TYPE_LABEL[state.lang][ct]}</div>
         `).join('')}
       </div>
       <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('coachTypeHint')}</div>
       ${(d.coachTypes||[]).includes('general') ? `
         <div class="field-label">${t('generalSpecTitle')}</div>
         <div class="chip-row" id="pf-genspec-chips">
-          ${['defense','attack','midfield'].map(s=>`<div class="chip ${(d.generalSpecialties||[]).includes(s)?'active':''}" data-pf-genspec="${s}">${GENERAL_SPEC_LABEL[state.lang][s]}</div>`).join('')}
+          ${sportGeneralSpecs().map(s=>`<div class="chip ${(d.generalSpecialties||[]).includes(s)?'active':''}" data-pf-genspec="${s}">${GENERAL_SPEC_LABEL[state.lang][s]}</div>`).join('')}
         </div>
       ` : ''}
       <div class="field-label">${t('fieldYears')}</div>
@@ -5037,7 +5178,7 @@ function renderProfile(){
       ${d.playerRole==='field' ? `
         <div class="field-label">${t('fieldPositions')}</div>
         <div class="chip-row" id="pf-position-chips">
-          ${['center_back','fullback','midfielder','winger','striker'].map(p=>`<div class="chip ${(d.positions||[]).includes(p)?'active':''}" data-pf-position="${p}">${POSITION_LABEL[state.lang][p]}</div>`).join('')}
+          ${sportFieldPositions().map(p=>`<div class="chip ${(d.positions||[]).includes(p)?'active':''}" data-pf-position="${p}">${POSITION_LABEL[state.lang][p]}</div>`).join('')}
         </div>
       ` : ''}
       <div class="field-label">${t('fieldDob')}</div>
@@ -5307,8 +5448,15 @@ function attachHandlers(){
       await savePrefs();
       go(state.onboardingReturnView || 'home');
     } else {
-      go('auth');
+      go('sport-select');
     }
+  });
+  app.querySelectorAll('[data-sport]').forEach(el=>{
+    el.addEventListener('click', ()=>{ state.sport = el.dataset.sport; render(); });
+  });
+  app.querySelector('[data-action="onb-sport-next"]')?.addEventListener('click', async ()=>{
+    await savePrefs();
+    go('auth');
   });
   app.querySelectorAll('[data-country]').forEach(el=>{
     el.addEventListener('click', ()=>{ state.countryFilter = el.dataset.country; render(); });
@@ -5513,8 +5661,9 @@ function attachHandlers(){
     const emailLower = d.email.trim().toLowerCase();
     const profile = {
       role:'gk', name:d.name.trim(), email:emailLower,
-      playerRole: d.playerRole,
-      positions: d.playerRole==='goalkeeper' ? ['goalkeeper'] : (d.positions || []),
+      sport: state.sport || 'football',
+      playerRole: sportHasGoalkeeper() ? d.playerRole : 'field',
+      positions: (sportHasGoalkeeper() && d.playerRole==='goalkeeper') ? ['goalkeeper'] : (d.positions || []),
       photo:d.photo||null, dob:d.dob||null, club:d.club||'', height:d.height||'', about:d.about||'',
       acceptedTermsAt: Date.now()
     };
@@ -5613,6 +5762,7 @@ function attachHandlers(){
     const emailLower = d.email.trim().toLowerCase();
     const profile = {
       role:'coach', name:d.name.trim(), email:emailLower,
+      sport: state.sport || 'football',
       photo:d.photo||null,
       country: d.country || COUNTRIES[0].code,
       coachTypes: (d.coachTypes && d.coachTypes.length) ? d.coachTypes : ['goalkeeper'],
@@ -5672,6 +5822,7 @@ function attachHandlers(){
     const emailLower = d.email.trim().toLowerCase();
     const profile = {
       role:'coach', name:d.name.trim(), email:emailLower,
+      sport: state.sport || 'football',
       photo:d.photo||null,
       country: d.country || COUNTRIES[0].code,
       coachTypes: ['mental'],
@@ -5726,6 +5877,7 @@ function attachHandlers(){
     const emailLower = d.email.trim().toLowerCase();
     const profile = {
       role: isScout ? 'scout' : 'agent', name:d.name.trim(), email:emailLower,
+      sport: state.sport || 'football',
       photo:d.photo||null,
       country: d.country || COUNTRIES[0].code,
       years: Number(d.years)||0,

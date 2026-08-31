@@ -810,7 +810,9 @@ const SPORT_DATA = {
 };
 
 function currentSport(){
-  if(state.user && state.user.sport) return state.user.sport;
+  // a logged-in account is bound to its own sport; accounts created before the
+  // basketball launch have no sport field and are football by definition.
+  if(state.user) return state.user.sport || 'football';
   if(state.signupDraft && state.signupDraft.sport) return state.signupDraft.sport;
   return state.sport || 'football';
 }
@@ -1065,7 +1067,9 @@ const STR = {
     coachProfileTitle:'פרופיל מאמן', aboutCoach:'קצת על המאמן',
     fieldCertificate:'העלאת תעודת מאמן/אנליסט', certificateHint:'העלו תמונה או PDF של התעודה',
     certificateRequired:'יש להעלות תעודת הסמכה כדי להירשם', certificateUploadError:'העלאת התעודה נכשלה, נסו שוב',
-    pendingVerification:'ממתין לאישור', pendingVerificationMsg:'החשבון שלכם ממתין לאישור התעודה. עד שיאושר, לא תופיעו ברשימת המאמנים לשחקנים.',
+    pendingVerification:'החשבון מוגבל - ממתין לאישור התעודה',
+    pendingVerificationMsg:'התעודה שהעליתם נמצאת בבדיקה שלנו. עד לאישור, הפרופיל שלכם לא מוצג לשחקנים ולא תוכלו לקבל בקשות או לקבוע שיחות. בינתיים אפשר להשלים את הפרטים, התמחור והחבילות - הכל יישמר. נעדכן אתכם במייל ברגע שהחשבון יאושר.',
+    pendingVerifToast:'החשבון נוצר. התעודה נשלחה לבדיקה - עד לאישור החשבון מוגבל.',
     verifiedBadge:'מאמן מאומת',
     adminTitle:'אישור מאמנים', adminPending:'ממתינים לאישור', adminNoCoaches:'אין בקשות ממתינות',
     adminViewCert:'צפו בתעודה', adminApprove:'אשרו מאמן', adminReject:'דחו',
@@ -1267,7 +1271,9 @@ const STR = {
     coachProfileTitle:'Coach profile', aboutCoach:'About the coach',
     fieldCertificate:'Upload coach/analyst certificate', certificateHint:'Upload an image or PDF of your certificate',
     certificateRequired:'Please upload a certificate to sign up', certificateUploadError:'Certificate upload failed, please try again',
-    pendingVerification:'Pending approval', pendingVerificationMsg:"Your account is awaiting certificate approval. Until approved, you won't appear in the coach list for players.",
+    pendingVerification:'Account limited - certificate pending approval',
+    pendingVerificationMsg:"We're reviewing the certificate you uploaded. Until it's approved your profile is hidden from players and you can't receive requests or book calls. In the meantime you can finish your details, pricing and packages - everything is saved. We'll email you as soon as the account is approved.",
+    pendingVerifToast:'Account created. Your certificate was sent for review - the account is limited until approved.',
     verifiedBadge:'Verified coach',
     adminTitle:'Coach approvals', adminPending:'Pending approval', adminNoCoaches:'No pending requests',
     adminViewCert:'View certificate', adminApprove:'Approve coach', adminReject:'Reject',
@@ -4846,7 +4852,7 @@ function renderCoachHome(){
     ${state.user && !state.user.isVerified ? `
       <div class="commit-box" style="margin-bottom:16px">
         ${icon('clip',18)}
-        <span><b>${t('pendingVerification')}</b> - ${t('pendingVerificationMsg')}</span>
+        <span><b>${t('pendingVerification')}</b><br>${t('pendingVerificationMsg')}</span>
       </div>
     ` : ''}
     <div class="profile-strip">
@@ -4921,6 +4927,12 @@ function renderCoachDash(){
   })() : '';
   const mine = [...state.requests].sort((a,b)=>b.createdAt-a.createdAt);
   return `
+    ${(state.user && !state.user.isVerified) ? `
+      <div class="commit-box" style="margin:0 0 18px">
+        ${icon('clip',18)}
+        <span><b>${t('pendingVerification')}</b><br>${t('pendingVerificationMsg')}</span>
+      </div>
+    ` : ''}
     <div class="hero-cta-row" style="margin-bottom:20px">
       <button class="btn btn-ghost" data-action="view-my-public-profile">${icon('star',17)} ${t('myProfileBtn')}</button>
       <button class="btn btn-ghost" data-action="open-income">${icon('chart',17)} ${t('myIncomeBtn')}</button>
@@ -5893,6 +5905,7 @@ function attachHandlers(){
     state.coachId = res.uid;
     state.requests = [];
     state.postVerifyDestination = 'home';
+    showToast(t('pendingVerifToast'));
     go('verify-email');
   });
   app.querySelector('[data-action="finish-signup-mental"]')?.addEventListener('click', async (e)=>{
@@ -5947,6 +5960,7 @@ function attachHandlers(){
     state.coachId = res.uid;
     state.requests = [];
     state.postVerifyDestination = 'home';
+    showToast(t('pendingVerifToast'));
     go('verify-email');
   });
   app.querySelector('[data-action="finish-signup-viewer"]')?.addEventListener('click', async (e)=>{

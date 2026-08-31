@@ -5740,6 +5740,7 @@ function attachHandlers(){
     if(!EMAIL_RE.test((d.email||'').trim())){ showToast(t('invalidEmail')); return; }
     if(!d.password || d.password.length<6){ showToast(t('invalidPassword')); return; }
     if(!d.agreedTerms){ showToast(t('mustAgreeTerms')); return; }
+    if(!sportHasGoalkeeper()) d.playerRole = 'field';   // basketball has no goalkeeper
     if(!d.playerRole){ showToast(t('requiredPlayerRole')); return; }
     const emailLower = d.email.trim().toLowerCase();
     const profile = {

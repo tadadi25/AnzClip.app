@@ -1,1 +1,5 @@
 /media/*  https://firebasestorage.googleapis.com/v0/b/nextsave-5548e.firebasestorage.app/o/:splat  200
+
+# landing pages - clean URLs
+/pro      /about.html     200
+/players  /players.html   200

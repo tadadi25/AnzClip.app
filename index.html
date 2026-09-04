@@ -3,9 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>AnzClip - Player Analysis</title><link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>AnzClip - Player Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800;900&family=Heebo:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -1011,7 +1009,7 @@ const STR = {
     recordCall:'הקליטו שיחה', recordingLive:'מוקלט', recordingSaved:'ההקלטה נשמרה במחשב שלכם',
     recordingNotSupported:'הדפדפן הזה לא תומך בהקלטת שיחות', noRecordingYet:'אין הקלטה עדיין',
     mentalPackagesTitle:'חבילות שיחות', addMentalPackage:'הוסיפו חבילת שיחות', sessionCountLabel:'מספר שיחות',
-    pkgOfCallsPre:'חבילת', pkgOfCallsPost:'שיחות',
+    pkgOfCallsPre:'חבילת', pkgOfCallsPost:'שיחות', callsRemaining:'שיחות נותרו',
     priceFrom:'החל מ-', videoDuration:'אורך סרטון', totalDuration:'משך כולל', selectedVideos:'סרטונים שנבחרו',
     addVideo:'הוסיפו סרטון', addMoreVideos:'הוסיפו עוד סרטון', priceForYourVideo:'מחיר לניתוח', upTo:'עד', minutesUnit:'דקות',
     packagesTitle:'חבילות', addPackage:'הוסיפו חבילה', removePackage:'הסירו',
@@ -1215,7 +1213,7 @@ const STR = {
     recordCall:'Record call', recordingLive:'Recording', recordingSaved:'Recording saved to your device',
     recordingNotSupported:'This browser does not support call recording', noRecordingYet:'No recording yet',
     mentalPackagesTitle:'Call packages', addMentalPackage:'Add a call package', sessionCountLabel:'Number of calls',
-    pkgOfCallsPre:'Package of', pkgOfCallsPost:'calls',
+    pkgOfCallsPre:'Package of', pkgOfCallsPost:'calls', callsRemaining:'calls left',
     priceFrom:'From ', videoDuration:'Video length', totalDuration:'Total length', selectedVideos:'Selected videos',
     addVideo:'Add video', addMoreVideos:'Add another video', priceForYourVideo:'Price for this analysis', upTo:'Up to', minutesUnit:'min',
     packagesTitle:'Packages', addPackage:'Add package', removePackage:'Remove',
@@ -1311,6 +1309,7 @@ let state = {
   composeAttachments: [],
   composeClipFile: null,
   viewingCoach: null, isSelfViewingProfile: false, expandedAnalysisId: null, sport: 'football',
+  activeCallPackages: [],
   shareStatKeys: null, shareStatsPickerOpen: false,
   adminPendingCoaches: [],
   adminStats: null,
@@ -2464,9 +2463,13 @@ function renderRequestCall(){
   const c = state.viewingCoach;
   if(!c) return renderCoaches();
   const choice = state.callDraft.paymentChoice || 'single';
+  const owned = state.activeCallPackages || [];
   let choiceSummary = `${t('requestCallTitle')} - ₪${c.mentalSessionPrice}`;
   let coachAmount = c.mentalSessionPrice;
-  if(choice.startsWith('pkg:')){
+  if(choice.startsWith('own:')){
+    const own = owned.find(o=>o.id===choice.slice(4));
+    if(own){ choiceSummary = `${t('useFromPackage')} - ${own.gamesTotal-own.gamesUsed} ${t('callsRemaining')}`; coachAmount = 0; }
+  } else if(choice.startsWith('pkg:')){
     const pid = choice.slice(4);
     const pkg = (c.mentalPackages||[]).find(p=>p.id===pid);
     if(pkg){ choiceSummary = `${t('pkgOfCallsPre')} ${pkg.sessionCount} ${t('pkgOfCallsPost')} - ₪${pkg.price}`; coachAmount = pkg.price; }
@@ -2481,7 +2484,13 @@ function renderRequestCall(){
       </div>
     </div>
 
-    <div class="field-label" style="margin-top:0">${t('requestCallTitle')}</div>
+    ${owned.length ? `
+      <div class="field-label" style="margin-top:0">${t('myActivePackages')}</div>
+      <div class="chip-row">
+        ${owned.map(o=>`<div class="chip ${choice==='own:'+o.id?'active':''}" data-call-payment-choice="own:${o.id}">${o.gamesTotal-o.gamesUsed} ${t('callsRemaining')}</div>`).join('')}
+      </div>
+    ` : ''}
+    <div class="field-label" style="margin-top:${owned.length?'14px':'0'}">${t('requestCallTitle')}</div>
     <div class="chip-row">
       <div class="chip ${choice==='single'?'active':''}" data-call-payment-choice="single">${t('requestCall')} (₪${c.mentalSessionPrice})</div>
       ${(c.mentalPackages||[]).map(p=>`<div class="chip ${choice==='pkg:'+p.id?'active':''}" data-call-payment-choice="pkg:${p.id}">${t('pkgOfCallsPre')} ${p.sessionCount} ${t('pkgOfCallsPost')} (₪${p.price})</div>`).join('')}
@@ -2528,7 +2537,7 @@ function renderCallRequestDetail(){
     ` : `
       <div class="field-label" style="margin-top:0">${t('chooseTimeTitle')}</div>
       ${(r.proposedSlots||[]).map(s=>`
-        <div class="req-card" data-confirm-slot="${s.id}" style="cursor:pointer;margin-bottom:10px">
+        <div class="req-card" style="margin-bottom:10px">
           <div class="req-top">
             <div class="coach-name" style="font-size:14px">${fmtDateTime(s.dateTimeMs)}</div>
             <button class="select-btn" data-confirm-slot="${s.id}">${t('confirmSlot')}</button>
@@ -3101,6 +3110,36 @@ function selectedShareStatKeys(available){
   return state.shareStatKeys.filter(k=>all.includes(k));
 }
 let __sharingBusy = false;
+let __submittingRequest = false;   // guards against double-submitting a paid request
+
+// wipes everything cached for the account that just signed out - otherwise the next
+// account (possibly from the other sport) sees the previous one's directories and drafts
+function clearSessionData(){
+  state.user = null;
+  state.role = 'player';
+  COACHES.length = 0;
+  state.requests = [];
+  state.callRequests = [];
+  state.allPlayers = [];
+  state.allAgents = [];
+  state.allScouts = [];
+  state.activePackages = [];
+  state.activeCallPackages = [];
+  state.coachReviews = [];
+  state.coachClips = [];
+  state.viewingCoach = null;
+  state.selectedCoach = null;
+  state.viewingPlayer = null;
+  state.viewingCallRequest = null;
+  state.expandedAnalysisId = null;
+  state.shareStatKeys = null;
+  state.shareStatsPickerOpen = false;
+  state.adminPendingCoaches = [];
+  state.adminStats = null;
+  state.filters.unifiedQuery = '';
+  state.draft = { category:'kids', note:'', videos:[], isDemo:false, fileName:null, paymentChoice:null, wantsHighlightClip:false, orderType:'analysis' };
+  state.callDraft = { paymentChoice:null };
+}
 async function runShare(btn, fn){
   if(__sharingBusy) return;                                 // a second click while working is ignored, not queued
   __sharingBusy = true;
@@ -3268,13 +3307,28 @@ function draftTotalDurationSec(){
   if(vids.some(v=>v.durationSec==null)) return null;
   return vids.reduce((s,v)=> s+v.durationSec, 0);
 }
-async function loadActivePackages(gkUid, coachUid){
+async function loadActivePackages(gkUid, coachUid, kind){
+  // kind: 'call' for mental-coaching call packages, anything else for video analysis
   try{
     const snap = await db.collection('packagePurchases').where('gkUid','==',gkUid).where('coachUid','==',coachUid).get();
     const list = [];
-    snap.forEach(doc=>{ const d = doc.data(); if(d.gamesUsed < d.gamesTotal) list.push({id:doc.id, ...d}); });
+    snap.forEach(doc=>{
+      const d = doc.data();
+      if((d.kind||'analysis') !== (kind||'analysis')) return;
+      if(d.gamesUsed < d.gamesTotal) list.push({id:doc.id, ...d});
+    });
     return list;
   }catch(e){ console.error('failed to load active packages', e); return []; }
+}
+// returns a game to the package when a request is cancelled or declined
+async function refundPackageGame(req){
+  if(!req || !req.packagePurchaseId) return;
+  if(req.paymentType!=='existingPackage' && req.paymentType!=='newPackage') return;
+  try{
+    await db.collection('packagePurchases').doc(req.packagePurchaseId).update({
+      gamesUsed: firebase.firestore.FieldValue.increment(-1)
+    });
+  }catch(e){ console.error('failed to refund package game', e); }
 }
 
 function timeLeftStr(deadline){
@@ -3802,7 +3856,7 @@ function renderSignupCoach(){
   const d = state.signupDraft;
   const specs = d.specialties || [];
   // one profession per account: a mental coach has no video pricing or turnaround
-  const suTypes = d.coachTypes || ['goalkeeper'];
+  const suTypes = d.coachTypes || [sportCoachTypes()[0]];
   const suMentalOnly = suTypes.length>0 && suTypes.every(ct=>ct==='mental');
   return `
     <div class="onboard" style="padding-top:30px">
@@ -4106,7 +4160,7 @@ function renderHome(){
         <button class="btn btn-ghost-line" data-action="scroll-how-it-works">${icon('check',18)} ${t('howTitle')}</button>
       </div>
       <div class="stats-strip">
-        <div class="stat-chip"><b class="mono">${(state.user && state.user.playerRole==='goalkeeper') ? COACHES.filter(c=>(c.coachTypes||[]).includes('goalkeeper')||(c.coachTypes||[]).includes('analyst')).length : (state.user && state.user.playerRole==='field') ? COACHES.filter(c=>(c.coachTypes||[]).includes('general')||(c.coachTypes||[]).includes('analyst')).length : COACHES.length}</b><span>${(state.user && state.user.playerRole==='goalkeeper') ? t('statCoachesGK') : t('statCoaches')}</span></div>
+        <div class="stat-chip"><b class="mono">${filteredCoachesForRole().length}</b><span>${t('statCoaches')}</span></div>
         <div class="stat-chip"><b class="mono">${completed}</b><span>${t('statDone')}</span></div>
         <div class="stat-chip"><b class="mono">24h+</b><span>${t('statTurnaround')}</span></div>
       </div>
@@ -4197,17 +4251,23 @@ function renderUpload(){
 }
 
 /* ---------------- COACHES ---------------- */
+// how many professionals this player can actually book - used by the home counter
+function filteredCoachesForRole(){
+  if(!(state.user && state.user.role==='gk' && state.user.playerRole)) return COACHES;
+  const exclude = state.user.playerRole==='goalkeeper' ? 'general' : 'goalkeeper';
+  const allowed = sportCoachTypes().filter(ct=>ct!==exclude);
+  return COACHES.filter(c => (c.coachTypes||[]).some(ct=>allowed.includes(ct)));
+}
 function filteredCoaches(){
   let list = COACHES.filter(c => state.filters.specialty==='all' || c.specialties.includes(state.filters.specialty));
   list = list.filter(c => state.filters.country==='all' || c.country===state.filters.country);
   list = list.filter(c => state.filters.coachType==='all' || (c.coachTypes||[]).includes(state.filters.coachType));
   list = list.filter(c => state.filters.generalSpec==='all' || (c.generalSpecialties||[]).includes(state.filters.generalSpec));
   if(state.user && state.user.role==='gk' && state.user.playerRole){
-    if(state.user.playerRole==='goalkeeper'){
-      list = list.filter(c => (c.coachTypes||[]).includes('goalkeeper') || (c.coachTypes||[]).includes('analyst') || (c.coachTypes||[]).includes('mental'));
-    } else {
-      list = list.filter(c => (c.coachTypes||[]).includes('general') || (c.coachTypes||[]).includes('analyst') || (c.coachTypes||[]).includes('mental'));
-    }
+    // every type the current sport offers, minus the one that belongs to the other player role
+    const exclude = state.user.playerRole==='goalkeeper' ? 'general' : 'goalkeeper';
+    const allowed = sportCoachTypes().filter(ct=>ct!==exclude);
+    list = list.filter(c => (c.coachTypes||[]).some(ct=>allowed.includes(ct)));
   }
   if(state.filters.query && state.filters.query.trim()){
     const q = state.filters.query.trim().toLowerCase();
@@ -4570,7 +4630,7 @@ function renderAdmin(){
             <div class="coach-sub">${c.email} · ${
               c.role==='agent' ? t('registerAgentTitle')
               : c.role==='scout' ? `${t('registerScoutTitle')}${c.club?' · '+c.club:''}`
-              : (c.coachTypes||['goalkeeper']).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')
+              : (c.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')
             } · ${c.years||0} ${t('yearsExp')}</div>
           </div>
         </div>
@@ -4708,7 +4768,7 @@ function renderRequests(){
           ${r.cancelReason ? `<div class="req-meta" style="margin-top:6px">${t('cancelReasonLabel')}: "${r.cancelReason}"</div>` : ''}
         ` : r.status!=='done' ? `
           <div class="countdown" data-countdown="${r.deadline}">${timeLeftStr(r.deadline)}</div>
-          <button class="demo-link" data-demo-complete="${r.id}">${t('demoComplete')}</button>
+          ${r.isDemo ? `<button class="demo-link" data-demo-complete="${r.id}">${t('demoComplete')}</button>` : ''}
         ` : `
           ${reqOrderType(r)!=='clip' ? `
             <div class="analysis-box">
@@ -5273,12 +5333,14 @@ function renderProfile(){
       </label>
       <input type="file" id="pf-cert-input" accept="image/*,.pdf" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
     ` : `
-      <div class="field-label">${t('playerRoleTitle')}</div>
-      <div class="chip-row" id="pf-player-role-chips">
-        <div class="chip ${d.playerRole==='goalkeeper'?'active':''}" data-pf-player-role="goalkeeper">${t('playerRoleGK')}</div>
-        <div class="chip ${d.playerRole==='field'?'active':''}" data-pf-player-role="field">${t('playerRoleField')}</div>
-      </div>
-      ${d.playerRole==='field' ? `
+      ${sportHasGoalkeeper() ? `
+        <div class="field-label">${t('playerRoleTitle')}</div>
+        <div class="chip-row" id="pf-player-role-chips">
+          <div class="chip ${d.playerRole==='goalkeeper'?'active':''}" data-pf-player-role="goalkeeper">${t('playerRoleGK')}</div>
+          <div class="chip ${d.playerRole==='field'?'active':''}" data-pf-player-role="field">${t('playerRoleField')}</div>
+        </div>
+      ` : ''}
+      ${(d.playerRole==='field' || !sportHasGoalkeeper()) ? `
         <div class="field-label">${t('fieldPositions')}</div>
         <div class="chip-row" id="pf-position-chips">
           ${sportFieldPositions().map(p=>`<div class="chip ${(d.positions||[]).includes(p)?'active':''}" data-pf-position="${p}">${POSITION_LABEL[state.lang][p]}</div>`).join('')}
@@ -5359,7 +5421,8 @@ function attachHandlers(){
     else if(state.view==='directory-players') go('viewer-home');
     else if(state.view==='profile' && state.role==='viewer') go('viewer-home');
     else if(state.view==='profile' && state.role==='coach') go('coach-dash');
-    else go('home');
+    // a coach must never land on the player home screen, and a viewer never on either
+    else go(state.role==='coach' ? 'coach-dash' : state.role==='viewer' ? 'viewer-home' : 'home');
   });
   app.querySelectorAll('[data-action="nav-home"]').forEach(el=>{
     el.addEventListener('click', ()=>go('home'));
@@ -5471,6 +5534,7 @@ function attachHandlers(){
         state.draft.wantsHighlightClip = false;
         state.draft.orderType = 'analysis';
         state.draft.paymentChoice = null;
+        state.activePackages = [];
         state.reviewsExpanded = false;
         state.coachReviews = await loadCoachReviews(coach.id);
         state.coachClips = await loadCoachClips(coach.id);
@@ -5872,7 +5936,7 @@ function attachHandlers(){
       sport: state.sport || 'football',
       photo:d.photo||null,
       country: d.country || COUNTRIES[0].code,
-      coachTypes: (d.coachTypes && d.coachTypes.length) ? d.coachTypes : ['goalkeeper'],
+      coachTypes: (d.coachTypes && d.coachTypes.length) ? d.coachTypes : [sportCoachTypes()[0]],
       generalSpecialties: (d.coachTypes||[]).includes('general') ? (d.generalSpecialties||[]) : [],
       years: Number(d.years)||0,
       specialties: (d.specialties && d.specialties.length) ? d.specialties : ['kids','teens','adults'],
@@ -6020,15 +6084,13 @@ function attachHandlers(){
   });
   app.querySelector('[data-action="switch-user"]')?.addEventListener('click', async ()=>{
     await firebaseLogout();
-    state.user = null;
-    state.role = 'player';
+    clearSessionData();
     go('auth');
   });
   app.querySelectorAll('[data-action="logout"]').forEach(el=>{
     el.addEventListener('click', async ()=>{
       await firebaseLogout();
-      state.user = null;
-      state.role = 'player';
+      clearSessionData();
       go('auth');
     });
   });
@@ -6296,7 +6358,7 @@ function attachHandlers(){
     const updates = isCoach ? {
       name: d.name.trim(), photo: d.photo||null,
       country: d.country || COUNTRIES[0].code,
-      coachTypes: (d.coachTypes && d.coachTypes.length) ? d.coachTypes : ['goalkeeper'],
+      coachTypes: (d.coachTypes && d.coachTypes.length) ? d.coachTypes : [sportCoachTypes()[0]],
       generalSpecialties: (d.coachTypes||[]).includes('general') ? (d.generalSpecialties||[]) : [],
       years: Number(d.years)||0,
       specialties: (d.specialties && d.specialties.length) ? d.specialties : ['kids','teens','adults'],
@@ -6323,8 +6385,8 @@ function attachHandlers(){
       ...certUpdates
     } : {
       name: d.name.trim(), photo: d.photo||null,
-      playerRole: d.playerRole || 'field',
-      positions: d.playerRole==='goalkeeper' ? ['goalkeeper'] : (d.positions || []),
+      playerRole: sportHasGoalkeeper() ? (d.playerRole || 'field') : 'field',
+      positions: (sportHasGoalkeeper() && d.playerRole==='goalkeeper') ? ['goalkeeper'] : (d.positions || []),
       statsPublic: d.statsPublic!==false,
       dob: d.dob||null, club: d.club||'', height: d.height||'', about: d.about||''
     };
@@ -6399,8 +6461,10 @@ function attachHandlers(){
     if(afterAccept && !confirm(t('confirmCancelRequest'))) return;
     const reason = (prompt(t('cancelReasonPrompt')) || '').trim();
     if(!reason){ showToast(t('cancelReasonRequired')); return; }
-    const ok = await updateRequestDoc(req.id, {status:'declined', cancelReason:reason, cancelledAfterAccept:!!afterAccept, gkSeen:false});
+    const ok = await updateRequestDoc(req.id, {status:'declined', cancelReason:reason, cancelledAfterAccept:!!afterAccept, gkSeen:false, packageRefunded:true});
     if(!ok){ showToast(t('saveError')); return; }
+    if(!req.packageRefunded) await refundPackageGame(req);   // the player keeps the game they paid for
+    req.packageRefunded = true;
     req.status = 'declined';
     req.cancelReason = reason;
     req.cancelledAfterAccept = !!afterAccept;
@@ -6449,7 +6513,12 @@ function attachHandlers(){
   });
   app.querySelector('#clip-file-input')?.addEventListener('change', (e)=>{
     const f = e.target.files && e.target.files[0];
-    if(f){ state.composeClipFile = f; render(); }
+    if(!f) return;
+    state.composeClipFile = f;
+    // do NOT re-render: the compose form is uncontrolled and a render would
+    // discard the score, the analysis text and every stat already typed in.
+    const label = document.querySelector('label[for="clip-file-input"] span');
+    if(label) label.textContent = f.name;
   });
 
   app.querySelectorAll('#stats-inputs [data-stat-key]').forEach(inp=>{
@@ -6666,8 +6735,10 @@ function attachHandlers(){
 
   // mental-coach call requests
   app.querySelectorAll('[data-action="open-request-call"]').forEach(el=>{
-    el.addEventListener('click', ()=>{
+    el.addEventListener('click', async ()=>{
       state.callDraft = { paymentChoice:'single' };
+      const c = state.viewingCoach;
+      state.activeCallPackages = (state.user && c) ? await loadActivePackages(state.user.uid, c.id, 'call') : [];
       go('request-call');
     });
   });
@@ -6681,12 +6752,28 @@ function attachHandlers(){
     const btn = e.currentTarget;
     const c = state.viewingCoach;
     if(!c || !state.user) return;
+    if(__submittingRequest) return;
+    __submittingRequest = true;
     const choice = state.callDraft.paymentChoice || 'single';
-    let coachAmount = c.mentalSessionPrice, pkgId = null;
-    if(choice.startsWith('pkg:')){
+    let coachAmount = c.mentalSessionPrice, pkgId = null, ownedId = null, buyPkg = null;
+    let callPaymentType = 'single';
+    if(choice.startsWith('own:')){
+      ownedId = choice.slice(4);
+      const own = (state.activeCallPackages||[]).find(o=>o.id===ownedId);
+      if(!own || own.coachUid!==c.id || (own.gamesUsed||0) >= own.gamesTotal){
+        showToast(t('saveError'));
+        state.activeCallPackages = await loadActivePackages(state.user.uid, c.id, 'call');
+        state.callDraft.paymentChoice = 'single';
+        __submittingRequest = false;
+        render();
+        return;
+      }
+      coachAmount = 0; callPaymentType = 'existingCallPackage';
+    } else if(choice.startsWith('pkg:')){
       pkgId = choice.slice(4);
-      const pkg = (c.mentalPackages||[]).find(p=>p.id===pkgId);
-      if(pkg) coachAmount = pkg.price;
+      buyPkg = (c.mentalPackages||[]).find(p=>p.id===pkgId);
+      if(buyPkg) coachAmount = buyPkg.price;
+      callPaymentType = 'newCallPackage';
     }
     const fee = computeFee(coachAmount);
     btn.disabled = true;
@@ -6694,13 +6781,34 @@ function attachHandlers(){
       gkUid: state.user.uid, gkName: state.user.name, gkPhoto: state.user.photo||null, gkEmail: state.user.email||null,
       coachUid: c.id, coachName: c.name, coachPhoto: c.photo||null, coachEmail: c.email||null,
       durationMinutes: Number(c.mentalCallDuration)||30,
-      paymentType: pkgId ? 'package' : 'single', packageId: pkgId,
+      paymentType: callPaymentType, packageId: pkgId, packagePurchaseId: ownedId,
       price: coachAmount, platformFee: fee.fee, totalCharged: fee.total,
       status: 'requested', proposedSlots: [], confirmedSlot: null, extendedMinutes: 0,
       createdAt: Date.now(), gkSeen: true, coachSeen: false
     });
+    if(!id){ showToast(t('saveError')); btn.disabled = false; __submittingRequest = false; return; }
+
+    // the call exists - only now move the package, so a failed request never costs a session
+    if(callPaymentType==='newCallPackage' && buyPkg){
+      try{
+        const ref = await db.collection('packagePurchases').add({
+          kind:'call',
+          gkUid: state.user.uid, gkName: state.user.name, coachUid: c.id, coachName: c.name,
+          gamesTotal: buyPkg.sessionCount, gamesUsed: 1, packagePrice: buyPkg.price,
+          purchasedAt: Date.now(), requestId: id
+        });
+        await updateCallRequestDoc(id, { packagePurchaseId: ref.id });
+      }catch(err){ console.error('failed to create call package purchase', err); }
+    } else if(callPaymentType==='existingCallPackage' && ownedId){
+      try{
+        await db.collection('packagePurchases').doc(ownedId).update({
+          gamesUsed: firebase.firestore.FieldValue.increment(1)
+        });
+      }catch(err){ console.error('failed to update call package usage', err); }
+    }
+    state.activeCallPackages = [];
     btn.disabled = false;
-    if(!id){ showToast(t('saveError')); return; }
+    __submittingRequest = false;
     if(c.email){
       sendEmailNotification(
         c.email,
@@ -6922,13 +7030,12 @@ function attachHandlers(){
       e.stopPropagation();
       const coach = COACHES.find(c=>c.id===el.dataset.selectCoach) || state.viewingCoach;
       state.selectedCoach = coach;
-      if(!state.draft.wantsHighlightClip) state.draft.wantsHighlightClip = false;
-        state.draft.orderType = 'analysis';
+      // keep whatever the player picked on the profile (analysis / clip / both)
       state.draft.orderType = state.draft.orderType || 'analysis';
-      if(!state.activePackages || !state.activePackages.length){
-        state.activePackages = state.user ? await loadActivePackages(state.user.uid, coach.id) : [];
-      }
-      if(!state.draft.paymentChoice){
+      state.draft.wantsHighlightClip = state.draft.orderType !== 'analysis';
+      // packages belong to a specific coach - always re-read them for THIS coach
+      state.activePackages = state.user ? await loadActivePackages(state.user.uid, coach.id) : [];
+      if(!state.draft.paymentChoice || state.draft.paymentChoice.startsWith('existing:')){
         state.draft.paymentChoice = state.activePackages.length ? ('existing:'+state.activePackages[0].id) : 'single';
       }
       state.draft.videos = [];
@@ -6948,8 +7055,9 @@ function attachHandlers(){
       state.selectedCoach = coach;
       state.isSelfViewingProfile = false;
       state.draft.wantsHighlightClip = false;
-        state.draft.orderType = 'analysis';
+      state.draft.orderType = 'analysis';
       state.draft.paymentChoice = null;
+      state.activePackages = [];
       state.reviewsExpanded = false;
       state.coachReviews = await loadCoachReviews(coach.id);
       state.coachClips = await loadCoachClips(coach.id);
@@ -6996,7 +7104,10 @@ function attachHandlers(){
 
   // confirm view
   app.querySelector('[data-action="submit-request"]')?.addEventListener('click', async (e)=>{
+    if(__submittingRequest) return;   // a double click must not create two requests
+    __submittingRequest = true;
     const btn = e.currentTarget;
+    btn.disabled = true;
     const c = state.selectedCoach, d = state.draft;
     const dur = draftTotalDurationSec();
     const choice = d.paymentChoice || 'single';
@@ -7010,6 +7121,16 @@ function attachHandlers(){
       basePrice = 0; paymentType = 'clipOnly';
     } else if(choice.startsWith('existing:')){
       existingPurchaseId = choice.slice(9);
+      // guard against a stale package list from a previously viewed coach
+      const pkgUse = (state.activePackages||[]).find(pk=>pk.id===existingPurchaseId);
+      if(!pkgUse || pkgUse.coachUid!==c.id || (pkgUse.gamesUsed||0) >= pkgUse.gamesTotal){
+        showToast(t('saveError'));
+        state.activePackages = await loadActivePackages(state.user.uid, c.id);
+        state.draft.paymentChoice = 'single';
+        __submittingRequest = false;
+        render();
+        return;
+      }
       basePrice = 0; paymentType = 'existingPackage';
     } else if(choice.startsWith('new:')){
       packageTemplateId = choice.slice(4);
@@ -7037,33 +7158,12 @@ function attachHandlers(){
         if(url) uploadedVideos.push({ name:v.name, url, durationSec:v.durationSec||null });
         if(fill) fill.style.width = '0%';
       }
-      btn.disabled = false;
       btn.textContent = originalLabel;
       if(track) track.style.display = 'none';
-      if(!uploadedVideos.length){ showToast(t('videoUploadError')); return; }
+      if(!uploadedVideos.length){ showToast(t('videoUploadError')); btn.disabled = false; __submittingRequest = false; return; }
     }
 
-    // handle package purchase / draw-down
     let packagePurchaseId = existingPurchaseId;
-    if(paymentType==='newPackage'){
-      const pkg = (c.packages||[]).find(p=>p.id===packageTemplateId);
-      if(pkg){
-        try{
-          const ref = await db.collection('packagePurchases').add({
-            gkUid: state.user.uid, gkName: state.user.name, coachUid: c.id, coachName: c.name,
-            gamesTotal: pkg.gameCount, gamesUsed: 1, packagePrice: pkg.price, purchasedAt: Date.now()
-          });
-          packagePurchaseId = ref.id;
-        }catch(err){ console.error('failed to create package purchase', err); }
-      }
-    } else if(paymentType==='existingPackage' && existingPurchaseId){
-      try{
-        await db.collection('packagePurchases').doc(existingPurchaseId).update({
-          gamesUsed: firebase.firestore.FieldValue.increment(1)
-        });
-      }catch(err){ console.error('failed to update package usage', err); }
-    }
-
     const reqData = {
       gkUid: state.user.uid, gkName: state.user.name, gkPhoto: state.user.photo||null, gkEmail: state.user.email||null, gkSeen: true,
       gkPlayerRole: state.user.playerRole || 'field',
@@ -7078,8 +7178,31 @@ function attachHandlers(){
       createdAt: Date.now(), deadline: null, status:'requested'
     };
     const id = await createRequestDoc(reqData);
-    if(!id){ showToast(t('saveError')); return; }
-    state.requests.push({ id, ...reqData });
+    if(!id){ showToast(t('saveError')); btn.disabled = false; __submittingRequest = false; return; }
+
+    // the request exists - only now touch the package, so a failed request never costs a game
+    if(paymentType==='newPackage'){
+      const pkg = (c.packages||[]).find(p=>p.id===packageTemplateId);
+      if(pkg){
+        try{
+          const ref = await db.collection('packagePurchases').add({
+            gkUid: state.user.uid, gkName: state.user.name, coachUid: c.id, coachName: c.name,
+            gamesTotal: pkg.gameCount, gamesUsed: 1, packagePrice: pkg.price, purchasedAt: Date.now(),
+            requestId: id
+          });
+          packagePurchaseId = ref.id;
+          await updateRequestDoc(id, { packagePurchaseId });
+        }catch(err){ console.error('failed to create package purchase', err); }
+      }
+    } else if(paymentType==='existingPackage' && existingPurchaseId){
+      try{
+        await db.collection('packagePurchases').doc(existingPurchaseId).update({
+          gamesUsed: firebase.firestore.FieldValue.increment(1)
+        });
+      }catch(err){ console.error('failed to update package usage', err); }
+    }
+    state.activePackages = [];   // force a fresh read next time
+    state.requests.push({ id, ...reqData, packagePurchaseId });
     if(paymentType==='newPackage') showToast(t('packagePurchased'));
     sendEmailNotification(
       c.email,
@@ -7092,6 +7215,7 @@ function attachHandlers(){
       </div>`
     );
     showToast(t('toastSent'));
+    __submittingRequest = false;
     go('requests');
   });
 
@@ -7100,6 +7224,7 @@ function attachHandlers(){
     el.addEventListener('click', async ()=>{
       const req = state.requests.find(r=>r.id===el.dataset.demoComplete);
       if(!req) return;
+      if(!req.isDemo) return;   // never auto-complete a real, paid request
       const score = (Math.random()*1.5+7.5).toFixed(1);
       const analysis = SAMPLE_ANALYSIS[state.lang];
       const ok = await updateRequestDoc(req.id, {status:'done', score, analysis});

@@ -1,5 +1,13 @@
 /media/*  https://firebasestorage.googleapis.com/v0/b/nextsave-5548e.firebasestorage.app/o/:splat  200
 
+# the app itself
+/app      /index.html          200
+/app/*    /index.html          200
+
 # landing pages - clean URLs
 /pro      /professional.html   200
 /players  /players.html        200
+
+# home page = the players landing page.
+# the "!" forces this rule ahead of the real index.html file that sits at the root.
+/         /players.html        200!

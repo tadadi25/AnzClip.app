@@ -1024,6 +1024,10 @@ const STR = {
     orderTypeTitle:'מה אתם מזמינים?', orderAnalysis:'ניתוח משחק', orderClip:'קליפ ביצועים', orderBoth:'ניתוח + קליפ',
     clipOnlyNote:'הזמנה זו כוללת קליפ ביצועים בלבד - ללא ניתוח כתוב.',
     cancelRequestBtn:'בטלו את הבקשה', confirmCancelRequest:'לבטל את הבקשה? השחקן יקבל על כך הודעה.', requestCancelled:'הבקשה בוטלה',
+    rejectReasonPrompt:'מה הסיבה לדחייה? ההודעה תישלח לבעל המקצוע:', rejectEmailSubject:'החשבון שלכם ב-AnzClip לא אושר', rejectEmailBody:'בדקנו את התעודה שהעליתם ולא יכולנו לאשר את החשבון בשלב זה.',
+    accountRejected:'החשבון לא אושר', accountRejectedMsg:'התעודה שהעליתם נבדקה ולא אושרה. אפשר להעלות תעודה מעודכנת דרך עריכת הפרופיל, או לפנות אלינו במייל.',
+    cancelCallBtn:'בטלו את השיחה', confirmCancelCall:'לבטל את השיחה? הצד השני יקבל על כך הודעה.', callCancelled:'השיחה בוטלה', callCancelledTitle:'השיחה בוטלה',
+    slotMustBeFuture:'יש לבחור מועד עתידי', callRequestSent:'הבקשה נשלחה למאמן', proposalSent:'המועדים נשלחו לשחקן',
     cancelReasonPrompt:'מה הסיבה לביטול? ההודעה תישלח לשחקן:', cancelReasonRequired:'יש לכתוב סיבה לביטול', cancelReasonLabel:'סיבת הביטול',
     viewAnalysisBtn:'לחץ לצפייה בניתוח', hideAnalysisBtn:'הסתירו את הניתוח',
     myReportsTitle:'הדוחות שלי', openReportBtn:'פתחו את הדוח המלא', reportFrom:'דוח מאת ', noReportsYet:'עדיין אין דוחות', analysisNoLimitHint:'אין הגבלת אורך - כתבו כמה שצריך.', reportTitle:'דוח ניתוח ביצועים',
@@ -1140,7 +1144,7 @@ const STR = {
     showingFor:'Showing requests for coach:',
     demoNote:'For this demo you can pick any coach to see the requests they would receive. In a real product, each coach would sign in to their own account only.',
     noIncomingTitle:'No requests yet',
-    noIncomingSub:(name)=>`Once a goalkeeper picks ${name}, the request will show up here`,
+    noIncomingSub:(name)=>`Once a player picks ${name}, the request will show up here`,
     goalkeeperNote:"Player's note", sentBy:'Sent by', submittedOn:'Submitted on',
     writeAnalysis:'Write analysis', analysisSent:'Sent to goalkeeper', theAnalysisSent:'Analysis sent',
     commitmentLabel:'Delivery commitment',
@@ -1228,6 +1232,10 @@ const STR = {
     orderTypeTitle:'What are you ordering?', orderAnalysis:'Game analysis', orderClip:'Highlight clip', orderBoth:'Analysis + clip',
     clipOnlyNote:'This order is for a highlight clip only - no written analysis.',
     cancelRequestBtn:'Cancel this request', confirmCancelRequest:'Cancel this request? The player will be notified.', requestCancelled:'Request cancelled',
+    rejectReasonPrompt:'Why is this account rejected? The message is sent to the professional:', rejectEmailSubject:'Your AnzClip account was not approved', rejectEmailBody:'We reviewed the certificate you uploaded and could not approve the account at this time.',
+    accountRejected:'Account not approved', accountRejectedMsg:'The certificate you uploaded was reviewed and not approved. You can upload an updated certificate from your profile, or contact us by email.',
+    cancelCallBtn:'Cancel this call', confirmCancelCall:'Cancel this call? The other side will be notified.', callCancelled:'Call cancelled', callCancelledTitle:'The call was cancelled',
+    slotMustBeFuture:'Please pick a time in the future', callRequestSent:'Your request was sent to the coach', proposalSent:'The times were sent to the player',
     cancelReasonPrompt:'Why are you cancelling? This message is sent to the player:', cancelReasonRequired:'Please write a reason', cancelReasonLabel:'Reason for cancellation',
     viewAnalysisBtn:'View the analysis', hideAnalysisBtn:'Hide the analysis',
     myReportsTitle:'My reports', openReportBtn:'Open the full report', reportFrom:'Report by ', noReportsYet:'No reports yet', analysisNoLimitHint:'No length limit - write as much as you need.', reportTitle:'Performance analysis report',
@@ -1543,21 +1551,29 @@ async function loadAdminStats(){
   }catch(e){ console.error('failed to count players', e); }
   try{
     const coachesSnap = await db.collection('users').where('role','==','coach').get();
-    stats.coachCount = coachesSnap.size;
+    // only approved, non-rejected coaches - this is what the directory actually shows
+    let approved = 0;
+    coachesSnap.forEach(doc=>{ const d = doc.data(); if(d.isVerified && !d.rejected) approved++; });
+    stats.coachCount = approved;
   }catch(e){ console.error('failed to count coaches', e); }
+  let gross = 0, revenue = 0;
+  const addRow = (d)=>{
+    const coachAmount = (d.price!=null?d.price:(d.basePrice||0));
+    const fee = d.platformFee!=null ? d.platformFee : Math.round(coachAmount*PLATFORM_FEE_RATE);
+    gross += coachAmount + fee;
+    revenue += fee;
+  };
   try{
     const doneSnap = await db.collection('requests').where('status','==','done').get();
-    let gross = 0, revenue = 0;
-    doneSnap.forEach(doc=>{
-      const d = doc.data();
-      const coachAmount = (d.price!=null?d.price:(d.basePrice||0));
-      const fee = d.platformFee!=null ? d.platformFee : Math.round(coachAmount*PLATFORM_FEE_RATE);
-      gross += coachAmount + fee;
-      revenue += fee;
-    });
-    stats.grossVolume = gross;
-    stats.platformRevenue = revenue;
+    doneSnap.forEach(doc=>addRow(doc.data()));
   }catch(e){ console.error('failed to sum completed requests', e); }
+  try{
+    // completed mental-coaching calls are revenue too, and were missing entirely
+    const callsSnap = await db.collection('callRequests').where('status','==','completed').get();
+    callsSnap.forEach(doc=>addRow(doc.data()));
+  }catch(e){ console.error('failed to sum completed calls', e); }
+  stats.grossVolume = gross;
+  stats.platformRevenue = revenue;
   return stats;
 }
 async function loadMyRequests(uid){
@@ -2040,28 +2056,36 @@ async function initVideoCall(){
     }
   };
 
+  // The player is always the caller and the coach always the callee. Deciding this from a
+  // one-off read of the doc made both sides pick the same role when they joined together.
+  const isCaller = !isCoach;
   try{
-    const roomSnap = await roomRef.get();
-    const roomData = roomSnap.data() || {};
-
-    if(!roomData.offer){
+    if(isCaller){
+      // a rejoin must start from a clean slate - stale offer/answer/candidates deadlock the call
+      await clearCallSignalling(roomRef);
       const offerDesc = await __rtcPC.createOffer();
       await __rtcPC.setLocalDescription(offerDesc);
-      await roomRef.update({ offer: { type: offerDesc.type, sdp: offerDesc.sdp } });
-    } else {
-      await __rtcPC.setRemoteDescription(new RTCSessionDescription(roomData.offer));
-      const answerDesc = await __rtcPC.createAnswer();
-      await __rtcPC.setLocalDescription(answerDesc);
-      await roomRef.update({ answer: { type: answerDesc.type, sdp: answerDesc.sdp } });
+      await roomRef.update({ offer: { type: offerDesc.type, sdp: offerDesc.sdp }, answer: null });
     }
-  }catch(e){ console.error('offer/answer exchange failed', e); }
+  }catch(e){ console.error('offer creation failed', e); }
 
+  let __answered = false;
   __rtcRoomUnsub = roomRef.onSnapshot(async (snap)=>{
     const data = snap.data();
-    if(!data) return;
-    if(!__rtcPC.currentRemoteDescription && data.answer && __rtcPC.signalingState!=='stable'){
-      try{ await __rtcPC.setRemoteDescription(new RTCSessionDescription(data.answer)); }
-      catch(e){ console.error('setRemoteDescription(answer) failed', e); }
+    if(!data || !__rtcPC) return;
+    if(isCaller){
+      if(!__rtcPC.currentRemoteDescription && data.answer && __rtcPC.signalingState!=='stable'){
+        try{ await __rtcPC.setRemoteDescription(new RTCSessionDescription(data.answer)); }
+        catch(e){ console.error('setRemoteDescription(answer) failed', e); }
+      }
+    } else if(!__answered && data.offer){
+      __answered = true;
+      try{
+        await __rtcPC.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answerDesc = await __rtcPC.createAnswer();
+        await __rtcPC.setLocalDescription(answerDesc);
+        await roomRef.update({ answer: { type: answerDesc.type, sdp: answerDesc.sdp } });
+      }catch(e){ console.error('answer creation failed', e); __answered = false; }
     }
     if(data.extendedMinutes!=null) r.extendedMinutes = data.extendedMinutes;
     const recIndicator = document.getElementById('recording-indicator');
@@ -2184,6 +2208,16 @@ function downloadCallRecording(){
   document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url), 8000);
 }
+// removes the previous session's offer/answer/ICE candidates so a rejoin can start clean
+async function clearCallSignalling(roomRef){
+  try{ await roomRef.update({ offer: null, answer: null }); }catch(e){}
+  for(const col of ['callerCandidates','calleeCandidates']){
+    try{
+      const snap = await roomRef.collection(col).get();
+      await Promise.all(snap.docs.map(d=>d.ref.delete().catch(()=>{})));
+    }catch(e){ console.error('failed to clear '+col, e); }
+  }
+}
 function teardownVideoCall(){
   if(__rtcIsRecording) stopCallRecording();
   if(__rtcTimerInterval){ clearInterval(__rtcTimerInterval); __rtcTimerInterval = null; }
@@ -2198,19 +2232,27 @@ function handleRemoteHangup(msg){
   const endedId = __rtcActiveCallId;
   if(__rtcIsRecording){ stopCallRecording(); downloadCallRecording(); }
   teardownVideoCall();
-  setCallStatusLocally(endedId, 'completed');
+  markCallCompleted(endedId);
   if(msg) showToast(msg);
   if(state.view==='video-call') go('call-request-detail');
+}
+// a call that ended in ANY way must be persisted as completed, otherwise the rating
+// screen never opens and the coach's income stays stuck on "expected"
+function markCallCompleted(callId){
+  if(!callId) return;
+  const rec = (state.viewingCallRequest && state.viewingCallRequest.id===callId)
+    ? state.viewingCallRequest
+    : (state.callRequests||[]).find(c=>c.id===callId);
+  if(rec && (rec.status==='completed' || rec.status==='cancelled')) return;
+  setCallStatusLocally(callId, 'completed');
+  updateCallRequestDoc(callId, { status:'completed', isRecording:false }).catch(()=>{});
 }
 function endVideoCall(){
   const r = state.viewingCallRequest;
   if(__rtcIsRecording){ stopCallRecording(); downloadCallRecording(); }
+  const endedId = __rtcActiveCallId || (r && r.id);
   teardownVideoCall();
-  // tell the other side the call is over, so their screen closes too
-  if(r && r.status!=='completed' && r.status!=='cancelled'){
-    setCallStatusLocally(r.id, 'completed');
-    updateCallRequestDoc(r.id, { status:'completed', isRecording:false }).catch(()=>{});
-  }
+  markCallCompleted(endedId);
 }
 
 function initPublicStatsCharts(){
@@ -2546,6 +2588,15 @@ function renderCallRequestDetail(){
       `).join('')}
       <button class="demo-link" style="display:block;margin-top:10px" data-action="request-more-options">${t('requestMoreOptions')}</button>
     `) : ''}
+
+    ${(r.status==='requested' || r.status==='proposed' || (r.status==='confirmed' && !isCallJoinable(r) && !isCallOver(r))) ? `
+      <button class="select-btn" style="width:100%;margin-top:12px" data-cancel-call="${r.id}">${t('cancelCallBtn')}</button>
+    ` : ''}
+
+    ${r.status==='cancelled' ? `
+      <div class="empty-state" style="padding:30px 16px">${icon('x',26)}<b>${t('callCancelledTitle')}</b></div>
+      ${r.cancelReason ? `<div class="req-meta" style="text-align:center;margin-top:6px">${t('cancelReasonLabel')}: "${r.cancelReason}"</div>` : ''}
+    ` : ''}
 
     ${r.status==='confirmed' ? `
       <div class="summary-card" style="margin-bottom:16px">
@@ -3323,7 +3374,8 @@ async function loadActivePackages(gkUid, coachUid, kind){
 // returns a game to the package when a request is cancelled or declined
 async function refundPackageGame(req){
   if(!req || !req.packagePurchaseId) return;
-  if(req.paymentType!=='existingPackage' && req.paymentType!=='newPackage') return;
+  const refundable = ['existingPackage','newPackage','existingCallPackage','newCallPackage'];
+  if(!refundable.includes(req.paymentType)) return;
   try{
     await db.collection('packagePurchases').doc(req.packagePurchaseId).update({
       gamesUsed: firebase.firestore.FieldValue.increment(-1)
@@ -4998,12 +5050,17 @@ function renderCoachDash(){
   })() : '';
   const mine = [...state.requests].sort((a,b)=>b.createdAt-a.createdAt);
   return `
-    ${(state.user && !state.user.isVerified) ? `
+    ${(state.user && !state.user.isVerified) ? (state.user.rejected ? `
+      <div class="commit-box" style="margin:0 0 18px;background:rgba(255,59,48,.10);border-color:rgba(255,59,48,.35);color:#ff8a7a">
+        ${icon('x',18)}
+        <span><b>${t('accountRejected')}</b><br>${t('accountRejectedMsg')}${state.user.rejectionReason?`<br><b>${t('cancelReasonLabel')}:</b> ${state.user.rejectionReason}`:''}</span>
+      </div>
+    ` : `
       <div class="commit-box" style="margin:0 0 18px">
         ${icon('clip',18)}
         <span><b>${t('pendingVerification')}</b><br>${t('pendingVerificationMsg')}</span>
       </div>
-    ` : ''}
+    `) : ''}
     <div class="hero-cta-row" style="margin-bottom:20px">
       <button class="btn btn-ghost" data-action="view-my-public-profile">${icon('star',17)} ${t('myProfileBtn')}</button>
       <button class="btn btn-ghost" data-action="open-income">${icon('chart',17)} ${t('myIncomeBtn')}</button>
@@ -5429,7 +5486,10 @@ function attachHandlers(){
   });
   app.querySelectorAll('[data-action="nav-requests"]').forEach(el=>{
     el.addEventListener('click', async ()=>{
-      if(state.user) await loadMyRequests(state.user.uid);
+      if(state.user){
+        await loadMyRequests(state.user.uid);
+        await loadMyCallRequests(state.user.uid);   // otherwise proposed slots never appear
+      }
       go('requests');
       markSeenForRequestsTab();
       render();
@@ -6115,8 +6175,22 @@ function attachHandlers(){
   app.querySelectorAll('[data-admin-reject]').forEach(el=>{
     el.addEventListener('click', async ()=>{
       const uid = el.dataset.adminReject;
+      const coach = (state.adminPendingCoaches||[]).find(c=>c.uid===uid);
+      const reason = (prompt(t('rejectReasonPrompt')) || '').trim();
+      if(!reason){ showToast(t('cancelReasonRequired')); return; }
       try{
-        await db.collection('users').doc(uid).update({ rejected:true });
+        await db.collection('users').doc(uid).update({ rejected:true, rejectionReason:reason });
+        if(coach && coach.email){
+          sendEmailNotification(
+            coach.email,
+            t('rejectEmailSubject'),
+            `<div dir="rtl" style="font-family:sans-serif">
+              <h2>${t('rejectEmailSubject')}</h2>
+              <p>${t('rejectEmailBody')}</p>
+              <p><b>${t('cancelReasonLabel')}:</b> ${reason}</p>
+            </div>`
+          );
+        }
         showToast(t('adminRejected'));
         state.adminPendingCoaches = state.adminPendingCoaches.filter(c=>c.uid!==uid);
         render();
@@ -6419,6 +6493,42 @@ function attachHandlers(){
   });
 
   // coach dashboard: open compose
+  app.querySelectorAll('[data-cancel-call]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const call = (state.callRequests||[]).find(c=>c.id===el.dataset.cancelCall)
+        || (state.viewingCallRequest && state.viewingCallRequest.id===el.dataset.cancelCall ? state.viewingCallRequest : null);
+      if(!call) return;
+      if(!confirm(t('confirmCancelCall'))) return;
+      const reason = (prompt(t('cancelReasonPrompt')) || '').trim();
+      if(!reason){ showToast(t('cancelReasonRequired')); return; }
+      const byCoach = state.role==='coach';
+      const ok = await updateCallRequestDoc(call.id, {
+        status:'cancelled', cancelReason:reason, cancelledBy: byCoach ? 'coach' : 'player',
+        gkSeen: byCoach ? false : true, coachSeen: byCoach ? true : false
+      });
+      if(!ok){ showToast(t('saveError')); return; }
+      if(!call.packageRefunded) await refundPackageGame(call);   // give the session back
+      call.packageRefunded = true;
+      call.status = 'cancelled';
+      call.cancelReason = reason;
+      setCallStatusLocally(call.id, 'cancelled');
+      const to = byCoach ? call.gkEmail : call.coachEmail;
+      const who = byCoach ? call.coachName : call.gkName;
+      if(to){
+        sendEmailNotification(
+          to,
+          t('callCancelledTitle'),
+          `<div dir="${state.lang==='he'?'rtl':'ltr'}" style="font-family:sans-serif">
+            <h2>${t('callCancelledTitle')}</h2>
+            <p><b>${who||''}</b></p>
+            <p><b>${t('cancelReasonLabel')}:</b> ${reason}</p>
+          </div>`
+        );
+      }
+      showToast(t('callCancelled'));
+      render();
+    });
+  });
   app.querySelectorAll('[data-toggle-analysis]').forEach(el=>{
     el.addEventListener('click', ()=>{
       const id = el.dataset.toggleAnalysis;
@@ -6819,7 +6929,7 @@ function attachHandlers(){
         </div>`
       );
     }
-    showToast(t('requestCallTitle'));
+    showToast(t('callRequestSent'));
     await loadMyCallRequests(state.user.uid);
     go('requests');
   });
@@ -6847,11 +6957,12 @@ function attachHandlers(){
   app.querySelector('[data-action="send-proposal"]')?.addEventListener('click', async (e)=>{
     const r = state.viewingCallRequest;
     if(!r) return;
-    const slots = state.proposedSlotsDraft
+    const parsed = state.proposedSlotsDraft
       .filter(s=>s.date && s.time)
       .map(s=>({ id: genPackageId(), dateTimeMs: new Date(`${s.date}T${s.time}`).getTime() }))
       .filter(s=>!isNaN(s.dateTimeMs));
-    if(!slots.length){ showToast(t('requiredName')); return; }
+    const slots = parsed.filter(s=>s.dateTimeMs > Date.now());
+    if(!slots.length){ showToast(parsed.length ? t('slotMustBeFuture') : t('requiredName')); return; }
     const btn = e.currentTarget;
     btn.disabled = true;
     const ok = await updateCallRequestDoc(r.id, { proposedSlots: slots, status:'proposed', gkSeen:false });
@@ -6869,7 +6980,7 @@ function attachHandlers(){
         </div>`
       );
     }
-    showToast(t('sendProposal'));
+    showToast(t('proposalSent'));
     go('call-request-detail');
   });
   app.querySelectorAll('[data-confirm-slot]').forEach(el=>{
@@ -7285,6 +7396,7 @@ function attachHandlers(){
       call.reviewText = reviewText;
       if(state.viewingCallRequest) state.viewingCallRequest = call;
       showToast(t('ratingSaved'));
+      if(!result.coachOk) console.warn('Rating saved on the call request, but updating the coach aggregate rating failed (check Firestore rules for the users collection).');
       render();
     });
   });
@@ -7292,7 +7404,11 @@ function attachHandlers(){
   if(state.view==='my-stats') initStatsCharts();
   if(state.view==='player-profile') initPublicStatsCharts();
   if(state.view==='video-call') initVideoCall();
-  else teardownVideoCall();
+  else if(__rtcActiveCallId){
+    const leavingId = __rtcActiveCallId;
+    teardownVideoCall();
+    markCallCompleted(leavingId);   // navigating away ends the call for both sides
+  }
 }
 
 /* countdown ticker */

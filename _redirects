@@ -4,6 +4,10 @@
 /app      /index.html          200
 /app/*    /index.html          200
 
+# separate entry points into the app
+/login    /index.html          200
+/signup   /index.html          200
+
 # landing pages - clean URLs
 /pro      /professional.html   200
 /players  /players.html        200

@@ -715,6 +715,92 @@ const COUNTRIES = [
 
 const COACHES = [];
 
+// Where an in-person professional is willing to work. A personal trainer or a
+// medical professional marks every area they cover; players search by area.
+const AREAS = [
+  {code:'north',     he:'צפון',            en:'North'},
+  {code:'haifa',     he:'חיפה והקריות',    en:'Haifa & Krayot'},
+  {code:'sharon',    he:'שרון',            en:'Sharon'},
+  {code:'dan',       he:'גוש דן',          en:'Gush Dan'},
+  {code:'jerusalem', he:'ירושלים והסביבה', en:'Jerusalem area'},
+  {code:'shfela',    he:'שפלה',            en:'Shfela'},
+  {code:'south',     he:'דרום',            en:'South'},
+  {code:'eilat',     he:'אילת והערבה',     en:'Eilat & Arava'},
+  {code:'online',    he:'אונליין',         en:'Online'},
+];
+const AREA_LABEL = {
+  he: Object.fromEntries(AREAS.map(a=>[a.code, a.he])),
+  en: Object.fromEntries(AREAS.map(a=>[a.code, a.en])),
+};
+function areaNames(codes){
+  const map = AREA_LABEL[state.lang] || AREA_LABEL.he;
+  return (codes||[]).map(c=>map[c]).filter(Boolean);
+}
+
+// Professions that sell a scheduled session instead of a video analysis.
+const SESSION_COACH_TYPES = ['mental','trainer','medical'];
+// ...and the subset of those that meet the player face to face, so no video call.
+const INPERSON_COACH_TYPES = ['trainer','medical'];
+// Personal trainers and medical professionals are paid directly by the player.
+// The platform takes no money for those bookings - it charges them a yearly
+// subscription instead. Change the two numbers below to change the offer.
+const DIRECT_PAY_COACH_TYPES = ['trainer','medical'];
+const SUBSCRIPTION_TRIAL_DAYS = 30;
+const SUBSCRIPTION_PRICE_ILS = 0;   // 0 = do not show a price anywhere yet
+function isDirectPay(types){ return (types||[]).some(ct=>DIRECT_PAY_COACH_TYPES.includes(ct)); }
+function needsSubscription(u){ return isDirectPay(u && (u.coachTypes||u)); }
+function subscriptionActive(u){
+  if(!u) return false;
+  if(!isDirectPay(u.coachTypes)) return true;         // nobody else needs one
+  return !!u.subscriptionUntil && u.subscriptionUntil > Date.now();
+}
+function subscriptionDaysLeft(u){
+  if(!u || !u.subscriptionUntil) return 0;
+  return Math.max(0, Math.ceil((u.subscriptionUntil - Date.now()) / 86400000));
+}
+function hasSessionService(types){ return (types||[]).some(ct=>SESSION_COACH_TYPES.includes(ct)); }
+function isSessionOnlyPro(types){ const a = types||[]; return a.length>0 && a.every(ct=>SESSION_COACH_TYPES.includes(ct)); }
+function isInPersonPro(types){ return (types||[]).some(ct=>INPERSON_COACH_TYPES.includes(ct)); }
+
+// A mental coach holds a call, a personal trainer holds a session, a medical
+// professional holds a treatment. Same mechanics, different words.
+function serviceKind(types){
+  const a = types||[];
+  if(a.includes('trainer')) return 'training';
+  if(a.includes('medical')) return 'treatment';
+  return 'call';
+}
+const SERVICE_WORDS = {
+  call: {
+    he:{ duration:'אורך השיחה', price:'מחיר לשיחה בודדת', pkgTitle:'חבילות שיחות', pkgPre:'חבילת', pkgPost:'שיחות',
+         request:'בקשת שיחה', scheduled:'השיחה נקבעה ל', pricing:'תמחור שיחות ייעוץ', summary:'סיכום שיחות',
+         sentToPro:'הבקשה נשלחה למאמן המנטלי', waitingProposal:'ממתינים שהמאמן המנטלי יציע זמנים' },
+    en:{ duration:'Call length', price:'Price per single call', pkgTitle:'Call packages', pkgPre:'Package of', pkgPost:'calls',
+         request:'Request a call', scheduled:'Call scheduled for', pricing:'Mental coaching pricing', summary:'Calls summary',
+         sentToPro:'Your request was sent to the mental coach', waitingProposal:'Waiting for the mental coach to propose times' },
+  },
+  training: {
+    he:{ duration:'אורך האימון', price:'מחיר לאימון בודד', pkgTitle:'חבילות אימונים', pkgPre:'חבילת', pkgPost:'אימונים',
+         request:'בקשת אימון', scheduled:'האימון נקבע ל', pricing:'תמחור אימונים', summary:'סיכום אימונים',
+         sentToPro:'הבקשה נשלחה למאמן האישי', waitingProposal:'ממתינים שהמאמן יציע מועדים' },
+    en:{ duration:'Session length', price:'Price per single session', pkgTitle:'Session packages', pkgPre:'Package of', pkgPost:'sessions',
+         request:'Request a session', scheduled:'Session scheduled for', pricing:'Session pricing', summary:'Sessions summary',
+         sentToPro:'Your request was sent to the trainer', waitingProposal:'Waiting for the trainer to propose times' },
+  },
+  treatment: {
+    he:{ duration:'אורך הטיפול', price:'מחיר לטיפול בודד', pkgTitle:'חבילות טיפולים', pkgPre:'חבילת', pkgPost:'טיפולים',
+         request:'בקשת טיפול', scheduled:'הטיפול נקבע ל', pricing:'תמחור טיפולים', summary:'סיכום טיפולים',
+         sentToPro:'הבקשה נשלחה לאיש הרפואה', waitingProposal:'ממתינים שאיש הרפואה יציע מועדים' },
+    en:{ duration:'Treatment length', price:'Price per single treatment', pkgTitle:'Treatment packages', pkgPre:'Package of', pkgPost:'treatments',
+         request:'Request a treatment', scheduled:'Treatment scheduled for', pricing:'Treatment pricing', summary:'Treatments summary',
+         sentToPro:'Your request was sent to the practitioner', waitingProposal:'Waiting for the practitioner to propose times' },
+  },
+};
+function svc(types, key){
+  const set = SERVICE_WORDS[serviceKind(types)];
+  return (set[state.lang] || set.he)[key];
+}
+
 const SPEC_LABEL = {
   he:{kids:'ילדים', teens:'נוער', adults:'בוגרים'},
   en:{kids:'Kids', teens:'Teens', adults:'Adults'},
@@ -734,8 +820,8 @@ const SPORT_DATA = {
     },
     fieldPositions: ['center_back','fullback','midfielder','winger','striker'],
     coachTypes: {
-      he:{goalkeeper:'מאמן שוערים', general:'מאמן כללי', analyst:'אנליסט', mental:'מאמן מנטלי'},
-      en:{goalkeeper:'Goalkeeper coach', general:'General coach', analyst:'Analyst', mental:'Mental coach'},
+      he:{goalkeeper:'מאמן שוערים', general:'מאמן כללי', analyst:'אנליסט', mental:'מאמן מנטלי', trainer:'מאמן אישי', medical:'איש רפואה'},
+      en:{goalkeeper:'Goalkeeper coach', general:'General coach', analyst:'Analyst', mental:'Mental coach', trainer:'Personal trainer', medical:'Medical professional'},
     },
     generalSpec: {
       he:{defense:'הגנה', attack:'התקפה', midfield:'קישור'},
@@ -795,8 +881,8 @@ const SPORT_DATA = {
     },
     fieldPositions: ['point_guard','shooting_guard','small_forward','power_forward','center'],
     coachTypes: {
-      he:{general:'מאמן כללי', shooting:'מאמן קליעה', analyst:'אנליסט', mental:'מאמן מנטלי'},
-      en:{general:'General coach', shooting:'Shooting coach', analyst:'Analyst', mental:'Mental coach'},
+      he:{general:'מאמן כללי', shooting:'מאמן קליעה', analyst:'אנליסט', mental:'מאמן מנטלי', trainer:'מאמן אישי', medical:'איש רפואה'},
+      en:{general:'General coach', shooting:'Shooting coach', analyst:'Analyst', mental:'Mental coach', trainer:'Personal trainer', medical:'Medical professional'},
     },
     generalSpec: {
       he:{defense:'הגנה', attack:'התקפה', playmaking:'יצירה'},
@@ -852,7 +938,7 @@ function sportFieldPositions(sport){ return sportData(sport).fieldPositions; }
 // The platform currently runs with analysts and mental coaches only. The other
 // coach types stay in the label maps so older accounts still display correctly,
 // but they are no longer offered anywhere.
-const ACTIVE_COACH_TYPES = ['analyst','mental'];
+const ACTIVE_COACH_TYPES = ['analyst','mental','trainer','medical'];
 function sportCoachTypes(sport){
   return Object.keys(sportData(sport).coachTypes.he).filter(ct=>ACTIVE_COACH_TYPES.includes(ct));
 }
@@ -979,9 +1065,29 @@ const STR = {
     hoursUnit:'שעות', daysUnit:'ימים', soon:'בקרוב',
     welcomeTitle:'ברוכים הבאים ל-AnzClip', welcomeSub:'איך תרצו להשתמש בפלטפורמה?',
     registerGKTitle:'הרשמה כשחקן/ית', registerGKSub:'העלו סרטונים וקבלו ניתוח מאנליסט מקצועי',
-    registerProTitle:'הרשמה כבעל מקצוע', registerProSub:'אנליסט, מאמן מנטלי, סוכן או סקאוט',
+    registerProTitle:'הרשמה כבעל מקצוע', registerProSub:'אנליסט, מאמן מנטלי, מאמן אישי, איש רפואה, סוכן או סקאוט',
     registerCoachTitle:'הרשמה כאנליסט', registerCoachSub:'קבלו בקשות ניתוח משחקנים ובנו לעצמכם הכנסה',
     registerMentalTitle:'הרשמה כמאמן מנטלי', registerMentalSub:'קבלו בקשות לשיחות ייעוץ מנטלי מהשחקנים',
+    registerTrainerTitle:'הרשמה כמאמן אישי', registerTrainerSub:'קבעו מחיר לאימון ולחבילות, וקבלו בקשות משחקנים באזור שלכם',
+    registerMedicalTitle:'הרשמה כאיש רפואה', registerMedicalSub:'פיזיותרפיה, ספורט-תרפיה, עיסוי - קבלו פניות משחקנים באזור שלכם',
+    fieldMedicalRole:'תחום העיסוק', medicalRolePh:'למשל: פיזיותרפיסט, ספורט-תרפיסט, מעסה ספורטיבי',
+    fieldAreas:'אזורי פעילות', areasHint:'סמנו כל אזור שאתם מוכנים להגיע אליו - שחקנים מחפשים לפי אזור',
+    filterArea:'אזור', noAreasYet:'לא הוגדרו אזורים', mustPickArea:'בחרו לפחות אזור פעילות אחד',
+    mustFillMedicalRole:'רשמו את תחום העיסוק שלכם',
+    directPayTitle:'התשלום מתבצע ישירות', directPayMsg:'AnzClip לא גובה תשלום על המפגש. את התשלום תעבירו ישירות לאיש המקצוע, לפי המחיר שסוכם.',
+    subActiveTitle:'המנוי בתוקף', subActiveMsg:(d)=>`נותרו ${d} ימים. הפרופיל שלכם מוצג לשחקנים.`,
+    subExpiredTitle:'המנוי אינו פעיל', subExpiredMsg:'הפרופיל שלכם אינו מוצג לשחקנים עד לחידוש המנוי. פנו אלינו כדי לחדש.',
+    subPendingTitle:'המנוי טרם הופעל', subPendingMsg:'אחרי אישור התעודה נשלח לכם את פרטי המנוי השנתי. עד להפעלתו הפרופיל לא מוצג לשחקנים.',
+    subAdminLabel:'מנוי בתוקף עד', subAdminSet:'הגדירו מנוי לשנה', subAdminSetTrial:'חודש ניסיון', subAdminClear:'ביטול מנוי',
+    subSaved:'המנוי עודכן', subNone:'אין מנוי', adminSubsTitle:'מנויים - מאמנים אישיים ואנשי רפואה',
+    signupSubNoteTitle:'איך זה עובד מבחינה כספית',
+    signupSubNoteMsg:'את התשלום על האימונים אתם מקבלים ישירות מהשחקן - הפלטפורמה לא גובה עמלה. כדי להופיע בפלטפורמה נדרש מנוי שנתי, שפרטיו יישלחו אליכם לאחר אימות התעודה.',
+    signupSubNoteMsgMed:'את התשלום על הטיפולים אתם מקבלים ישירות מהשחקן - הפלטפורמה לא גובה עמלה. כדי להופיע בפלטפורמה נדרש מנוי שנתי, שפרטיו יישלחו אליכם לאחר אימות התעודה.',
+    directPayIncomeNote:'הסכומים כאן הם לפי המחירון שלכם. התשלום מתקבל ישירות מהשחקן, והפלטפורמה אינה מעורבת בו.',
+    meetingPlaceLabel:'מקום המפגש', meetingPlacePh:'למשל: מגרש הכדורגל בפארק הירקון, תל אביב',
+    meetingPlaceHint:'יוצג לשחקן יחד עם המועדים שהצעתם',
+    markSessionDone:'סמנו שהמפגש בוצע', confirmSessionDone:'לסמן שהמפגש בוצע? השחקן יוכל לדרג אתכם.',
+    sessionDoneToast:'המפגש סומן כבוצע', sessionUpcoming:'המפגש נקבע. נתראה!',
     registerAgentTitle:'הרשמה כסוכן', registerAgentSub:'צפו בפרופילים של אנליסטים, מאמנים מנטליים, סקאוטים ושחקנים',
     registerScoutTitle:'הרשמה כסקאוט', registerScoutSub:'צפו בפרופילים של אנליסטים, מאמנים מנטליים, סקאוטים ושחקנים',
     viewerLicenseTitle:'העלאת רישיון סוכן בתוקף', viewerScoutProofTitle:'העלאת אישור ייצוג קבוצה',
@@ -1003,7 +1109,7 @@ const STR = {
     pricingByGame:'תמחור לפי משחק', singleGamePriceLabel:'מחיר למשחק בודד (₪)',
     mentalPricingTitle:'תמחור ייעוץ מנטלי', mentalSessionPriceLabel:'מחיר לשיחה בודדת (₪)',
     mentalDurationLabel:'אורך שיחה', requestCall:'בקשו שיחה', callDurationBadge:'שיחה של',
-    myCallRequests:'בקשות שיחה', requestCallTitle:'בקשת שיחת ייעוץ', analyzedGamesTab:'משחקים שנותחו', noCallRequestsTitle:'עדיין אין בקשות שיחה',
+    myCallRequests:'שיחות ומפגשים', requestCallTitle:'בקשת מפגש', analyzedGamesTab:'משחקים שנותחו', noCallRequestsTitle:'עדיין אין בקשות',
     proposeTimesTitle:'הציעו זמנים לשחקן', proposeTimesHint:'הציעו 2-3 אפשרויות של תאריך ושעה',
     addTimeSlot:'הוסיפו אפשרות זמן', sendProposal:'שלחו הצעה לשחקן', dateLabel:'תאריך', timeLabel:'שעה',
     chooseTimeTitle:'בחרו זמן לשיחה', requestMoreOptions:'הציעו לי עוד אפשרויות', confirmSlot:'אשרו זמן זה',
@@ -1055,7 +1161,7 @@ const STR = {
     cancelRequestBtn:'בטלו את הבקשה', confirmCancelRequest:'לבטל את הבקשה? השחקן יקבל על כך הודעה.', requestCancelled:'הבקשה בוטלה',
     rejectReasonPrompt:'מה הסיבה לדחייה? ההודעה תישלח לבעל המקצוע:', rejectEmailSubject:'החשבון שלכם ב-AnzClip לא אושר', rejectEmailBody:'בדקנו את התעודה שהעליתם ולא יכולנו לאשר את החשבון בשלב זה.',
     accountRejected:'החשבון לא אושר', accountRejectedMsg:'התעודה שהעליתם נבדקה ולא אושרה. אפשר להעלות תעודה מעודכנת דרך עריכת הפרופיל, או לפנות אלינו במייל.',
-    cancelCallBtn:'בטלו את השיחה', confirmCancelCall:'לבטל את השיחה? הצד השני יקבל על כך הודעה.', callCancelled:'השיחה בוטלה', callCancelledTitle:'השיחה בוטלה',
+    cancelCallBtn:'ביטול הבקשה', confirmCancelCall:'לבטל את הבקשה? הצד השני יקבל על כך הודעה.', callCancelled:'הבקשה בוטלה', callCancelledTitle:'הבקשה בוטלה',
     slotMustBeFuture:'יש לבחור מועד עתידי', callRequestSent:'הבקשה נשלחה למאמן המנטלי', proposalSent:'המועדים נשלחו לשחקן',
     cancelReasonPrompt:'מה הסיבה לביטול? ההודעה תישלח לשחקן:', cancelReasonRequired:'יש לכתוב סיבה לביטול', cancelReasonLabel:'סיבת הביטול',
     viewAnalysisBtn:'לחץ לצפייה בניתוח', hideAnalysisBtn:'הסתירו את הניתוח',
@@ -1190,9 +1296,29 @@ const STR = {
     hoursUnit:'hours', daysUnit:'days', soon:'soon',
     welcomeTitle:'Welcome to AnzClip', welcomeSub:'How would you like to use the platform?',
     registerGKTitle:'Sign up as a player', registerGKSub:'Upload videos and get analysis from a professional analyst',
-    registerProTitle:'Sign up as a professional', registerProSub:'Analyst, mental coach, agent or scout',
+    registerProTitle:'Sign up as a professional', registerProSub:'Analyst, mental coach, personal trainer, medical professional, agent or scout',
     registerCoachTitle:'Sign up as an analyst', registerCoachSub:'Get analysis requests from players and build your income',
     registerMentalTitle:'Sign up as a mental coach', registerMentalSub:'Get requests for mental coaching calls from players',
+    registerTrainerTitle:'Sign up as a personal trainer', registerTrainerSub:'Set your session and package prices, and get requests from players in your area',
+    registerMedicalTitle:'Sign up as a medical professional', registerMedicalSub:'Physiotherapy, sports therapy, massage - get enquiries from players in your area',
+    fieldMedicalRole:'Your field', medicalRolePh:'e.g. physiotherapist, sports therapist, sports masseur',
+    fieldAreas:'Areas you cover', areasHint:'Tick every area you are willing to travel to - players search by area',
+    filterArea:'Area', noAreasYet:'No areas set', mustPickArea:'Pick at least one area',
+    mustFillMedicalRole:'Please enter your field',
+    directPayTitle:'You pay directly', directPayMsg:'AnzClip does not charge for this booking. You pay the professional directly, at the price agreed.',
+    subActiveTitle:'Subscription active', subActiveMsg:(d)=>`${d} days left. Your profile is visible to players.`,
+    subExpiredTitle:'Subscription inactive', subExpiredMsg:'Your profile is not shown to players until the subscription is renewed. Get in touch to renew.',
+    subPendingTitle:'Subscription not started yet', subPendingMsg:'Once your certificate is approved we will send you the yearly subscription details. Until it starts, your profile is not shown to players.',
+    subAdminLabel:'Subscribed until', subAdminSet:'Set one year', subAdminSetTrial:'One month trial', subAdminClear:'Clear subscription',
+    subSaved:'Subscription updated', subNone:'No subscription', adminSubsTitle:'Subscriptions - trainers & practitioners',
+    signupSubNoteTitle:'How the money works',
+    signupSubNoteMsg:'Players pay you directly for sessions - the platform takes no commission. To appear on the platform a yearly subscription is required; we will send you the details once your certificate is verified.',
+    signupSubNoteMsgMed:'Players pay you directly for treatments - the platform takes no commission. To appear on the platform a yearly subscription is required; we will send you the details once your certificate is verified.',
+    directPayIncomeNote:'These amounts follow your own price list. Payment is made to you directly by the player; the platform is not involved in it.',
+    meetingPlaceLabel:'Meeting place', meetingPlacePh:'e.g. the pitch at Hayarkon Park, Tel Aviv',
+    meetingPlaceHint:'Shown to the player together with the times you propose',
+    markSessionDone:'Mark as done', confirmSessionDone:'Mark this session as done? The player will be able to rate you.',
+    sessionDoneToast:'Session marked as done', sessionUpcoming:'Your session is booked.',
     registerAgentTitle:'Sign up as an agent', registerAgentSub:'Browse profiles of analysts, mental coaches, scouts and players',
     registerScoutTitle:'Sign up as a scout', registerScoutSub:'Browse profiles of analysts, mental coaches, scouts and players',
     viewerLicenseTitle:'Upload a valid agent license', viewerScoutProofTitle:'Upload proof of club representation',
@@ -1214,7 +1340,7 @@ const STR = {
     pricingByGame:'Pricing per game', singleGamePriceLabel:'Price per single game (₪)',
     mentalPricingTitle:'Mental coaching pricing', mentalSessionPriceLabel:'Price per single call (₪)',
     mentalDurationLabel:'Call length', requestCall:'Request a call', callDurationBadge:'Call length',
-    myCallRequests:'Call requests', requestCallTitle:'Request a coaching call', analyzedGamesTab:'Analyzed games', noCallRequestsTitle:'No call requests yet',
+    myCallRequests:'Calls & sessions', requestCallTitle:'New booking', analyzedGamesTab:'Analyzed games', noCallRequestsTitle:'No bookings yet',
     proposeTimesTitle:'Propose times to the player', proposeTimesHint:'Offer 2-3 date and time options',
     addTimeSlot:'Add a time option', sendProposal:'Send proposal to player', dateLabel:'Date', timeLabel:'Time',
     chooseTimeTitle:'Choose a call time', requestMoreOptions:'Ask for more options', confirmSlot:'Confirm this time',
@@ -1266,7 +1392,7 @@ const STR = {
     cancelRequestBtn:'Cancel this request', confirmCancelRequest:'Cancel this request? The player will be notified.', requestCancelled:'Request cancelled',
     rejectReasonPrompt:'Why is this account rejected? The message is sent to the professional:', rejectEmailSubject:'Your AnzClip account was not approved', rejectEmailBody:'We reviewed the certificate you uploaded and could not approve the account at this time.',
     accountRejected:'Account not approved', accountRejectedMsg:'The certificate you uploaded was reviewed and not approved. You can upload an updated certificate from your profile, or contact us by email.',
-    cancelCallBtn:'Cancel this call', confirmCancelCall:'Cancel this call? The other side will be notified.', callCancelled:'Call cancelled', callCancelledTitle:'The call was cancelled',
+    cancelCallBtn:'Cancel request', confirmCancelCall:'Cancel this request? The other side will be notified.', callCancelled:'Request cancelled', callCancelledTitle:'The request was cancelled',
     slotMustBeFuture:'Please pick a time in the future', callRequestSent:'Your request was sent to the mental coach', proposalSent:'The times were sent to the player',
     cancelReasonPrompt:'Why are you cancelling? This message is sent to the player:', cancelReasonRequired:'Please write a reason', cancelReasonLabel:'Reason for cancellation',
     viewAnalysisBtn:'View the analysis', hideAnalysisBtn:'Hide the analysis',
@@ -1351,7 +1477,7 @@ let state = {
   viewingCoach: null, isSelfViewingProfile: false, expandedAnalysisId: null, sport: 'football',
   activeCallPackages: [],
   shareStatKeys: null, shareStatsPickerOpen: false,
-  adminPendingCoaches: [],
+  adminPendingCoaches: [], adminSubscribers: [],
   adminStats: null,
   activePackages: [],
   coachReviews: [], reviewsExpanded: false,
@@ -1364,7 +1490,7 @@ let state = {
   composeId: null,
   requests: [],
   draft: { videos:[], isDemo:false, fileName:null, category:'kids', note:'' },
-  filters: { specialty:'all', sort:'rating', country:'all', coachType:'all', generalSpec:'all', query:'' },
+  filters: { specialty:'all', sort:'rating', country:'all', coachType:'all', generalSpec:'all', area:'all', query:'' },
   selectedCoach: null,
 };
 const videoUrls = {}; // reqId -> objectURL (session-only)
@@ -1575,6 +1701,21 @@ async function loadPendingCoaches(){
     return list;
   }catch(e){ console.error('failed to load pending coaches', e); return []; }
 }
+// Every approved trainer / practitioner, so their yearly subscription can be managed by hand.
+async function loadSubscribers(){
+  try{
+    const snap = await db.collection('users')
+      .where('role','==','coach')
+      .where('isVerified','==',true)
+      .get();
+    const list = [];
+    snap.forEach(doc=>{
+      const d = doc.data();
+      if(isDirectPay(d.coachTypes)) list.push({uid:doc.id, ...d});
+    });
+    return list.sort((a,b)=>(a.subscriptionUntil||0)-(b.subscriptionUntil||0));
+  }catch(e){ console.error('failed to load subscribers', e); return []; }
+}
 async function loadAdminStats(){
   const stats = { playerCount:0, coachCount:0, grossVolume:0, platformRevenue:0 };
   try{
@@ -1590,6 +1731,8 @@ async function loadAdminStats(){
   }catch(e){ console.error('failed to count coaches', e); }
   let gross = 0, revenue = 0;
   const addRow = (d)=>{
+    // a direct-pay booking never passes through the platform, so it is not revenue
+    if(d.directPay || d.paymentType==='direct') return;
     const coachAmount = (d.price!=null?d.price:(d.basePrice||0));
     const fee = d.platformFee!=null ? d.platformFee : Math.round(coachAmount*PLATFORM_FEE_RATE);
     gross += coachAmount + fee;
@@ -1883,6 +2026,9 @@ function buildCoachProfile(u, idx){
     specialties: u.specialties && u.specialties.length ? u.specialties : ['kids','teens','adults'],
     singleGamePrice: Number(u.singleGamePrice)||legacyPrice||0,
     packages: Array.isArray(u.packages) ? u.packages : [],
+    areas: Array.isArray(u.areas) ? u.areas : [],
+    subscriptionUntil: u.subscriptionUntil || null,
+    medicalRole: u.medicalRole || '',
     mentalSessionPrice: Number(u.mentalSessionPrice)||0,
     mentalCallDuration: Number(u.mentalCallDuration)||30,
     mentalPackages: Array.isArray(u.mentalPackages) ? u.mentalPackages : [],
@@ -2631,17 +2777,40 @@ function renderRequestCall(){
   } else if(choice.startsWith('pkg:')){
     const pid = choice.slice(4);
     const pkg = (c.mentalPackages||[]).find(p=>p.id===pid);
-    if(pkg){ choiceSummary = `${t('pkgOfCallsPre')} ${pkg.sessionCount} ${t('pkgOfCallsPost')} - ₪${pkg.price}`; coachAmount = pkg.price; }
+    if(pkg){ choiceSummary = `${svc(c.coachTypes,'pkgPre')} ${pkg.sessionCount} ${svc(c.coachTypes,'pkgPost')} - ₪${pkg.price}`; coachAmount = pkg.price; }
   }
   const fee = computeFee(coachAmount);
-  return `
+  const direct = isDirectPay(c.coachTypes);
+  const header = `
     <div class="coach-top" style="margin-bottom:18px">
       ${avatarHtml(c, 48)}
       <div>
         <div class="coach-name">${c.name}</div>
-        <div class="coach-sub">${t('mentalDurationLabel')}: ${c.mentalCallDuration} ${t('minutesUnit')}</div>
+        <div class="coach-sub">${svc(c.coachTypes,'duration')}: ${c.mentalCallDuration} ${t('minutesUnit')}</div>
       </div>
-    </div>
+    </div>`;
+  // The player pays a trainer or a practitioner directly, so there is nothing to
+  // choose here - just the price list and the request itself.
+  if(direct){
+    return `
+      ${header}
+      <div class="summary-card" style="margin-top:4px">
+        <div class="summary-row"><span>${svc(c.coachTypes,'price')}</span><span class="mono">₪${c.mentalSessionPrice}</span></div>
+        ${(c.mentalPackages||[]).map(p=>`
+          <div class="summary-row"><span>${svc(c.coachTypes,'pkgPre')} ${p.sessionCount} ${svc(c.coachTypes,'pkgPost')}</span><span class="mono">₪${p.price}</span></div>
+        `).join('')}
+      </div>
+      <div class="commit-box" style="margin-top:14px">
+        ${icon('check',18)}
+        <span><b>${t('directPayTitle')}</b><br>${t('directPayMsg')}</span>
+      </div>
+      <div class="sticky-cta">
+        <button class="btn btn-primary btn-block" data-action="submit-call-request">${svc(c.coachTypes,'request')}</button>
+      </div>
+    `;
+  }
+  return `
+    ${header}
 
     ${owned.length ? `
       <div class="field-label" style="margin-top:0">${t('myActivePackages')}</div>
@@ -2651,8 +2820,8 @@ function renderRequestCall(){
     ` : ''}
     <div class="field-label" style="margin-top:${owned.length?'14px':'0'}">${t('requestCallTitle')}</div>
     <div class="chip-row">
-      <div class="chip ${choice==='single'?'active':''}" data-call-payment-choice="single">${t('requestCall')} (₪${c.mentalSessionPrice})</div>
-      ${(c.mentalPackages||[]).map(p=>`<div class="chip ${choice==='pkg:'+p.id?'active':''}" data-call-payment-choice="pkg:${p.id}">${t('pkgOfCallsPre')} ${p.sessionCount} ${t('pkgOfCallsPost')} (₪${p.price})</div>`).join('')}
+      <div class="chip ${choice==='single'?'active':''}" data-call-payment-choice="single">${svc(c.coachTypes,'request')} (₪${c.mentalSessionPrice})</div>
+      ${(c.mentalPackages||[]).map(p=>`<div class="chip ${choice==='pkg:'+p.id?'active':''}" data-call-payment-choice="pkg:${p.id}">${svc(c.coachTypes,'pkgPre')} ${p.sessionCount} ${svc(c.coachTypes,'pkgPost')} (₪${p.price})</div>`).join('')}
     </div>
 
     <div class="summary-card" style="margin-top:16px">
@@ -2662,7 +2831,7 @@ function renderRequestCall(){
     </div>
 
     <div class="sticky-cta">
-      <button class="btn btn-primary btn-block" data-action="submit-call-request">${t('requestCall')}</button>
+      <button class="btn btn-primary btn-block" data-action="submit-call-request">${svc(c.coachTypes,'request')}</button>
     </div>
   `;
 }
@@ -2685,7 +2854,7 @@ function renderCallRequestDetail(){
       <div class="empty-state" style="padding:24px 16px">${icon('timer',26)}<b>${t('statusRequested')}</b></div>
       <button class="btn btn-primary btn-block" data-action="open-propose-times">${t('proposeTimesTitle')}</button>
     ` : `
-      <div class="empty-state" style="padding:30px 16px">${icon('timer',26)}<b>${t('waitingForProposal')}</b></div>
+      <div class="empty-state" style="padding:30px 16px">${icon('timer',26)}<b>${svc(r.coachTypes,'waitingProposal')}</b></div>
     `) : ''}
 
     ${r.status==='proposed' ? (isCoachView ? `
@@ -2706,7 +2875,7 @@ function renderCallRequestDetail(){
       <button class="demo-link" style="display:block;margin-top:10px" data-action="request-more-options">${t('requestMoreOptions')}</button>
     `) : ''}
 
-    ${(r.status==='requested' || r.status==='proposed' || (r.status==='confirmed' && !isCallJoinable(r) && !isCallOver(r))) ? `
+    ${(r.status==='requested' || r.status==='proposed' || (r.status==='confirmed' && (r.sessionKind==='inperson' || (!isCallJoinable(r) && !isCallOver(r))))) ? `
       <button class="select-btn" style="width:100%;margin-top:12px" data-cancel-call="${r.id}">${t('cancelCallBtn')}</button>
     ` : ''}
 
@@ -2717,10 +2886,15 @@ function renderCallRequestDetail(){
 
     ${r.status==='confirmed' ? `
       <div class="summary-card" style="margin-bottom:16px">
-        <div class="summary-row"><span>${t('callScheduledFor')}</span><span class="mono">${fmtDateTime(r.confirmedSlot.dateTimeMs)}</span></div>
-        <div class="summary-row"><span>${t('mentalDurationLabel')}</span><span class="mono">${r.durationMinutes}${r.extendedMinutes?'+'+r.extendedMinutes:''} ${t('minutesUnit')}</span></div>
+        <div class="summary-row"><span>${svc(r.coachTypes,'scheduled')}</span><span class="mono">${fmtDateTime(r.confirmedSlot.dateTimeMs)}</span></div>
+        <div class="summary-row"><span>${svc(r.coachTypes,'duration')}</span><span class="mono">${r.durationMinutes}${r.extendedMinutes?'+'+r.extendedMinutes:''} ${t('minutesUnit')}</span></div>
+        ${r.meetingPlace ? `<div class="summary-row"><span>${t('meetingPlaceLabel')}</span><span>${r.meetingPlace}</span></div>` : ''}
       </div>
-      ${isCallJoinable(r) ? `
+      ${r.sessionKind==='inperson' ? (isCoachView ? `
+        <button class="btn btn-primary btn-block" data-mark-session-done="${r.id}">${icon('check',18)} ${t('markSessionDone')}</button>
+      ` : `
+        <div class="empty-state" style="padding:26px 16px">${icon('check',26)}<b>${t('sessionUpcoming')}</b></div>
+      `) : isCallJoinable(r) ? `
         <button class="btn btn-primary btn-block" data-action="join-call">${icon('clip',18)} ${t('joinCall')}</button>
       ` : isCallOver(r) ? `
         <div class="empty-state" style="padding:26px 16px">${icon('check',26)}<b>${t('callEnded')}</b></div>
@@ -2792,6 +2966,12 @@ function renderProposeTimes(){
       `).join('')}
     </div>
     <button type="button" class="demo-link" data-add-slot="1" style="display:block;margin-top:4px">+ ${t('addTimeSlot')}</button>
+
+    ${state.viewingCallRequest && state.viewingCallRequest.sessionKind==='inperson' ? `
+      <div class="field-label">${t('meetingPlaceLabel')}</div>
+      <input class="form-input" id="meeting-place" type="text" placeholder="${t('meetingPlacePh')}" value="${(state.viewingCallRequest.meetingPlace||'')}">
+      <div class="photo-hint" style="margin-top:6px">${t('meetingPlaceHint')}</div>
+    ` : ''}
 
     <div class="sticky-cta">
       <button class="btn btn-primary btn-block" data-action="send-proposal">${t('sendProposal')}</button>
@@ -3309,7 +3489,7 @@ function clearSessionData(){
   state.expandedAnalysisId = null;
   state.shareStatKeys = null;
   state.shareStatsPickerOpen = false;
-  state.adminPendingCoaches = [];
+  state.adminPendingCoaches = []; state.adminSubscribers = [];
   state.adminStats = null;
   state.filters.unifiedQuery = '';
   state.draft = { category:'kids', note:'', videos:[], isDemo:false, fileName:null, paymentChoice:null, wantsHighlightClip:false, orderType:'analysis' };
@@ -3440,6 +3620,19 @@ function packageEditorRowsHtml(packages){
     </div>
   `).join('');
 }
+// Multi-select of the areas an in-person professional covers.
+function areaPickerHtml(prefix, selected){
+  const sel = selected || [];
+  return `
+    <div class="field-label">${t('fieldAreas')}</div>
+    <div class="chip-row" id="${prefix}-area-chips" style="flex-wrap:wrap;gap:7px">
+      ${AREAS.map(a=>`
+        <div class="chip ${sel.includes(a.code)?'active':''}" data-${prefix}-area="${a.code}">${state.lang==='he'?a.he:a.en}</div>
+      `).join('')}
+    </div>
+    <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('areasHint')}</div>
+  `;
+}
 function mentalPackageEditorRowsHtml(packages){
   if(!packages.length) return `<div class="req-meta" style="margin:4px 0 8px">${t('noPackagesOffered')}</div>`;
   return packages.map((p,i)=>`
@@ -3565,7 +3758,7 @@ function langToggleHtml(){
 function renderTopBar(){
   const titles = {
     home:null, upload:t('titleUpload'), coaches:t('titleCoaches'), confirm:t('titleConfirm'), requests:t('titleRequests'),
-    'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'admin':t('adminTitle'), 'my-stats':t('statsPageTitle'), 'my-clips':t('myClipsTitle'), 'player-profile':t('playerProfileTitle'), 'directory-players':t('directoryPlayers'), 'viewer-pending':t('directoryTitle'), 'contact-profile':t('directoryTitle'), 'viewer-home':null, 'request-call':t('requestCallTitle'), 'call-request-detail':t('myCallRequests'), 'propose-times':t('proposeTimesTitle'), 'video-call':null, 'income':t('incomeTitle'), 'search':t('searchTitle')
+    'coach-dash':t('titleIncoming'), 'coach-compose':t('titleCompose'), 'profile':t('titleProfile'), 'coach-profile':t('coachProfileTitle'), 'admin':t('adminTitle'), 'my-stats':t('statsPageTitle'), 'my-clips':t('myClipsTitle'), 'player-profile':t('playerProfileTitle'), 'directory-players':t('directoryPlayers'), 'viewer-pending':t('directoryTitle'), 'contact-profile':t('directoryTitle'), 'viewer-home':null, 'request-call':(state.viewingCoach ? svc(state.viewingCoach.coachTypes,'request') : t('requestCallTitle')), 'call-request-detail':t('myCallRequests'), 'propose-times':t('proposeTimesTitle'), 'video-call':null, 'income':t('incomeTitle'), 'search':t('searchTitle')
   };
   const isRoot = state.view==='home' || state.view==='coach-dash' || state.view==='admin' || state.view==='viewer-pending' || state.view==='viewer-home';
   return `
@@ -3821,6 +4014,14 @@ function renderAuthProfessional(){
           ${icon('check',22, true)}
           <div><b>${t('registerMentalTitle')}</b><span>${t('registerMentalSub')}</span></div>
         </div>
+        <div class="auth-card" data-action="goto-signup-trainer">
+          ${icon('trending',22, true)}
+          <div><b>${t('registerTrainerTitle')}</b><span>${t('registerTrainerSub')}</span></div>
+        </div>
+        <div class="auth-card" data-action="goto-signup-medical">
+          ${icon('glove',22, true)}
+          <div><b>${t('registerMedicalTitle')}</b><span>${t('registerMedicalSub')}</span></div>
+        </div>
         <div class="auth-card" data-action="goto-signup-agent">
           ${icon('briefcase',22, true)}
           <div><b>${t('registerAgentTitle')}</b><span>${t('registerAgentSub')}</span></div>
@@ -3969,12 +4170,17 @@ function renderSignupGK(){
 /* ---------------- SIGNUP: MENTAL COACH (dedicated, separate from video-analysis coach) ---------------- */
 function renderSignupMental(){
   const d = state.signupDraft;
+  // one screen serves the three session professions; only the wording differs
+  const kind = (d.coachTypes||['mental'])[0];
+  const titleKey = kind==='trainer' ? 'registerTrainerTitle' : kind==='medical' ? 'registerMedicalTitle' : 'registerMentalTitle';
+  const subKey   = kind==='trainer' ? 'registerTrainerSub'   : kind==='medical' ? 'registerMedicalSub'   : 'registerMentalSub';
+  const needsAreas = INPERSON_COACH_TYPES.includes(kind);
   return `
     <div class="onboard" style="padding-top:30px">
       <div class="onboard-top">
         <button class="back-btn" data-action="goto-auth-professional" style="margin-bottom:18px">${icon('back',18)} ${t('back')}</button>
-        <h2>${t('registerMentalTitle')}</h2>
-        <p class="sub">${t('registerMentalSub')}</p>
+        <h2>${t(titleKey)}</h2>
+        <p class="sub">${t(subKey)}</p>
 
         <label class="avatar-upload" for="photo-input">
           ${d.photo ? `<img src="${d.photo}">` : icon('ghost',30)}
@@ -4000,17 +4206,24 @@ function renderSignupMental(){
           ${COUNTRIES.map(c=>`<option value="${c.code}" ${d.country===c.code?'selected':''}>${c.flag} ${state.lang==='he'?c.he:c.en}</option>`).join('')}
         </select>
 
+        ${kind==='medical' ? `
+          <div class="field-label">${t('fieldMedicalRole')}</div>
+          <input class="form-input" id="su-medical-role" type="text" value="${d.medicalRole||''}" placeholder="${t('medicalRolePh')}">
+        ` : ''}
+
         <div class="field-label">${t('fieldYears')}</div>
         <input class="form-input" id="su-years" type="number" min="0" max="50" value="${d.years||''}">
 
-        <div class="field-label">${t('mentalDurationLabel')}</div>
+        ${needsAreas ? areaPickerHtml('su', d.areas) : ''}
+
+        <div class="field-label">${svc(d.coachTypes,'duration')}</div>
         <select class="form-input" id="su-mental-duration">
           ${[15,30,45,60,90].map(m=>`<option value="${m}" ${String(d.mentalCallDuration)===String(m)?'selected':''}>${m} ${t('minutesUnit')}</option>`).join('')}
         </select>
-        <div class="field-label">${t('mentalSessionPriceLabel')}</div>
+        <div class="field-label">${svc(d.coachTypes,'price')} (₪)</div>
         <input class="form-input" id="su-mental-price" type="number" min="0" value="${d.mentalSessionPrice||''}">
 
-        <div class="field-label">${t('mentalPackagesTitle')}</div>
+        <div class="field-label">${svc(d.coachTypes,'pkgTitle')}</div>
         <div id="su-mental-packages-list">${mentalPackageEditorRowsHtml(d.mentalPackages||[])}</div>
         <button type="button" class="demo-link" data-add-mental-package="su" style="display:block;margin-top:4px">+ ${t('addMentalPackage')}</button>
 
@@ -4023,6 +4236,13 @@ function renderSignupMental(){
           <span style="font-size:13px">${d.certificateFile ? d.certificateFile.name : t('certificateHint')}</span>
         </label>
         <input type="file" id="cert-input" accept="image/*,.pdf" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
+
+        ${needsAreas ? `
+          <div class="commit-box" style="margin-top:18px">
+            ${icon('check',18)}
+            <span><b>${t('signupSubNoteTitle')}</b><br>${kind==='medical' ? t('signupSubNoteMsgMed') : t('signupSubNoteMsg')}</span>
+          </div>
+        ` : ''}
 
         <label class="consent-row">
           <input type="checkbox" id="su-agree-terms" ${d.agreedTerms?'checked':''}>
@@ -4041,7 +4261,7 @@ function renderSignupCoach(){
   // this screen is the analyst sign-up; mental coaches have their own screen
   if(!d.coachTypes || !d.coachTypes.length) d.coachTypes = ['analyst'];
   const suTypes = d.coachTypes;
-  const suMentalOnly = suTypes.length>0 && suTypes.every(ct=>ct==='mental');
+  const suMentalOnly = isSessionOnlyPro(suTypes);
   return `
     <div class="onboard" style="padding-top:30px">
       <div class="onboard-top">
@@ -4102,16 +4322,16 @@ function renderSignupCoach(){
           <button type="button" class="demo-link" data-add-package="su" style="display:block;margin-top:4px">+ ${t('addPackage')}</button>
         ` : ''}
 
-        ${(d.coachTypes||[]).includes('mental') ? `
-          <div class="field-label" style="margin-top:22px">${t('mentalPricingTitle')}</div>
-          <div class="field-label" style="margin-top:0;font-weight:400;font-size:12.5px">${t('mentalDurationLabel')}</div>
+        ${hasSessionService(d.coachTypes) ? `
+          <div class="field-label" style="margin-top:22px">${svc(d.coachTypes,'pricing')}</div>
+          <div class="field-label" style="margin-top:0;font-weight:400;font-size:12.5px">${svc(d.coachTypes,'duration')}</div>
           <select class="form-input" id="su-mental-duration">
             ${[15,30,45,60,90].map(m=>`<option value="${m}" ${String(d.mentalCallDuration)===String(m)?'selected':''}>${m} ${t('minutesUnit')}</option>`).join('')}
           </select>
-          <div class="field-label" style="font-weight:400;font-size:12.5px">${t('mentalSessionPriceLabel')}</div>
+          <div class="field-label" style="font-weight:400;font-size:12.5px">${svc(d.coachTypes,'price')} (₪)</div>
           <input class="form-input" id="su-mental-price" type="number" min="0" value="${d.mentalSessionPrice||''}">
 
-          <div class="field-label">${t('mentalPackagesTitle')}</div>
+          <div class="field-label">${svc(d.coachTypes,'pkgTitle')}</div>
           <div id="su-mental-packages-list">${mentalPackageEditorRowsHtml(d.mentalPackages||[])}</div>
           <button type="button" class="demo-link" data-add-mental-package="su" style="display:block;margin-top:4px">+ ${t('addMentalPackage')}</button>
         ` : ''}
@@ -4436,10 +4656,13 @@ function filteredCoachesForRole(){
   return COACHES.filter(c => (c.coachTypes||[]).some(ct=>allowed.includes(ct)));
 }
 function filteredCoaches(){
-  let list = COACHES.filter(c => state.filters.specialty==='all' || c.specialties.includes(state.filters.specialty));
+  // a trainer or practitioner whose yearly subscription lapsed drops out of search
+  let list = COACHES.filter(c => subscriptionActive(c));
+  list = list.filter(c => state.filters.specialty==='all' || c.specialties.includes(state.filters.specialty));
   list = list.filter(c => state.filters.country==='all' || c.country===state.filters.country);
   list = list.filter(c => state.filters.coachType==='all' || (c.coachTypes||[]).includes(state.filters.coachType));
   list = list.filter(c => state.filters.generalSpec==='all' || (c.generalSpecialties||[]).includes(state.filters.generalSpec));
+  list = list.filter(c => !state.filters.area || state.filters.area==='all' || (c.areas||[]).includes(state.filters.area));
   if(state.user && state.user.role==='gk' && state.user.playerRole){
     // every type the current sport offers, minus the one that belongs to the other player role
     const exclude = state.user.playerRole==='goalkeeper' ? 'general' : 'goalkeeper';
@@ -4558,6 +4781,14 @@ function renderCoaches(){
         <div class="chip ${state.filters.coachType===v?'active':''}" data-coach-type-filter="${v}">${l}</div>
       `).join('')}
     </div>
+    ${INPERSON_COACH_TYPES.includes(state.filters.coachType) ? `
+      <div class="field-label">${t('filterArea')}</div>
+      <div class="filter-bar">
+        ${[['all',t('filterAllTypes')], ...AREAS.map(a=>[a.code, state.lang==='he'?a.he:a.en])].map(([v,l])=>`
+          <div class="chip ${(state.filters.area||'all')===v?'active':''}" data-area-filter="${v}">${l}</div>
+        `).join('')}
+      </div>
+    ` : ''}
     ${state.filters.coachType==='general' ? `
       <div class="field-label">${t('filterSpecialization')}</div>
       <div class="filter-bar">
@@ -4587,12 +4818,12 @@ function renderCoaches(){
 
     ${list.map(c=>{
       const cTypes = c.coachTypes || [];
-      const mentalOnly = cTypes.length>0 && cTypes.every(ct=>ct==='mental');
+      const mentalOnly = isSessionOnlyPro(cTypes);
       const cheapestPkg = (c.packages||[]).slice().sort((a,b)=>a.price-b.price)[0];
       const cheapestCallPkg = (c.mentalPackages||[]).slice().sort((a,b)=>a.price-b.price)[0];
       const priceBlockHtml = mentalOnly ? `
           <div class="price">₪${c.mentalSessionPrice||0}</div>
-          <div class="turnaround">${t('requestCall')}${cheapestCallPkg?` · ${t('mentalPackagesTitle')} ${t('priceFrom')}₪${cheapestCallPkg.price}`:''}</div>
+          <div class="turnaround">${svc(c.coachTypes,'request')}${cheapestCallPkg?` · ${svc(c.coachTypes,'pkgTitle')} ${t('priceFrom')}₪${cheapestCallPkg.price}`:''}</div>
       ` : `
           <div class="price">₪${c.singleGamePrice}</div>
           <div class="turnaround">${t('singleGameOption')}${cheapestPkg?` · ${t('packagesTitle')} ${t('priceFrom')}₪${cheapestPkg.price}`:''}</div>
@@ -4611,10 +4842,12 @@ function renderCoaches(){
         </div>
         <div class="badge-row">
           ${(c.coachTypes||[]).map(ct=>`<div class="badge spec">${COACH_TYPE_LABEL[state.lang][ct]}</div>`).join('')}
+          ${c.medicalRole ? `<div class="badge spec">${c.medicalRole}</div>` : ''}
+          ${areaNames(c.areas).map(a=>`<div class="badge">${a}</div>`).join('')}
           ${(c.coachTypes||[]).includes('general') ? (c.generalSpecialties||[]).map(s=>`<div class="badge spec">${GENERAL_SPEC_LABEL[state.lang][s]}</div>`).join('') : ''}
           ${c.specialties.map(s=>`<div class="badge">${SPEC_LABEL[state.lang][s]}</div>`).join('')}
           ${mentalOnly
-            ? `<div class="badge">${t('mentalDurationLabel')} ${c.mentalCallDuration||30} ${t('minutesUnit')}</div>`
+            ? `<div class="badge">${svc(c.coachTypes,'duration')} ${c.mentalCallDuration||30} ${t('minutesUnit')}</div>`
             : `<div class="badge">${t('deliveryIn')} ${fmtHours(c.turnaround)}</div>`}
           ${!mentalOnly && c.highlightClipEnabled ? `<div class="badge">${t('highlightClipTitle')} +₪${c.highlightClipPrice}</div>` : ''}
           ${c.isFullyBooked ? `<div class="badge" style="background:rgba(198,255,77,.12);color:var(--coral-dim);border-color:rgba(198,255,77,.25)">${t('fullyBookedBadge')}</div>` : ''}
@@ -4656,7 +4889,7 @@ function renderCoachProfile(){
   const fee = computeFee(coachAmount + clipPrice);
   // a coach whose ONLY service is mental coaching takes calls, not video uploads
   const cTypes = c.coachTypes || [];
-  const isMentalOnly = cTypes.length>0 && cTypes.every(ct=>ct==='mental');
+  const isMentalOnly = isSessionOnlyPro(cTypes);
   return `
     <div class="coach-top" style="margin-bottom:14px">
       ${avatarHtml(c, 56)}
@@ -4673,10 +4906,12 @@ function renderCoachProfile(){
 
     <div class="badge-row">
       ${(c.coachTypes||[]).map(ct=>`<div class="badge spec">${COACH_TYPE_LABEL[state.lang][ct]}</div>`).join('')}
+      ${c.medicalRole ? `<div class="badge spec">${c.medicalRole}</div>` : ''}
+      ${areaNames(c.areas).map(a=>`<div class="badge">${a}</div>`).join('')}
       ${(c.coachTypes||[]).includes('general') ? (c.generalSpecialties||[]).map(s=>`<div class="badge spec">${GENERAL_SPEC_LABEL[state.lang][s]}</div>`).join('') : ''}
       ${c.specialties.map(s=>`<div class="badge">${SPEC_LABEL[state.lang][s]}</div>`).join('')}
       ${isMentalOnly
-        ? `<div class="badge">${t('mentalDurationLabel')} ${c.mentalCallDuration||30} ${t('minutesUnit')}</div>`
+        ? `<div class="badge">${svc(c.coachTypes,'duration')} ${c.mentalCallDuration||30} ${t('minutesUnit')}</div>`
         : `<div class="badge">${t('deliveryIn')} ${fmtHours(c.turnaround)}</div>`}
       ${!isMentalOnly && c.highlightClipEnabled ? `<div class="badge">${t('highlightClipTitle')} +₪${c.highlightClipPrice}</div>` : ''}
       ${c.isFullyBooked ? `<div class="badge" style="background:rgba(198,255,77,.12);color:var(--coral-dim);border-color:rgba(198,255,77,.25)">${t('fullyBookedBadge')}</div>` : ''}
@@ -4688,17 +4923,17 @@ function renderCoachProfile(){
       <p style="font-size:13.5px;color:var(--chalk-dim);line-height:1.6;margin:0 0 18px">${state.lang==='he'?c.bio:c.bio_en}</p>
     ` : ''}
 
-    ${(c.coachTypes||[]).includes('mental') && c.mentalSessionPrice ? `
-      <div class="section-title" style="margin-top:22px">${t('mentalPricingTitle')}</div>
+    ${hasSessionService(c.coachTypes) && c.mentalSessionPrice ? `
+      <div class="section-title" style="margin-top:22px">${svc(c.coachTypes,'pricing')}</div>
       <div class="section-line"></div>
       <div class="summary-card">
-        <div class="summary-row"><span>${t('mentalDurationLabel')}</span><span class="mono">${c.mentalCallDuration} ${t('minutesUnit')}</span></div>
-        <div class="summary-row"><span>${t('mentalSessionPriceLabel')}</span><span class="mono">₪${c.mentalSessionPrice}</span></div>
+        <div class="summary-row"><span>${svc(c.coachTypes,'duration')}</span><span class="mono">${c.mentalCallDuration} ${t('minutesUnit')}</span></div>
+        <div class="summary-row"><span>${svc(c.coachTypes,'price')}</span><span class="mono">₪${c.mentalSessionPrice}</span></div>
         ${(c.mentalPackages||[]).map(p=>`
-          <div class="summary-row"><span>${t('pkgOfCallsPre')} ${p.sessionCount} ${t('pkgOfCallsPost')}</span><span class="mono">₪${p.price}</span></div>
+          <div class="summary-row"><span>${svc(c.coachTypes,'pkgPre')} ${p.sessionCount} ${svc(c.coachTypes,'pkgPost')}</span><span class="mono">₪${p.price}</span></div>
         `).join('')}
       </div>
-      ${(state.role!=='viewer' && !state.isSelfViewingProfile && !isMentalOnly) ? `<button class="btn btn-primary btn-block" style="margin-top:14px" data-action="open-request-call">${t('requestCall')}</button>` : ''}
+      ${(state.role!=='viewer' && !state.isSelfViewingProfile && !isMentalOnly) ? `<button class="btn btn-primary btn-block" style="margin-top:14px" data-action="open-request-call">${svc(c.coachTypes,'request')}</button>` : ''}
     ` : ''}
 
     ${(!c.isFullyBooked && state.role!=='viewer' && !isMentalOnly) ? `
@@ -4771,7 +5006,7 @@ function renderCoachProfile(){
     ` : `
       <div class="sticky-cta">
         ${isMentalOnly
-          ? `<button class="btn btn-primary btn-block" data-action="open-request-call">${t('requestCall')}</button>`
+          ? `<button class="btn btn-primary btn-block" data-action="open-request-call">${svc(c.coachTypes,'request')}</button>`
           : c.isFullyBooked
             ? `<button class="btn btn-primary btn-block" disabled style="opacity:.5;cursor:not-allowed">${t('notAvailableBtn')}</button>`
             : `<button class="btn btn-primary btn-block" data-select-coach="${c.id}">${t('continueToCoaches')}</button>`}
@@ -4822,6 +5057,36 @@ function renderAdmin(){
         </div>
       </div>
     `).join('')}
+
+    ${(()=>{
+      const subs = state.adminSubscribers || [];
+      if(!subs.length) return '';
+      return `
+        <div class="section-title" style="margin-top:26px">${t('adminSubsTitle')} (${subs.length})</div>
+        <div class="section-line"></div>
+        ${subs.map(c=>{
+          const active = subscriptionActive(c);
+          return `
+            <div class="coach-card">
+              <div class="coach-top">
+                ${personAvatarHtml(c.name, c.photo, 40)}
+                <div style="flex:1">
+                  <div class="coach-name">${c.name} ${countryFlag(c.country)}</div>
+                  <div class="coach-sub">${(c.coachTypes||[]).map(ct=>COACH_TYPE_LABEL[state.lang][ct]).join(' · ')}${c.medicalRole?' · '+c.medicalRole:''}</div>
+                </div>
+                <div class="status-badge ${active?'status-done':'status-declined'}">${active ? subscriptionDaysLeft(c)+' '+t('daysUnit') : t('subNone')}</div>
+              </div>
+              <div class="req-meta" style="margin-top:8px">${t('subAdminLabel')}: ${c.subscriptionUntil ? fmtDateTime(c.subscriptionUntil) : t('subNone')}</div>
+              <div class="chip-row" style="margin-top:10px">
+                <div class="chip" data-admin-sub="year" data-admin-sub-uid="${c.uid}">${t('subAdminSet')}</div>
+                <div class="chip" data-admin-sub="trial" data-admin-sub-uid="${c.uid}">${t('subAdminSetTrial')}</div>
+                <div class="chip" data-admin-sub="clear" data-admin-sub-uid="${c.uid}">${t('subAdminClear')}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      `;
+    })()}
   `;
 }
 
@@ -5014,8 +5279,8 @@ function renderIncome(){
   const reqs = state.requests || [];
   const calls = state.callRequests || [];
   const types = (state.user && state.user.coachTypes) || [];
-  const isMental = types.includes('mental');
-  const doesAnalysis = types.length===0 || types.some(ct=>ct!=='mental');
+  const isMental = hasSessionService(types);
+  const doesAnalysis = types.length===0 || !isSessionOnlyPro(types);
   const amt = r => (r.price!=null ? r.price : (r.basePrice||0));
 
   const analysisDoneList = reqs.filter(r=>r.status==='done');
@@ -5086,7 +5351,7 @@ function renderIncome(){
       ` : ''}
     ` : ''}
 
-    <div class="req-meta" style="margin-top:18px">${t('incomeNote')}</div>
+    <div class="req-meta" style="margin-top:18px">${(state.user && isDirectPay(state.user.coachTypes)) ? t('directPayIncomeNote') : t('incomeNote')}</div>
   `;
 }
 function renderCoachHome(){
@@ -5159,13 +5424,13 @@ function renderCoachDash(){
   if(!coach){
     return `<div class="empty-state">${icon('clip',36)}<b>${t('noIncomingTitle')}</b></div>`;
   }
-  const isMental = (coach.coachTypes||[]).includes('mental');
+  const isMental = hasSessionService(coach.coachTypes);
   const callsSummary = isMental ? (()=>{
     const calls = state.callRequests || [];
     const completed = calls.filter(c=>c.status==='completed').length;
     const upcoming = calls.filter(c=>c.status==='confirmed').length;
     return `
-      <div class="section-title" style="margin-top:0">${t('mentalCallsSummary')}</div>
+      <div class="section-title" style="margin-top:0">${svc(coach.coachTypes,'summary')}</div>
       <div class="section-line"></div>
       <div style="display:flex;gap:10px;margin-bottom:22px">
         <div class="stat-chip"><b class="mono">${completed}</b><span>${t('statusCompleted')}</span></div>
@@ -5176,6 +5441,18 @@ function renderCoachDash(){
   const mine = [...state.requests].sort((a,b)=>b.createdAt-a.createdAt);
   const hasCalls = (state.callRequests||[]).length > 0;
   return `
+    ${(state.user && state.user.isVerified && isDirectPay(state.user.coachTypes)) ? (
+      subscriptionActive(state.user) ? `
+        <div class="commit-box" style="margin:0 0 18px">
+          ${icon('check',18)}
+          <span><b>${t('subActiveTitle')}</b><br>${t('subActiveMsg')(subscriptionDaysLeft(state.user))}</span>
+        </div>
+      ` : `
+        <div class="commit-box" style="margin:0 0 18px;background:rgba(255,59,48,.10);border-color:rgba(255,59,48,.35);color:#ff8a7a">
+          ${icon('timer',18)}
+          <span><b>${state.user.subscriptionUntil ? t('subExpiredTitle') : t('subPendingTitle')}</b><br>${state.user.subscriptionUntil ? t('subExpiredMsg') : t('subPendingMsg')}</span>
+        </div>
+      `) : ''}
     ${(state.user && !state.user.isVerified) ? (state.user.rejected ? `
       <div class="commit-box" style="margin:0 0 18px;background:rgba(255,59,48,.10);border-color:rgba(255,59,48,.35);color:#ff8a7a">
         ${icon('x',18)}
@@ -5386,7 +5663,7 @@ function renderProfile(){
   const isViewer = state.role==='viewer';
   // a coach who only does mental coaching has no video deliverable, so no turnaround / per-game pricing
   const pfTypes = d.coachTypes || [];
-  const pfMentalOnly = pfTypes.length>0 && pfTypes.every(ct=>ct==='mental');
+  const pfMentalOnly = isSessionOnlyPro(pfTypes);
   return `
     <label class="avatar-upload" for="profile-photo-input">
       ${d.photo ? `<img src="${d.photo}">` : icon('ghost',30)}
@@ -5401,7 +5678,7 @@ function renderProfile(){
     <input class="form-input" type="email" value="${state.user.email}" disabled style="opacity:.55;cursor:not-allowed">
     <div class="photo-hint" style="margin:6px 0 0">${t('emailFixedNote')}</div>
 
-    ${(isCoach && (state.user.coachTypes||[]).includes('mental')) ? (()=>{
+    ${(isCoach && hasSessionService(state.user.coachTypes)) ? (()=>{
       const calls = state.callRequests || [];
       const earned = calls.filter(c=>c.status==='completed').reduce((s,c)=>s+(c.price||0),0);
       const upcoming = calls.filter(c=>c.status==='confirmed').reduce((s,c)=>s+(c.price||0),0);
@@ -5431,6 +5708,11 @@ function renderProfile(){
         `).join('')}
       </div>
       <div class="photo-hint" style="margin-top:6px;margin-bottom:0">${t('coachTypeHint')}</div>
+      ${(d.coachTypes||[]).includes('medical') ? `
+        <div class="field-label">${t('fieldMedicalRole')}</div>
+        <input class="form-input" id="pf-medical-role" type="text" value="${d.medicalRole||''}" placeholder="${t('medicalRolePh')}">
+      ` : ''}
+      ${isInPersonPro(d.coachTypes) ? areaPickerHtml('pf', d.areas) : ''}
       ${(d.coachTypes||[]).includes('general') ? `
         <div class="field-label">${t('generalSpecTitle')}</div>
         <div class="chip-row" id="pf-genspec-chips">
@@ -5453,16 +5735,16 @@ function renderProfile(){
         <button type="button" class="demo-link" data-add-package="pf" style="display:block;margin-top:4px">+ ${t('addPackage')}</button>
       ` : ''}
 
-      ${(d.coachTypes||[]).includes('mental') ? `
-        <div class="field-label" style="margin-top:22px">${t('mentalPricingTitle')}</div>
-        <div class="field-label" style="margin-top:0;font-weight:400;font-size:12.5px">${t('mentalDurationLabel')}</div>
+      ${hasSessionService(d.coachTypes) ? `
+        <div class="field-label" style="margin-top:22px">${svc(d.coachTypes,'pricing')}</div>
+        <div class="field-label" style="margin-top:0;font-weight:400;font-size:12.5px">${svc(d.coachTypes,'duration')}</div>
         <select class="form-input" id="pf-mental-duration">
           ${[15,30,45,60,90].map(m=>`<option value="${m}" ${String(d.mentalCallDuration)===String(m)?'selected':''}>${m} ${t('minutesUnit')}</option>`).join('')}
         </select>
-        <div class="field-label" style="font-weight:400;font-size:12.5px">${t('mentalSessionPriceLabel')}</div>
+        <div class="field-label" style="font-weight:400;font-size:12.5px">${svc(d.coachTypes,'price')} (₪)</div>
         <input class="form-input" id="pf-mental-price" type="number" min="0" value="${d.mentalSessionPrice||0}">
 
-        <div class="field-label">${t('mentalPackagesTitle')}</div>
+        <div class="field-label">${svc(d.coachTypes,'pkgTitle')}</div>
         <div id="pf-mental-packages-list">${mentalPackageEditorRowsHtml(d.mentalPackages||[])}</div>
         <button type="button" class="demo-link" data-add-mental-package="pf" style="display:block;margin-top:4px">+ ${t('addMentalPackage')}</button>
       ` : ''}
@@ -5840,6 +6122,30 @@ function attachHandlers(){
   app.querySelector('[data-action="goto-signup-mental"]')?.addEventListener('click', ()=>{
     state.signupRole = 'coach'; state.signupDraft = { coachTypes:['mental'], mentalPackages:[] }; go('signup-mental');
   });
+  app.querySelector('[data-action="goto-signup-trainer"]')?.addEventListener('click', ()=>{
+    state.signupRole = 'coach'; state.signupDraft = { coachTypes:['trainer'], mentalPackages:[], areas:[] }; go('signup-mental');
+  });
+  app.querySelector('[data-action="goto-signup-medical"]')?.addEventListener('click', ()=>{
+    state.signupRole = 'coach'; state.signupDraft = { coachTypes:['medical'], mentalPackages:[], areas:[], medicalRole:'' }; go('signup-mental');
+  });
+  app.querySelectorAll('[data-su-area]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const code = el.dataset.suArea;
+      const list = state.signupDraft.areas || (state.signupDraft.areas = []);
+      const i = list.indexOf(code);
+      if(i>=0) list.splice(i,1); else list.push(code);
+      render();
+    });
+  });
+  app.querySelectorAll('[data-pf-area]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const code = el.dataset.pfArea;
+      const list = state.profileDraft.areas || (state.profileDraft.areas = []);
+      const i = list.indexOf(code);
+      if(i>=0) list.splice(i,1); else list.push(code);
+      render();
+    });
+  });
   app.querySelector('[data-action="goto-signup-agent"]')?.addEventListener('click', ()=>{
     state.signupRole = 'agent'; state.signupDraft = { viewerRole:'agent' }; go('signup-viewer');
   });
@@ -5874,6 +6180,7 @@ function attachHandlers(){
           return;
         }
         state.adminPendingCoaches = await loadPendingCoaches();
+          state.adminSubscribers = await loadSubscribers();
         state.adminStats = await loadAdminStats();
         showToast(t('welcomeBack')+', Admin');
         go('admin');
@@ -5934,6 +6241,7 @@ function attachHandlers(){
     const dest = state.postVerifyDestination || 'home';
     if(state.role==='admin'){
       state.adminPendingCoaches = await loadPendingCoaches();
+          state.adminSubscribers = await loadSubscribers();
       state.adminStats = await loadAdminStats();
       go('admin');
       return;
@@ -6039,9 +6347,9 @@ function attachHandlers(){
   });
 
   // signup: coach
-  ['su-name','su-email','su-password','su-years','su-single-price','su-clip-price','su-about','su-mental-price'].forEach(id=>{
+  ['su-name','su-email','su-password','su-years','su-single-price','su-clip-price','su-about','su-mental-price','su-medical-role'].forEach(id=>{
     app.querySelector('#'+id)?.addEventListener('input', (e)=>{
-      const map = {'su-name':'name','su-email':'email','su-password':'password','su-years':'years','su-single-price':'singleGamePrice','su-clip-price':'highlightClipPrice','su-about':'about','su-mental-price':'mentalSessionPrice'};
+      const map = {'su-name':'name','su-email':'email','su-password':'password','su-years':'years','su-single-price':'singleGamePrice','su-clip-price':'highlightClipPrice','su-about':'about','su-mental-price':'mentalSessionPrice','su-medical-role':'medicalRole'};
       state.signupDraft[map[id]] = e.target.value;
     });
   });
@@ -6128,6 +6436,8 @@ function attachHandlers(){
       photo:d.photo||null,
       country: d.country || COUNTRIES[0].code,
       coachTypes: (d.coachTypes && d.coachTypes.length) ? d.coachTypes : ['analyst'],
+      areas: d.areas || [],
+      medicalRole: (d.medicalRole||'').trim(),
       generalSpecialties: (d.coachTypes||[]).includes('general') ? (d.generalSpecialties||[]) : [],
       years: Number(d.years)||0,
       specialties: (d.specialties && d.specialties.length) ? d.specialties : ['kids','teens','adults'],
@@ -6181,6 +6491,9 @@ function attachHandlers(){
     if(!EMAIL_RE.test((d.email||'').trim())){ showToast(t('invalidEmail')); return; }
     if(!d.password || d.password.length<6){ showToast(t('invalidPassword')); return; }
     if(!d.certificateFile){ showToast(t('certificateRequired')); return; }
+    const suKind = (d.coachTypes||['mental'])[0];
+    if(suKind==='medical' && !(d.medicalRole||'').trim()){ showToast(t('mustFillMedicalRole')); return; }
+    if(INPERSON_COACH_TYPES.includes(suKind) && !(d.areas||[]).length){ showToast(t('mustPickArea')); return; }
     if(!d.agreedTerms){ showToast(t('mustAgreeTerms')); return; }
     const emailLower = d.email.trim().toLowerCase();
     const profile = {
@@ -6188,7 +6501,9 @@ function attachHandlers(){
       sport: state.sport || 'football',
       photo:d.photo||null,
       country: d.country || COUNTRIES[0].code,
-      coachTypes: ['mental'],
+      coachTypes: [suKind],
+      areas: d.areas || [],
+      medicalRole: (d.medicalRole||'').trim(),
       generalSpecialties: [],
       years: Number(d.years)||0,
       specialties: ['kids','teens','adults'],
@@ -6289,6 +6604,7 @@ function attachHandlers(){
   // admin: coach approvals
   app.querySelector('[data-action="open-admin"]')?.addEventListener('click', async ()=>{
     state.adminPendingCoaches = await loadPendingCoaches();
+          state.adminSubscribers = await loadSubscribers();
     state.adminStats = await loadAdminStats();
     go('admin');
   });
@@ -6301,6 +6617,21 @@ function attachHandlers(){
         state.adminPendingCoaches = state.adminPendingCoaches.filter(c=>c.uid!==uid);
         render();
       }catch(e){ console.error('approve failed', e); showToast(t('saveError')); }
+    });
+  });
+  app.querySelectorAll('[data-admin-sub]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const uid = el.dataset.adminSubUid;
+      const mode = el.dataset.adminSub;
+      const until = mode==='clear' ? null
+        : Date.now() + (mode==='trial' ? SUBSCRIPTION_TRIAL_DAYS : 365) * 86400000;
+      try{
+        await db.collection('users').doc(uid).update({ subscriptionUntil: until });
+        const row = (state.adminSubscribers||[]).find(c=>c.uid===uid);
+        if(row) row.subscriptionUntil = until;
+        showToast(t('subSaved'));
+        render();
+      }catch(e){ console.error('subscription update failed', e); showToast(t('saveError')); }
     });
   });
   app.querySelectorAll('[data-admin-reject]').forEach(el=>{
@@ -6359,7 +6690,7 @@ function attachHandlers(){
     btn.disabled = true; btn.textContent = '...';
     const avgRating = c.rating!=null ? c.rating.toFixed(1) : null;
     const cTypes = c.coachTypes || [];
-    const mentalOnly = cTypes.length>0 && cTypes.every(ct=>ct==='mental');
+    const mentalOnly = isSessionOnlyPro(cTypes);
     const lines = [];
     if(!mentalOnly){
       lines.push({label:t('singleGameOption'), value:`₪${c.singleGamePrice||0}`});
@@ -6367,10 +6698,10 @@ function attachHandlers(){
       if(c.highlightClipEnabled) lines.push({label:t('highlightClipTitle'), value:`+₪${c.highlightClipPrice}`});
       lines.push({label:t('deliveryIn'), value:fmtHours(c.turnaround)});
     }
-    if(cTypes.includes('mental')){
-      lines.push({label:t('mentalDurationLabel'), value:`${c.mentalCallDuration||30} ${t('minutesUnit')}`});
-      lines.push({label:t('requestCall'), value:`₪${c.mentalSessionPrice||0}`});
-      (c.mentalPackages||[]).forEach(pk=>lines.push({label:`${t('pkgOfCallsPre')} ${pk.sessionCount} ${t('pkgOfCallsPost')}`, value:`₪${pk.price}`}));
+    if(hasSessionService(cTypes)){
+      lines.push({label:svc(c.coachTypes,'duration'), value:`${c.mentalCallDuration||30} ${t('minutesUnit')}`});
+      lines.push({label:svc(c.coachTypes,'price'), value:`₪${c.mentalSessionPrice||0}`});
+      (c.mentalPackages||[]).forEach(pk=>lines.push({label:`${svc(c.coachTypes,'pkgPre')} ${pk.sessionCount} ${svc(c.coachTypes,'pkgPost')}`, value:`₪${pk.price}`}));
     }
     lines.push({label:t('fieldYears'), value:`${c.years||0}`});
     const profileUrl = coachProfileUrl(c.id);
@@ -6440,9 +6771,9 @@ function attachHandlers(){
       render();
     }catch(err){ console.error('photo read failed', err); showToast(t('photoError')); }
   });
-  ['pf-name','pf-dob','pf-club','pf-height','pf-years','pf-single-price','pf-clip-price','pf-about','pf-mental-price'].forEach(id=>{
+  ['pf-name','pf-dob','pf-club','pf-height','pf-years','pf-single-price','pf-clip-price','pf-about','pf-mental-price','pf-medical-role'].forEach(id=>{
     app.querySelector('#'+id)?.addEventListener('input', (e)=>{
-      const map = {'pf-name':'name','pf-dob':'dob','pf-club':'club','pf-height':'height','pf-years':'years','pf-single-price':'singleGamePrice','pf-clip-price':'highlightClipPrice','pf-about':'about','pf-mental-price':'mentalSessionPrice'};
+      const map = {'pf-name':'name','pf-dob':'dob','pf-club':'club','pf-height':'height','pf-years':'years','pf-single-price':'singleGamePrice','pf-clip-price':'highlightClipPrice','pf-about':'about','pf-mental-price':'mentalSessionPrice','pf-medical-role':'medicalRole'};
       state.profileDraft[map[id]] = e.target.value;
     });
   });
@@ -6564,6 +6895,8 @@ function attachHandlers(){
       name: d.name.trim(), photo: d.photo||null,
       country: d.country || COUNTRIES[0].code,
       coachTypes: (d.coachTypes && d.coachTypes.length) ? d.coachTypes : ['analyst'],
+      areas: d.areas || [],
+      medicalRole: (d.medicalRole||'').trim(),
       generalSpecialties: (d.coachTypes||[]).includes('general') ? (d.generalSpecialties||[]) : [],
       years: Number(d.years)||0,
       specialties: (d.specialties && d.specialties.length) ? d.specialties : ['kids','teens','adults'],
@@ -6995,9 +7328,10 @@ function attachHandlers(){
     if(!c || !state.user) return;
     if(__submittingRequest) return;
     __submittingRequest = true;
-    const choice = state.callDraft.paymentChoice || 'single';
+    const directPay = isDirectPay(c.coachTypes);
+    const choice = directPay ? 'single' : (state.callDraft.paymentChoice || 'single');
     let coachAmount = c.mentalSessionPrice, pkgId = null, ownedId = null, buyPkg = null;
-    let callPaymentType = 'single';
+    let callPaymentType = directPay ? 'direct' : 'single';
     if(choice.startsWith('own:')){
       ownedId = choice.slice(4);
       const own = (state.activeCallPackages||[]).find(o=>o.id===ownedId);
@@ -7016,7 +7350,8 @@ function attachHandlers(){
       if(buyPkg) coachAmount = buyPkg.price;
       callPaymentType = 'newCallPackage';
     }
-    const fee = computeFee(coachAmount);
+    // the platform never touches the money for a direct-pay booking
+    const fee = directPay ? { fee: 0, total: coachAmount } : computeFee(coachAmount);
     btn.disabled = true;
     const id = await createCallRequestDoc({
       gkUid: state.user.uid, gkName: state.user.name, gkPhoto: state.user.photo||null, gkEmail: state.user.email||null,
@@ -7024,13 +7359,18 @@ function attachHandlers(){
       durationMinutes: Number(c.mentalCallDuration)||30,
       paymentType: callPaymentType, packageId: pkgId, packagePurchaseId: ownedId,
       price: coachAmount, platformFee: fee.fee, totalCharged: fee.total,
+      // a trainer or a medical professional meets the player in person - no video call
+      sessionKind: isInPersonPro(c.coachTypes) ? 'inperson' : 'video',
+      directPay,
+      coachTypes: c.coachTypes || [],
+      meetingPlace: '',
       status: 'requested', proposedSlots: [], confirmedSlot: null, extendedMinutes: 0,
       createdAt: Date.now(), gkSeen: true, coachSeen: false
     });
     if(!id){ showToast(t('saveError')); btn.disabled = false; __submittingRequest = false; return; }
 
     // the call exists - only now move the package, so a failed request never costs a session
-    if(callPaymentType==='newCallPackage' && buyPkg){
+    if(!directPay && callPaymentType==='newCallPackage' && buyPkg){
       try{
         const ref = await db.collection('packagePurchases').add({
           kind:'call',
@@ -7060,7 +7400,7 @@ function attachHandlers(){
         </div>`
       );
     }
-    showToast(t('callRequestSent'));
+    showToast(svc(c.coachTypes,'sentToPro'));
     await loadMyCallRequests(state.user.uid);
     go('requests');
   });
@@ -7096,10 +7436,14 @@ function attachHandlers(){
     if(!slots.length){ showToast(parsed.length ? t('slotMustBeFuture') : t('requiredName')); return; }
     const btn = e.currentTarget;
     btn.disabled = true;
-    const ok = await updateCallRequestDoc(r.id, { proposedSlots: slots, status:'proposed', gkSeen:false });
+    const place = (document.getElementById('meeting-place')?.value || '').trim();
+    const patch = { proposedSlots: slots, status:'proposed', gkSeen:false };
+    if(r.sessionKind==='inperson') patch.meetingPlace = place;
+    const ok = await updateCallRequestDoc(r.id, patch);
     btn.disabled = false;
     if(!ok){ showToast(t('saveError')); return; }
     r.proposedSlots = slots; r.status = 'proposed';
+    if(r.sessionKind==='inperson') r.meetingPlace = place;
     state.viewingCallRequest = r;
     if(r.gkEmail){
       sendEmailNotification(
@@ -7113,6 +7457,19 @@ function attachHandlers(){
     }
     showToast(t('proposalSent'));
     go('call-request-detail');
+  });
+  app.querySelectorAll('[data-mark-session-done]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const id = el.dataset.markSessionDone;
+      if(!confirm(t('confirmSessionDone'))) return;
+      el.disabled = true;
+      const ok = await updateCallRequestDoc(id, { status:'completed', gkSeen:false });
+      el.disabled = false;
+      if(!ok){ showToast(t('saveError')); return; }
+      setCallStatusLocally(id, 'completed');
+      showToast(t('sessionDoneToast'));
+      render();
+    });
   });
   app.querySelectorAll('[data-confirm-slot]').forEach(el=>{
     el.addEventListener('click', async ()=>{
@@ -7253,7 +7610,10 @@ function attachHandlers(){
     if(input){ input.focus(); input.setSelectionRange(caret, caret); }
   });
   app.querySelectorAll('[data-coach-type-filter]').forEach(el=>{
-    el.addEventListener('click', ()=>{ state.filters.coachType = el.dataset.coachTypeFilter; state.filters.generalSpec='all'; render(); });
+    el.addEventListener('click', ()=>{ state.filters.coachType = el.dataset.coachTypeFilter; state.filters.generalSpec='all'; state.filters.area='all'; render(); });
+  });
+  app.querySelectorAll('[data-area-filter]').forEach(el=>{
+    el.addEventListener('click', ()=>{ state.filters.area = el.dataset.areaFilter; render(); });
   });
   app.querySelectorAll('[data-genspec-filter]').forEach(el=>{
     el.addEventListener('click', ()=>{ state.filters.generalSpec = el.dataset.genspecFilter; render(); });
@@ -7587,6 +7947,7 @@ setInterval(()=>{
           state.view = 'verify-email';
         } else {
           state.adminPendingCoaches = await loadPendingCoaches();
+          state.adminSubscribers = await loadSubscribers();
           state.adminStats = await loadAdminStats();
           state.view = 'admin';
         }

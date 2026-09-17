@@ -738,13 +738,13 @@ function areaNames(codes){
 }
 
 // Professions that sell a scheduled session instead of a video analysis.
-const SESSION_COACH_TYPES = ['mental','trainer','medical'];
+const SESSION_COACH_TYPES = ['mental','trainer','medical','nutrition'];
 // ...and the subset of those that meet the player face to face, so no video call.
-const INPERSON_COACH_TYPES = ['trainer','medical'];
+const INPERSON_COACH_TYPES = ['trainer','medical','nutrition'];
 // Personal trainers and medical professionals are paid directly by the player.
 // The platform takes no money for those bookings - it charges them a yearly
 // subscription instead. Change the two numbers below to change the offer.
-const DIRECT_PAY_COACH_TYPES = ['trainer','medical'];
+const DIRECT_PAY_COACH_TYPES = ['trainer','medical','nutrition'];
 const SUBSCRIPTION_TRIAL_DAYS = 30;
 const SUBSCRIPTION_PRICE_ILS = 0;   // 0 = do not show a price anywhere yet
 function isDirectPay(types){ return (types||[]).some(ct=>DIRECT_PAY_COACH_TYPES.includes(ct)); }
@@ -768,6 +768,7 @@ function serviceKind(types){
   const a = types||[];
   if(a.includes('trainer')) return 'training';
   if(a.includes('medical')) return 'treatment';
+  if(a.includes('nutrition')) return 'consult';
   return 'call';
 }
 const SERVICE_WORDS = {
@@ -786,6 +787,14 @@ const SERVICE_WORDS = {
     en:{ duration:'Session length', price:'Price per single session', pkgTitle:'Session packages', pkgPre:'Package of', pkgPost:'sessions',
          request:'Request a session', scheduled:'Session scheduled for', pricing:'Session pricing', summary:'Sessions summary',
          sentToPro:'Your request was sent to the trainer', waitingProposal:'Waiting for the trainer to propose times' },
+  },
+  consult: {
+    he:{ duration:'אורך הפגישה', price:'מחיר לפגישה בודדת', pkgTitle:'חבילות פגישות', pkgPre:'חבילת', pkgPost:'פגישות',
+         request:'בקשת פגישה', scheduled:'הפגישה נקבעה ל', pricing:'תמחור פגישות', summary:'סיכום פגישות',
+         sentToPro:'הבקשה נשלחה לתזונאי/ת', waitingProposal:'ממתינים שהתזונאי/ת יציע מועדים' },
+    en:{ duration:'Session length', price:'Price per single session', pkgTitle:'Session packages', pkgPre:'Package of', pkgPost:'sessions',
+         request:'Book a session', scheduled:'Session scheduled for', pricing:'Session pricing', summary:'Sessions summary',
+         sentToPro:'Your request was sent to the nutritionist', waitingProposal:'Waiting for the nutritionist to propose times' },
   },
   treatment: {
     he:{ duration:'אורך הטיפול', price:'מחיר לטיפול בודד', pkgTitle:'חבילות טיפולים', pkgPre:'חבילת', pkgPost:'טיפולים',
@@ -820,8 +829,8 @@ const SPORT_DATA = {
     },
     fieldPositions: ['center_back','fullback','midfielder','winger','striker'],
     coachTypes: {
-      he:{goalkeeper:'מאמן שוערים', general:'מאמן כללי', analyst:'אנליסט', mental:'מאמן מנטלי', trainer:'מאמן אישי', medical:'איש רפואה'},
-      en:{goalkeeper:'Goalkeeper coach', general:'General coach', analyst:'Analyst', mental:'Mental coach', trainer:'Personal trainer', medical:'Medical professional'},
+      he:{goalkeeper:'מאמן שוערים', general:'מאמן כללי', analyst:'אנליסט', mental:'מאמן מנטלי', trainer:'מאמן אישי', medical:'איש רפואה', nutrition:'תזונאי/ת'},
+      en:{goalkeeper:'Goalkeeper coach', general:'General coach', analyst:'Analyst', mental:'Mental coach', trainer:'Personal trainer', medical:'Medical professional', nutrition:'Nutritionist'},
     },
     generalSpec: {
       he:{defense:'הגנה', attack:'התקפה', midfield:'קישור'},
@@ -881,8 +890,8 @@ const SPORT_DATA = {
     },
     fieldPositions: ['point_guard','shooting_guard','small_forward','power_forward','center'],
     coachTypes: {
-      he:{general:'מאמן כללי', shooting:'מאמן קליעה', analyst:'אנליסט', mental:'מאמן מנטלי', trainer:'מאמן אישי', medical:'איש רפואה'},
-      en:{general:'General coach', shooting:'Shooting coach', analyst:'Analyst', mental:'Mental coach', trainer:'Personal trainer', medical:'Medical professional'},
+      he:{general:'מאמן כללי', shooting:'מאמן קליעה', analyst:'אנליסט', mental:'מאמן מנטלי', trainer:'מאמן אישי', medical:'איש רפואה', nutrition:'תזונאי/ת'},
+      en:{general:'General coach', shooting:'Shooting coach', analyst:'Analyst', mental:'Mental coach', trainer:'Personal trainer', medical:'Medical professional', nutrition:'Nutritionist'},
     },
     generalSpec: {
       he:{defense:'הגנה', attack:'התקפה', playmaking:'יצירה'},
@@ -938,7 +947,7 @@ function sportFieldPositions(sport){ return sportData(sport).fieldPositions; }
 // The platform currently runs with analysts and mental coaches only. The other
 // coach types stay in the label maps so older accounts still display correctly,
 // but they are no longer offered anywhere.
-const ACTIVE_COACH_TYPES = ['analyst','mental','trainer','medical'];
+const ACTIVE_COACH_TYPES = ['analyst','mental','trainer','medical','nutrition'];
 function sportCoachTypes(sport){
   return Object.keys(sportData(sport).coachTypes.he).filter(ct=>ACTIVE_COACH_TYPES.includes(ct));
 }
@@ -1065,11 +1074,12 @@ const STR = {
     hoursUnit:'שעות', daysUnit:'ימים', soon:'בקרוב',
     welcomeTitle:'ברוכים הבאים ל-AnzClip', welcomeSub:'איך תרצו להשתמש בפלטפורמה?',
     registerGKTitle:'הרשמה כשחקן/ית', registerGKSub:'העלו סרטונים וקבלו ניתוח מאנליסט מקצועי',
-    registerProTitle:'הרשמה כבעל מקצוע', registerProSub:'אנליסט, מאמן מנטלי, מאמן אישי, איש רפואה, סוכן או סקאוט',
+    registerProTitle:'הרשמה כבעל מקצוע', registerProSub:'אנליסט, מאמן מנטלי, מאמן אישי, איש רפואה, תזונאי, סוכן או סקאוט',
     registerCoachTitle:'הרשמה כאנליסט', registerCoachSub:'קבלו בקשות ניתוח משחקנים ובנו לעצמכם הכנסה',
     registerMentalTitle:'הרשמה כמאמן מנטלי', registerMentalSub:'קבלו בקשות לשיחות ייעוץ מנטלי מהשחקנים',
     registerTrainerTitle:'הרשמה כמאמן אישי', registerTrainerSub:'קבעו מחיר לאימון ולחבילות, וקבלו בקשות משחקנים באזור שלכם',
     registerMedicalTitle:'הרשמה כאיש רפואה', registerMedicalSub:'פיזיותרפיה, ספורט-תרפיה, עיסוי - קבלו פניות משחקנים באזור שלכם',
+    registerNutritionTitle:'הרשמה כתזונאי/ת', registerNutritionSub:'תזונת ספורט לשחקנים - קבעו מחיר לפגישה ולחבילות, וקבלו פניות מהאזור שלכם',
     fieldMedicalRole:'תחום העיסוק', medicalRolePh:'למשל: פיזיותרפיסט, ספורט-תרפיסט, מעסה ספורטיבי',
     fieldAreas:'אזורי פעילות', areasHint:'סמנו כל אזור שאתם מוכנים להגיע אליו - שחקנים מחפשים לפי אזור',
     filterArea:'אזור', noAreasYet:'לא הוגדרו אזורים', mustPickArea:'בחרו לפחות אזור פעילות אחד',
@@ -1079,10 +1089,11 @@ const STR = {
     subExpiredTitle:'המנוי אינו פעיל', subExpiredMsg:'הפרופיל שלכם אינו מוצג לשחקנים עד לחידוש המנוי. פנו אלינו כדי לחדש.',
     subPendingTitle:'המנוי טרם הופעל', subPendingMsg:'אחרי אישור התעודה נשלח לכם את פרטי המנוי השנתי. עד להפעלתו הפרופיל לא מוצג לשחקנים.',
     subAdminLabel:'מנוי בתוקף עד', subAdminSet:'הגדירו מנוי לשנה', subAdminSetTrial:'חודש ניסיון', subAdminClear:'ביטול מנוי',
-    subSaved:'המנוי עודכן', subNone:'אין מנוי', adminSubsTitle:'מנויים - מאמנים אישיים ואנשי רפואה',
+    subSaved:'המנוי עודכן', subNone:'אין מנוי', adminSubsTitle:'מנויים - מאמנים אישיים, אנשי רפואה ותזונאים',
     signupSubNoteTitle:'איך זה עובד מבחינה כספית',
     signupSubNoteMsg:'את התשלום על האימונים אתם מקבלים ישירות מהשחקן - הפלטפורמה לא גובה עמלה. כדי להופיע בפלטפורמה נדרש מנוי שנתי, שפרטיו יישלחו אליכם לאחר אימות התעודה.',
     signupSubNoteMsgMed:'את התשלום על הטיפולים אתם מקבלים ישירות מהשחקן - הפלטפורמה לא גובה עמלה. כדי להופיע בפלטפורמה נדרש מנוי שנתי, שפרטיו יישלחו אליכם לאחר אימות התעודה.',
+    signupSubNoteMsgNut:'את התשלום על הפגישות אתם מקבלים ישירות מהשחקן - הפלטפורמה לא גובה עמלה. כדי להופיע בפלטפורמה נדרש מנוי שנתי, שפרטיו יישלחו אליכם לאחר אימות התעודה.',
     directPayIncomeNote:'הסכומים כאן הם לפי המחירון שלכם. התשלום מתקבל ישירות מהשחקן, והפלטפורמה אינה מעורבת בו.',
     meetingPlaceLabel:'מקום המפגש', meetingPlacePh:'למשל: מגרש הכדורגל בפארק הירקון, תל אביב',
     meetingPlaceHint:'יוצג לשחקן יחד עם המועדים שהצעתם',
@@ -1296,11 +1307,12 @@ const STR = {
     hoursUnit:'hours', daysUnit:'days', soon:'soon',
     welcomeTitle:'Welcome to AnzClip', welcomeSub:'How would you like to use the platform?',
     registerGKTitle:'Sign up as a player', registerGKSub:'Upload videos and get analysis from a professional analyst',
-    registerProTitle:'Sign up as a professional', registerProSub:'Analyst, mental coach, personal trainer, medical professional, agent or scout',
+    registerProTitle:'Sign up as a professional', registerProSub:'Analyst, mental coach, personal trainer, medical professional, nutritionist, agent or scout',
     registerCoachTitle:'Sign up as an analyst', registerCoachSub:'Get analysis requests from players and build your income',
     registerMentalTitle:'Sign up as a mental coach', registerMentalSub:'Get requests for mental coaching calls from players',
     registerTrainerTitle:'Sign up as a personal trainer', registerTrainerSub:'Set your session and package prices, and get requests from players in your area',
     registerMedicalTitle:'Sign up as a medical professional', registerMedicalSub:'Physiotherapy, sports therapy, massage - get enquiries from players in your area',
+    registerNutritionTitle:'Sign up as a nutritionist', registerNutritionSub:'Sports nutrition for players - set your session and package prices, and get enquiries from your area',
     fieldMedicalRole:'Your field', medicalRolePh:'e.g. physiotherapist, sports therapist, sports masseur',
     fieldAreas:'Areas you cover', areasHint:'Tick every area you are willing to travel to - players search by area',
     filterArea:'Area', noAreasYet:'No areas set', mustPickArea:'Pick at least one area',
@@ -1310,10 +1322,11 @@ const STR = {
     subExpiredTitle:'Subscription inactive', subExpiredMsg:'Your profile is not shown to players until the subscription is renewed. Get in touch to renew.',
     subPendingTitle:'Subscription not started yet', subPendingMsg:'Once your certificate is approved we will send you the yearly subscription details. Until it starts, your profile is not shown to players.',
     subAdminLabel:'Subscribed until', subAdminSet:'Set one year', subAdminSetTrial:'One month trial', subAdminClear:'Clear subscription',
-    subSaved:'Subscription updated', subNone:'No subscription', adminSubsTitle:'Subscriptions - trainers & practitioners',
+    subSaved:'Subscription updated', subNone:'No subscription', adminSubsTitle:'Subscriptions - trainers, practitioners & nutritionists',
     signupSubNoteTitle:'How the money works',
     signupSubNoteMsg:'Players pay you directly for sessions - the platform takes no commission. To appear on the platform a yearly subscription is required; we will send you the details once your certificate is verified.',
     signupSubNoteMsgMed:'Players pay you directly for treatments - the platform takes no commission. To appear on the platform a yearly subscription is required; we will send you the details once your certificate is verified.',
+    signupSubNoteMsgNut:'Players pay you directly for sessions - the platform takes no commission. To appear on the platform a yearly subscription is required; we will send you the details once your certificate is verified.',
     directPayIncomeNote:'These amounts follow your own price list. Payment is made to you directly by the player; the platform is not involved in it.',
     meetingPlaceLabel:'Meeting place', meetingPlacePh:'e.g. the pitch at Hayarkon Park, Tel Aviv',
     meetingPlaceHint:'Shown to the player together with the times you propose',
@@ -4022,6 +4035,10 @@ function renderAuthProfessional(){
           ${icon('glove',22, true)}
           <div><b>${t('registerMedicalTitle')}</b><span>${t('registerMedicalSub')}</span></div>
         </div>
+        <div class="auth-card" data-action="goto-signup-nutrition">
+          ${icon('target',22, true)}
+          <div><b>${t('registerNutritionTitle')}</b><span>${t('registerNutritionSub')}</span></div>
+        </div>
         <div class="auth-card" data-action="goto-signup-agent">
           ${icon('briefcase',22, true)}
           <div><b>${t('registerAgentTitle')}</b><span>${t('registerAgentSub')}</span></div>
@@ -4172,8 +4189,8 @@ function renderSignupMental(){
   const d = state.signupDraft;
   // one screen serves the three session professions; only the wording differs
   const kind = (d.coachTypes||['mental'])[0];
-  const titleKey = kind==='trainer' ? 'registerTrainerTitle' : kind==='medical' ? 'registerMedicalTitle' : 'registerMentalTitle';
-  const subKey   = kind==='trainer' ? 'registerTrainerSub'   : kind==='medical' ? 'registerMedicalSub'   : 'registerMentalSub';
+  const titleKey = kind==='trainer' ? 'registerTrainerTitle' : kind==='medical' ? 'registerMedicalTitle' : kind==='nutrition' ? 'registerNutritionTitle' : 'registerMentalTitle';
+  const subKey   = kind==='trainer' ? 'registerTrainerSub'   : kind==='medical' ? 'registerMedicalSub'   : kind==='nutrition' ? 'registerNutritionSub'   : 'registerMentalSub';
   const needsAreas = INPERSON_COACH_TYPES.includes(kind);
   return `
     <div class="onboard" style="padding-top:30px">
@@ -4240,7 +4257,7 @@ function renderSignupMental(){
         ${needsAreas ? `
           <div class="commit-box" style="margin-top:18px">
             ${icon('check',18)}
-            <span><b>${t('signupSubNoteTitle')}</b><br>${kind==='medical' ? t('signupSubNoteMsgMed') : t('signupSubNoteMsg')}</span>
+            <span><b>${t('signupSubNoteTitle')}</b><br>${kind==='medical' ? t('signupSubNoteMsgMed') : kind==='nutrition' ? t('signupSubNoteMsgNut') : t('signupSubNoteMsg')}</span>
           </div>
         ` : ''}
 
@@ -6127,6 +6144,9 @@ function attachHandlers(){
   });
   app.querySelector('[data-action="goto-signup-medical"]')?.addEventListener('click', ()=>{
     state.signupRole = 'coach'; state.signupDraft = { coachTypes:['medical'], mentalPackages:[], areas:[], medicalRole:'' }; go('signup-mental');
+  });
+  app.querySelector('[data-action="goto-signup-nutrition"]')?.addEventListener('click', ()=>{
+    state.signupRole = 'coach'; state.signupDraft = { coachTypes:['nutrition'], mentalPackages:[], areas:[] }; go('signup-mental');
   });
   app.querySelectorAll('[data-su-area]').forEach(el=>{
     el.addEventListener('click', ()=>{

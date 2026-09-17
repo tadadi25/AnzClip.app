@@ -11,6 +11,9 @@
 # landing pages - clean URLs
 /pro      /professional.html   200
 /players  /players.html        200
+/trainer  /trainer.html        200
+/medical  /medical.html        200
+/nutrition /nutrition.html     200
 
 # home page = the players landing page.
 # the "!" forces this rule ahead of the real index.html file that sits at the root.
